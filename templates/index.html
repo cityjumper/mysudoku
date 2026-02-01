@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sudoku for Nicolas</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .sudoku-cell {
+            width: 50px;
+            height: 50px;
+            font-size: 24px;
+            font-weight: 600;
+            text-align: center;
+            border: 1px solid #94a3b8;
+            transition: all 0.2s;
+        }
+        .sudoku-cell:focus {
+            outline: none;
+            border-color: #3b82f6;
+            background-color: #dbeafe;
+            z-index: 10;
+            position: relative;
+        }
+        .sudoku-cell.prefilled {
+            background-color: #f1f5f9;
+            color: #1e293b;
+            font-weight: 700;
+        }
+        .sudoku-cell:not(.prefilled) {
+            color: #3b82f6;
+        }
+        .thick-border-right {
+            border-right: 4px solid #0f172a !important;
+        }
+        .thick-border-bottom {
+            border-bottom: 4px solid #0f172a !important;
+        }
+        .sudoku-grid {
+            display: grid;
+            grid-template-columns: repeat(9, 50px);
+            grid-template-rows: repeat(9, 50px);
+            border: 4px solid #0f172a;
+            background-color: #0f172a;
+            gap: 0;
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen">
+    <div class="container mx-auto px-4 py-8">
+        <!-- Header -->
+        <div class="text-center mb-8">
+            <h1 class="text-5xl font-bold text-indigo-900 mb-2">Sudoku for Nicolas</h1>
+            <p class="text-gray-600">Challenge your mind with this classic puzzle game</p>
+        </div>
+
+        <!-- Game Controls -->
+        <div class="max-w-2xl mx-auto mb-8">
+            <div class="bg-white rounded-lg shadow-lg p-6">
+                <div class="flex flex-wrap gap-4 items-center justify-center">
+                    <!-- New Game Button -->
+                    <div class="flex gap-2">
+                        <button onclick="newGame('easy')" class="bg-green-500 hover:bg-green-600 text-white font-semibold py-3 px-6 rounded-lg shadow-md transition duration-200 transform hover:scale-105">
+                            Easy
+                        </button>
+                        <button onclick="newGame('medium')" class="bg-yellow-500 hover:bg-yellow-600 text-white font-semibold py-3 px-6 rounded-lg shadow-md transition duration-200 transform hover:scale-105">
+                            Medium
+                        </button>
+                        <button onclick="newGame('hard')" class="bg-red-500 hover:bg-red-600 text-white font-semibold py-3 px-6 rounded-lg shadow-md transition duration-200 transform hover:scale-105">
+                            Hard
+                        </button>
+                    </div>
+                    
+                    <!-- Action Buttons -->
+                    <div class="flex gap-2">
+                        <button onclick="validateSolution()" class="bg-blue-500 hover:bg-blue-600 text-white font-semibold py-3 px-6 rounded-lg shadow-md transition duration-200">
+                            Check
+                        </button>
+                        <button onclick="showSolution()" class="bg-purple-500 hover:bg-purple-600 text-white font-semibold py-3 px-6 rounded-lg shadow-md transition duration-200">
+                            Solution
+                        </button>
+                        <button onclick="clearBoard()" class="bg-gray-500 hover:bg-gray-600 text-white font-semibold py-3 px-6 rounded-lg shadow-md transition duration-200">
+                            Clear
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Status Message -->
+                <div id="status-message" class="mt-4 text-center font-semibold text-lg"></div>
+            </div>
+        </div>
+
+        <!-- Game Area with Board and Scoreboard -->
+        <div class="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <!-- Sudoku Board -->
+            <div class="lg:col-span-2">
+                <div class="bg-white rounded-lg shadow-2xl p-8">
+                    <!-- Timer -->
+                    <div class="text-center mb-6">
+                        <div class="inline-block bg-gradient-to-r from-indigo-500 to-purple-500 text-white px-6 py-3 rounded-lg shadow-lg">
+                            <div class="text-sm font-semibold uppercase tracking-wide">Time</div>
+                            <div id="timer" class="text-3xl font-bold">00:00</div>
+                        </div>
+                    </div>
+                    
+                    <div id="game-container" class="flex justify-center">
+                        <div class="text-gray-500 text-center py-12">
+                            <svg class="w-24 h-24 mx-auto mb-4 text-indigo-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 10l-2 1m0 0l-2-1m2 1v2.5M20 7l-2 1m2-1l-2-1m2 1v2.5M14 4l-2-1-2 1M4 7l2-1M4 7l2 1M4 7v2.5M12 21l-2-1m2 1l2-1m-2 1v-2.5M6 18l-2-1v-2.5M18 18l2-1v-2.5"></path>
+                            </svg>
+                            <p class="text-xl font-semibold text-gray-600">Select difficulty to start a new game</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Scoreboard -->
+            <div class="lg:col-span-1">
+                <div class="bg-white rounded-lg shadow-2xl p-6 sticky top-8">
+                    <h2 class="text-2xl font-bold text-indigo-900 mb-4 flex items-center">
+                        <svg class="w-6 h-6 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z"></path>
+                            <path fill-rule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z" clip-rule="evenodd"></path>
+                        </svg>
+                        Leaderboard
+                    </h2>
+                    
+                    <!-- Difficulty Filter -->
+                    <div class="mb-4">
+                        <select id="difficulty-filter" onchange="updateLeaderboard()" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                            <option value="all">All Difficulties</option>
+                            <option value="easy">Easy</option>
+                            <option value="medium">Medium</option>
+                            <option value="hard">Hard</option>
+                        </select>
+                    </div>
+                    
+                    <div id="leaderboard" class="space-y-2 max-h-96 overflow-y-auto">
+                        <p class="text-gray-500 text-center py-8">No scores yet. Complete a puzzle to get on the board!</p>
+                    </div>
+                    
+                    <button onclick="clearLeaderboard()" class="mt-4 w-full bg-red-100 hover:bg-red-200 text-red-700 font-semibold py-2 px-4 rounded-lg transition duration-200">
+                        Clear All Scores
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Instructions -->
+        <div class="max-w-2xl mx-auto mt-8">
+            <div class="bg-white rounded-lg shadow-lg p-6">
+                <h2 class="text-2xl font-bold text-indigo-900 mb-4">How to Play</h2>
+                <ul class="space-y-2 text-gray-700">
+                    <li class="flex items-start">
+                        <span class="text-indigo-500 mr-2">•</span>
+                        <span>Fill the 9×9 grid so that each row, column, and 3×3 box contains digits 1-9</span>
+                    </li>
+                    <li class="flex items-start">
+                        <span class="text-indigo-500 mr-2">•</span>
+                        <span>Click on a cell and type a number to fill it (1-9)</span>
+                    </li>
+                    <li class="flex items-start">
+                        <span class="text-indigo-500 mr-2">•</span>
+                        <span>Press 0 or Backspace to clear a cell</span>
+                    </li>
+                    <li class="flex items-start">
+                        <span class="text-indigo-500 mr-2">•</span>
+                        <span>Click "Check" to validate your solution when complete</span>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentGameId = null;
+        let initialBoard = null;
+        let timerStarted = false;
+        let timerInterval = null;
+        let startTime = null;
+        let currentDifficulty = null;
+
+        async function newGame(difficulty) {
+            try {
+                console.log('Creating new game with difficulty:', difficulty);
+                
+                const response = await fetch('/games/new', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ difficulty: difficulty })
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                console.log('Game created:', data);
+                
+                currentGameId = data.game_id;
+                initialBoard = data.board.map(row => [...row]);
+                currentDifficulty = difficulty;
+                
+                // Reset timer
+                stopTimer();
+                resetTimer();
+                timerStarted = false;
+                
+                renderBoard(data.board);
+                showStatus(`New ${difficulty} game started!`, 'success');
+            } catch (error) {
+                console.error('Error creating game:', error);
+                showStatus('Error creating game: ' + error.message, 'error');
+            }
+        }
+
+        function renderBoard(board) {
+            const container = document.getElementById('game-container');
+            container.innerHTML = '';
+            
+            const grid = document.createElement('div');
+            grid.className = 'sudoku-grid';
+            
+            for (let i = 0; i < 9; i++) {
+                for (let j = 0; j < 9; j++) {
+                    const input = document.createElement('input');
+                    input.type = 'text';
+                    input.maxLength = 1;
+                    input.className = 'sudoku-cell';
+                    
+                    // Add thick borders to separate 3x3 boxes
+                    // Right border: after columns 2 and 5 (indices 2, 5)
+                    if (j === 2 || j === 5) {
+                        input.classList.add('thick-border-right');
+                    }
+                    // Bottom border: after rows 2 and 5 (indices 2, 5)
+                    if (i === 2 || i === 5) {
+                        input.classList.add('thick-border-bottom');
+                    }
+                    
+                    const value = board[i][j];
+                    if (value !== 0) {
+                        input.value = value;
+                        input.classList.add('prefilled');
+                        input.readOnly = true;
+                    } else {
+                        input.dataset.row = i;
+                        input.dataset.col = j;
+                        
+                        input.addEventListener('input', async (e) => {
+                            const value = e.target.value;
+                            if (value && !/^[1-9]$/.test(value)) {
+                                e.target.value = '';
+                                return;
+                            }
+                            
+                            const num = value ? parseInt(value) : 0;
+                            await makeMove(parseInt(e.target.dataset.row), parseInt(e.target.dataset.col), num);
+                        });
+                        
+                        input.addEventListener('keydown', (e) => {
+                            if (e.key === 'Backspace' || e.key === 'Delete' || e.key === '0') {
+                                e.target.value = '';
+                                makeMove(parseInt(e.target.dataset.row), parseInt(e.target.dataset.col), 0);
+                            }
+                        });
+                    }
+                    
+                    grid.appendChild(input);
+                }
+            }
+            
+            container.appendChild(grid);
+        }
+
+        async function makeMove(row, col, num) {
+            if (!currentGameId) return;
+            
+            // Start timer on first move
+            if (!timerStarted && num !== 0) {
+                startTimer();
+                timerStarted = true;
+            }
+            
+            try {
+                const response = await fetch(`/games/${currentGameId}/move`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ row, col, num })
+                });
+                
+                const data = await response.json();
+                
+                if (!data.success) {
+                    showStatus(data.message, 'error');
+                    // Clear the invalid input
+                    const inputs = document.querySelectorAll('.sudoku-cell');
+                    const input = Array.from(inputs).find(inp => 
+                        inp.dataset.row == row && inp.dataset.col == col
+                    );
+                    if (input) input.value = '';
+                } else if (data.is_complete && data.is_correct) {
+                    stopTimer();
+                    const finalTime = getElapsedTime();
+                    showStatus(data.message, 'success');
+                    
+                    // Prompt for name and save score
+                    setTimeout(() => {
+                        const playerName = prompt('🎉 Congratulations! Enter your name for the leaderboard:');
+                        if (playerName && playerName.trim()) {
+                            saveScore(playerName.trim(), finalTime, currentDifficulty);
+                            updateLeaderboard();
+                        }
+                    }, 500);
+                } else if (data.is_complete) {
+                    showStatus(data.message, 'error');
+                }
+            } catch (error) {
+                showStatus('Error making move', 'error');
+                console.error(error);
+            }
+        }
+
+        async function validateSolution() {
+            if (!currentGameId) {
+                showStatus('Please start a game first', 'error');
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/games/${currentGameId}/validate`);
+                const data = await response.json();
+                
+                if (data.complete && data.valid) {
+                    showStatus('🎉 Congratulations! You solved it correctly!', 'success');
+                } else if (data.complete && !data.valid) {
+                    showStatus('❌ Solution is incorrect. Keep trying!', 'error');
+                } else {
+                    showStatus('⏳ Puzzle is not yet complete', 'info');
+                }
+            } catch (error) {
+                showStatus('Error validating solution', 'error');
+                console.error(error);
+            }
+        }
+
+        async function showSolution() {
+            if (!currentGameId) {
+                showStatus('Please start a game first', 'error');
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/games/${currentGameId}/solution`);
+                const data = await response.json();
+                
+                renderBoard(data.solution);
+                showStatus('Solution revealed!', 'info');
+            } catch (error) {
+                showStatus('Error getting solution', 'error');
+                console.error(error);
+            }
+        }
+
+        function clearBoard() {
+            if (!currentGameId || !initialBoard) {
+                showStatus('Please start a game first', 'error');
+                return;
+            }
+            
+            renderBoard(initialBoard);
+            showStatus('Board cleared!', 'info');
+            
+            // Reset timer
+            stopTimer();
+            resetTimer();
+            timerStarted = false;
+        }
+        
+        // Timer Functions
+        function startTimer() {
+            startTime = Date.now();
+            timerInterval = setInterval(updateTimerDisplay, 1000);
+            updateTimerDisplay();
+        }
+        
+        function stopTimer() {
+            if (timerInterval) {
+                clearInterval(timerInterval);
+                timerInterval = null;
+            }
+        }
+        
+        function resetTimer() {
+            document.getElementById('timer').textContent = '00:00';
+            startTime = null;
+        }
+        
+        function updateTimerDisplay() {
+            if (!startTime) return;
+            const elapsed = Math.floor((Date.now() - startTime) / 1000);
+            const minutes = Math.floor(elapsed / 60);
+            const seconds = elapsed % 60;
+            document.getElementById('timer').textContent = 
+                `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+        }
+        
+        function getElapsedTime() {
+            if (!startTime) return 0;
+            return Math.floor((Date.now() - startTime) / 1000);
+        }
+        
+        // Leaderboard Functions
+        function saveScore(name, time, difficulty) {
+            const scores = getScores();
+            scores.push({
+                name: name,
+                time: time,
+                difficulty: difficulty,
+                date: new Date().toISOString()
+            });
+            localStorage.setItem('sudokuScores', JSON.stringify(scores));
+        }
+        
+        function getScores() {
+            const scores = localStorage.getItem('sudokuScores');
+            return scores ? JSON.parse(scores) : [];
+        }
+        
+        function updateLeaderboard() {
+            const leaderboard = document.getElementById('leaderboard');
+            const filter = document.getElementById('difficulty-filter').value;
+            let scores = getScores();
+            
+            // Filter by difficulty
+            if (filter !== 'all') {
+                scores = scores.filter(s => s.difficulty === filter);
+            }
+            
+            // Sort by time (ascending)
+            scores.sort((a, b) => a.time - b.time);
+            
+            // Take top 10
+            scores = scores.slice(0, 10);
+            
+            if (scores.length === 0) {
+                leaderboard.innerHTML = '<p class="text-gray-500 text-center py-8">No scores yet. Complete a puzzle to get on the board!</p>';
+                return;
+            }
+            
+            leaderboard.innerHTML = scores.map((score, index) => {
+                const minutes = Math.floor(score.time / 60);
+                const seconds = score.time % 60;
+                const timeStr = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+                
+                const medal = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `${index + 1}.`;
+                const bgColor = index < 3 ? 'bg-gradient-to-r from-yellow-50 to-yellow-100' : 'bg-gray-50';
+                
+                return `
+                    <div class="${bgColor} rounded-lg p-3 border border-gray-200">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center space-x-3">
+                                <span class="text-lg font-bold ${index < 3 ? 'text-yellow-600' : 'text-gray-600'}">${medal}</span>
+                                <div>
+                                    <div class="font-semibold text-gray-900">${score.name}</div>
+                                    <div class="text-xs text-gray-500 capitalize">${score.difficulty}</div>
+                                </div>
+                            </div>
+                            <div class="text-right">
+                                <div class="font-bold text-indigo-600">${timeStr}</div>
+                                <div class="text-xs text-gray-500">${new Date(score.date).toLocaleDateString()}</div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+        
+        function clearLeaderboard() {
+            if (confirm('Are you sure you want to clear all scores?')) {
+                localStorage.removeItem('sudokuScores');
+                updateLeaderboard();
+                showStatus('Leaderboard cleared!', 'info');
+            }
+        }
+        
+        // Load leaderboard on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            updateLeaderboard();
+        });
+
+        function showStatus(message, type) {
+            const statusEl = document.getElementById('status-message');
+            statusEl.textContent = message;
+            
+            // Remove all color classes
+            statusEl.className = 'mt-4 text-center font-semibold text-lg';
+            
+            // Add color based on type
+            if (type === 'success') {
+                statusEl.classList.add('text-green-600');
+            } else if (type === 'error') {
+                statusEl.classList.add('text-red-600');
+            } else if (type === 'info') {
+                statusEl.classList.add('text-blue-600');
+            }
+            
+            // Clear message after 5 seconds (except for success/error on completion)
+            if (type === 'info') {
+                setTimeout(() => {
+                    statusEl.textContent = '';
+                }, 5000);
+            }
+        }
+    </script>
+</body>
+</html>
