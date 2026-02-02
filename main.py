@@ -112,6 +112,12 @@ async def kenken(request: Request):
     return templates.TemplateResponse("kenken.html", {"request": request})
 
 
+@app.get("/solitaire", response_class=HTMLResponse)
+async def solitaire(request: Request):
+    """Solitaire (Peg Solitaire) page endpoint."""
+    return templates.TemplateResponse("solitaire.html", {"request": request})
+
+
 @app.get("/api")
 async def api_root():
     """API root endpoint with API information."""
