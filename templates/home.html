@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Games</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gradient-to-br from-slate-50 to-indigo-100 min-h-screen">
+    <div class="container mx-auto px-4 py-10">
+        <header class="mb-10">
+            <div class="flex items-start justify-between gap-6">
+                <div>
+                    <h1 class="text-4xl sm:text-5xl font-extrabold tracking-tight text-slate-900">Game Hub</h1>
+                    <p class="mt-2 text-slate-600">Pick a game to play.</p>
+                </div>
+                <a href="/docs" class="text-sm font-semibold text-indigo-700 hover:text-indigo-900">API Docs</a>
+            </div>
+        </header>
+
+        <main>
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                <!-- Sudoku tile -->
+                <a href="/sudoku" class="group rounded-2xl bg-white shadow-lg ring-1 ring-slate-200 hover:shadow-xl hover:ring-indigo-200 transition overflow-hidden">
+                    <div class="p-6">
+                        <div class="flex items-center justify-between">
+                            <h2 class="text-2xl font-bold text-slate-900 group-hover:text-indigo-900">Sudoku</h2>
+                            <span class="inline-flex items-center rounded-full bg-indigo-50 px-3 py-1 text-xs font-semibold text-indigo-700 ring-1 ring-indigo-200">Play</span>
+                        </div>
+                        <p class="mt-3 text-slate-600">Classic 9×9 puzzle with timer and leaderboard.</p>
+                        <div class="mt-6 flex items-center text-indigo-700 font-semibold">
+                            <span>Open</span>
+                            <svg class="ml-2 h-5 w-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                                <path fill-rule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clip-rule="evenodd" />
+                            </svg>
+                        </div>
+                    </div>
+                    <div class="h-2 bg-gradient-to-r from-indigo-500 to-purple-500"></div>
+                </a>
+
+                <!-- Coming soon tiles -->
+                <div class="rounded-2xl bg-white/70 backdrop-blur shadow ring-1 ring-slate-200 overflow-hidden">
+                    <div class="p-6">
+                        <div class="flex items-center justify-between">
+                            <h2 class="text-2xl font-bold text-slate-700">Minesweeper</h2>
+                            <span class="inline-flex items-center rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600 ring-1 ring-slate-200">Soon</span>
+                        </div>
+                        <p class="mt-3 text-slate-600">A modern take on the classic logic game.</p>
+                        <button disabled class="mt-6 w-full rounded-lg bg-slate-200 text-slate-500 font-semibold py-2">Coming soon</button>
+                    </div>
+                    <div class="h-2 bg-slate-200"></div>
+                </div>
+
+                <a href="/tictactoe" class="group rounded-2xl bg-white shadow-lg ring-1 ring-slate-200 hover:shadow-xl hover:ring-emerald-200 transition overflow-hidden">
+                    <div class="p-6">
+                        <div class="flex items-center justify-between">
+                            <h2 class="text-2xl font-bold text-slate-900 group-hover:text-emerald-900">Tic-Tac-Toe</h2>
+                            <span class="inline-flex items-center rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-200">Play</span>
+                        </div>
+                        <p class="mt-3 text-slate-600">Quick, simple, and surprisingly tactical.</p>
+                        <div class="mt-6 flex items-center text-emerald-700 font-semibold">
+                            <span>Open</span>
+                            <svg class="ml-2 h-5 w-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                                <path fill-rule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clip-rule="evenodd" />
+                            </svg>
+                        </div>
+                    </div>
+                    <div class="h-2 bg-gradient-to-r from-emerald-500 to-teal-500"></div>
+                </a>
+            </div>
+
+            <div class="mt-10 text-sm text-slate-500">
+                <p>Tip: bookmark <a href="/sudoku" class="font-semibold text-indigo-700 hover:text-indigo-900">/sudoku</a> to jump straight into Sudoku.</p>
+            </div>
+        </main>
+    </div>
+</body>
+</html>

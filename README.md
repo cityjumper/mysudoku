@@ -47,11 +47,15 @@ The server will start on `http://localhost:8000`
 
 ## Playing the Game
 
-Simply open your browser to `http://localhost:8000` and enjoy the interactive Sudoku game with:
+Open your browser to `http://localhost:8000` to see the game hub, then click into Sudoku.
+
+Sudoku is available directly at `http://localhost:8000/sudoku` and includes:
 - Three difficulty levels
 - Timer that starts on first move
 - Local leaderboard to track your best times
 - Visual separation of 3×3 boxes
+
+Tic-Tac-Toe is available at `http://localhost:8000/tictactoe`.
 
 ## API Documentation
 

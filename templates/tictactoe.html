@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Tic-Tac-Toe</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .cell {
+            width: 96px;
+            height: 96px;
+            font-size: 48px;
+            line-height: 1;
+            font-weight: 800;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 0px;
+            user-select: none;
+        }
+        @media (min-width: 640px) {
+            .cell {
+                width: 112px;
+                height: 112px;
+                font-size: 56px;
+            }
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-slate-50 to-emerald-100 min-h-screen">
+    <div class="container mx-auto px-4 py-8">
+        <!-- Top Nav -->
+        <div class="max-w-5xl mx-auto mb-6 flex items-center justify-between">
+            <a href="/" class="inline-flex items-center text-emerald-800 hover:text-emerald-950 font-semibold">
+                <svg class="w-5 h-5 mr-2" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                    <path fill-rule="evenodd" d="M12.707 15.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 111.414 1.414L7.414 9H17a1 1 0 110 2H7.414l5.293 5.293a1 1 0 010 1.414z" clip-rule="evenodd" />
+                </svg>
+                Home
+            </a>
+            <a href="/sudoku" class="text-sm font-semibold text-indigo-700 hover:text-indigo-900">Sudoku</a>
+        </div>
+
+        <div class="max-w-5xl mx-auto">
+            <header class="text-center mb-8">
+                <h1 class="text-4xl sm:text-5xl font-extrabold tracking-tight text-slate-900">Tic-Tac-Toe</h1>
+                <p class="mt-2 text-slate-600">Local two-player on one device.</p>
+            </header>
+
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- Board -->
+                <div class="lg:col-span-2">
+                    <div class="bg-white rounded-2xl shadow-xl ring-1 ring-slate-200 p-6 sm:p-8">
+                        <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
+                            <div>
+                                <div class="text-sm font-semibold text-slate-500 uppercase tracking-wide">Status</div>
+                                <div id="status" class="mt-1 text-2xl font-bold text-slate-900">X to move</div>
+                                <div id="substatus" class="mt-1 text-slate-600">Click a square to place your mark.</div>
+                            </div>
+                            <div class="flex gap-2">
+                                <button id="new-game" class="rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-4 py-2">New Game</button>
+                                <button id="reset-scores" class="rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 font-semibold px-4 py-2">Reset Scores</button>
+                            </div>
+                        </div>
+
+                        <div class="inline-block bg-white border-2 border-black" aria-hidden="false">
+                            <div class="grid grid-cols-3 gap-0" role="grid" aria-label="Tic-Tac-Toe board">
+                                <button class="cell bg-white hover:bg-slate-50 focus:outline-none border-r-2 border-b-2 border-black" data-index="0" role="gridcell" aria-label="Cell 1"></button>
+                                <button class="cell bg-white hover:bg-slate-50 focus:outline-none border-r-2 border-b-2 border-black" data-index="1" role="gridcell" aria-label="Cell 2"></button>
+                                <button class="cell bg-white hover:bg-slate-50 focus:outline-none border-b-2 border-black" data-index="2" role="gridcell" aria-label="Cell 3"></button>
+                                <button class="cell bg-white hover:bg-slate-50 focus:outline-none border-r-2 border-b-2 border-black" data-index="3" role="gridcell" aria-label="Cell 4"></button>
+                                <button class="cell bg-white hover:bg-slate-50 focus:outline-none border-r-2 border-b-2 border-black" data-index="4" role="gridcell" aria-label="Cell 5"></button>
+                                <button class="cell bg-white hover:bg-slate-50 focus:outline-none border-b-2 border-black" data-index="5" role="gridcell" aria-label="Cell 6"></button>
+                                <button class="cell bg-white hover:bg-slate-50 focus:outline-none border-r-2 border-black" data-index="6" role="gridcell" aria-label="Cell 7"></button>
+                                <button class="cell bg-white hover:bg-slate-50 focus:outline-none border-r-2 border-black" data-index="7" role="gridcell" aria-label="Cell 8"></button>
+                                <button class="cell bg-white hover:bg-slate-50 focus:outline-none" data-index="8" role="gridcell" aria-label="Cell 9"></button>
+                            </div>
+                        </div>
+
+                        <div class="mt-6 text-sm text-slate-500">
+                            <p>Keyboard: Use Tab/Shift+Tab to focus a cell, then press Enter/Space to play.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Sidebar -->
+                <div class="lg:col-span-1">
+                    <div class="bg-white rounded-2xl shadow-xl ring-1 ring-slate-200 p-6 sticky top-8">
+                        <h2 class="text-xl font-bold text-slate-900 mb-4">Scoreboard</h2>
+                        <div class="grid grid-cols-2 gap-3">
+                            <div class="rounded-xl bg-emerald-50 ring-1 ring-emerald-100 p-4">
+                                <div class="text-xs font-semibold uppercase tracking-wide text-emerald-700">X wins</div>
+                                <div id="score-x" class="mt-1 text-3xl font-extrabold text-emerald-900">0</div>
+                            </div>
+                            <div class="rounded-xl bg-indigo-50 ring-1 ring-indigo-100 p-4">
+                                <div class="text-xs font-semibold uppercase tracking-wide text-indigo-700">O wins</div>
+                                <div id="score-o" class="mt-1 text-3xl font-extrabold text-indigo-900">0</div>
+                            </div>
+                            <div class="rounded-xl bg-slate-50 ring-1 ring-slate-200 p-4 col-span-2">
+                                <div class="text-xs font-semibold uppercase tracking-wide text-slate-600">Draws</div>
+                                <div id="score-d" class="mt-1 text-3xl font-extrabold text-slate-900">0</div>
+                            </div>
+                        </div>
+
+                        <div class="mt-6">
+                            <h3 class="text-sm font-bold text-slate-700 mb-2">Rules</h3>
+                            <ul class="text-sm text-slate-600 space-y-1">
+                                <li>• First to get 3 in a row wins.</li>
+                                <li>• Rows, columns, and diagonals count.</li>
+                                <li>• If all squares fill with no winner: draw.</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const WIN_LINES = [
+            [0, 1, 2], [3, 4, 5], [6, 7, 8],
+            [0, 3, 6], [1, 4, 7], [2, 5, 8],
+            [0, 4, 8], [2, 4, 6]
+        ];
+
+        const SCORE_KEY = 'ttt:scores:v1';
+
+        let board = Array(9).fill('');
+        let current = 'X';
+        let gameOver = false;
+
+        const statusEl = document.getElementById('status');
+        const substatusEl = document.getElementById('substatus');
+        const cells = Array.from(document.querySelectorAll('[data-index]'));
+
+        const scoreXEl = document.getElementById('score-x');
+        const scoreOEl = document.getElementById('score-o');
+        const scoreDEl = document.getElementById('score-d');
+
+        function loadScores() {
+            try {
+                const raw = localStorage.getItem(SCORE_KEY);
+                if (!raw) return { x: 0, o: 0, d: 0 };
+                const parsed = JSON.parse(raw);
+                return {
+                    x: Number(parsed.x) || 0,
+                    o: Number(parsed.o) || 0,
+                    d: Number(parsed.d) || 0,
+                };
+            } catch {
+                return { x: 0, o: 0, d: 0 };
+            }
+        }
+
+        function saveScores(scores) {
+            localStorage.setItem(SCORE_KEY, JSON.stringify(scores));
+        }
+
+        function renderScores() {
+            const scores = loadScores();
+            scoreXEl.textContent = String(scores.x);
+            scoreOEl.textContent = String(scores.o);
+            scoreDEl.textContent = String(scores.d);
+        }
+
+        function setStatus(main, sub) {
+            statusEl.textContent = main;
+            substatusEl.textContent = sub;
+        }
+
+        function winnerOf(b) {
+            for (const [a, c, d] of WIN_LINES) {
+                if (b[a] && b[a] === b[c] && b[a] === b[d]) {
+                    return { winner: b[a], line: [a, c, d] };
+                }
+            }
+            if (b.every(v => v)) return { winner: 'D', line: null };
+            return { winner: null, line: null };
+        }
+
+        function resetBoard() {
+            board = Array(9).fill('');
+            current = 'X';
+            gameOver = false;
+            for (const btn of cells) {
+                btn.textContent = '';
+                btn.disabled = false;
+                btn.classList.remove('bg-emerald-100', 'ring-2', 'ring-emerald-400', 'bg-indigo-100', 'ring-indigo-400', 'bg-amber-100', 'ring-amber-400');
+                btn.classList.add('bg-white');
+            }
+            setStatus('X to move', 'Click a square to place your mark.');
+        }
+
+        function highlightLine(line) {
+            if (!line) return;
+            for (const idx of line) {
+                const btn = cells[idx];
+                btn.classList.remove('bg-white');
+                btn.classList.add('ring-2', 'bg-amber-100', 'ring-amber-400');
+            }
+        }
+
+        function playMove(index) {
+            if (gameOver) return;
+            if (board[index]) return;
+
+            board[index] = current;
+            const btn = cells[index];
+            btn.textContent = current;
+            btn.classList.remove('bg-white');
+            if (current === 'X') {
+                btn.classList.add('bg-emerald-100', 'ring-2', 'ring-emerald-400');
+            } else {
+                btn.classList.add('bg-indigo-100', 'ring-2', 'ring-indigo-400');
+            }
+
+            const result = winnerOf(board);
+            if (result.winner) {
+                gameOver = true;
+                for (const c of cells) c.disabled = true;
+
+                const scores = loadScores();
+                if (result.winner === 'X') {
+                    scores.x += 1;
+                    setStatus('X wins!', 'Start a new game to play again.');
+                } else if (result.winner === 'O') {
+                    scores.o += 1;
+                    setStatus('O wins!', 'Start a new game to play again.');
+                } else {
+                    scores.d += 1;
+                    setStatus("It's a draw!", 'Start a new game to play again.');
+                }
+
+                saveScores(scores);
+                renderScores();
+                highlightLine(result.line);
+                return;
+            }
+
+            current = current === 'X' ? 'O' : 'X';
+            setStatus(`${current} to move`, '');
+        }
+
+        function wireEvents() {
+            for (const btn of cells) {
+                btn.addEventListener('click', () => playMove(Number(btn.dataset.index)));
+            }
+
+            document.getElementById('new-game').addEventListener('click', resetBoard);
+            document.getElementById('reset-scores').addEventListener('click', () => {
+                saveScores({ x: 0, o: 0, d: 0 });
+                renderScores();
+                resetBoard();
+            });
+        }
+
+        renderScores();
+        wireEvents();
+        resetBoard();
+    </script>
+</body>
+</html>

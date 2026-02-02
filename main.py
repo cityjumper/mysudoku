@@ -66,8 +66,20 @@ class SolutionResponse(BaseModel):
 
 @app.get("/", response_class=HTMLResponse)
 async def root(request: Request):
-    """Root endpoint serving the Sudoku game interface."""
+    """Root endpoint serving the game hub home page."""
+    return templates.TemplateResponse("home.html", {"request": request})
+
+
+@app.get("/sudoku", response_class=HTMLResponse)
+async def sudoku(request: Request):
+    """Sudoku page endpoint serving the Sudoku game interface."""
     return templates.TemplateResponse("index.html", {"request": request})
+
+
+@app.get("/tictactoe", response_class=HTMLResponse)
+async def tictactoe(request: Request):
+    """Tic-Tac-Toe page endpoint."""
+    return templates.TemplateResponse("tictactoe.html", {"request": request})
 
 
 @app.get("/api")
