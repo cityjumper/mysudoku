@@ -57,6 +57,8 @@ Sudoku is available directly at `http://localhost:8000/sudoku` and includes:
 
 Tic-Tac-Toe is available at `http://localhost:8000/tictactoe`.
 
+Dots and Boxes is available at `http://localhost:8000/dots-and-boxes`.
+
 ## API Documentation
 
 Once the server is running, visit:

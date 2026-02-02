@@ -1,0 +1,527 @@
+{% extends "base.html" %}
+
+{% block title %}Dots and Boxes{% endblock %}
+
+{% block extra_head %}
+<style>
+  canvas { touch-action: manipulation; }
+</style>
+{% endblock %}
+
+{% block body_class %}bg-gradient-to-br from-slate-50 to-amber-100 min-h-screen{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+  <div class="max-w-5xl mx-auto mb-6 flex items-center justify-between">
+    <a href="/" class="inline-flex items-center text-amber-800 hover:text-amber-950 font-semibold">
+      <svg class="w-5 h-5 mr-2" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+        <path fill-rule="evenodd" d="M12.707 15.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 111.414 1.414L7.414 9H17a1 1 0 110 2H7.414l5.293 5.293a1 1 0 010 1.414z" clip-rule="evenodd" />
+      </svg>
+      Home
+    </a>
+    <div class="flex items-center gap-4">
+      <a href="/sudoku" class="text-sm font-semibold text-indigo-700 hover:text-indigo-900">Sudoku</a>
+      <a href="/tictactoe" class="text-sm font-semibold text-emerald-700 hover:text-emerald-900">Tic-Tac-Toe</a>
+    </div>
+  </div>
+
+  <div class="max-w-5xl mx-auto">
+    <header class="text-center mb-8">
+      <h1 class="text-4xl sm:text-5xl font-extrabold tracking-tight text-slate-900">Dots and Boxes</h1>
+      <p class="mt-2 text-slate-600">Two players take turns drawing lines. Complete a box to score and play again.</p>
+    </header>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div class="lg:col-span-2">
+        <div class="bg-white rounded-2xl shadow-xl ring-1 ring-slate-200 p-6 sm:p-8">
+          <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
+            <div>
+              <div class="text-sm font-semibold text-slate-500 uppercase tracking-wide">Status</div>
+              <div id="status" class="mt-1 text-2xl font-bold text-slate-900">Player 1 to move</div>
+              <div id="substatus" class="mt-1 text-slate-600">Click near a segment to draw it.</div>
+            </div>
+            <div class="flex flex-wrap gap-2">
+              <label class="text-sm font-semibold text-slate-700 inline-flex items-center gap-2">
+                Size
+                <select id="size" class="border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500">
+                  <option value="3">3×3</option>
+                  <option value="4" selected>4×4</option>
+                  <option value="5">5×5</option>
+                  <option value="6">6×6</option>
+                  <option value="7">7×7</option>
+                  <option value="8">8×8</option>
+                </select>
+              </label>
+              <button id="new-game" class="rounded-lg bg-amber-600 hover:bg-amber-700 text-white font-semibold px-4 py-2">New Game</button>
+              <button id="reset-scores" class="rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 font-semibold px-4 py-2">Reset Scores</button>
+            </div>
+          </div>
+
+          <div class="flex justify-center">
+            <canvas id="board" class="bg-white rounded-xl ring-1 ring-slate-200" width="720" height="720" aria-label="Dots and Boxes board"></canvas>
+          </div>
+
+          <div class="mt-6 text-sm text-slate-500">
+            <p>Tip: aim near a gap between two dots. Completing a box gives you another turn.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="lg:col-span-1">
+        <div class="bg-white rounded-2xl shadow-xl ring-1 ring-slate-200 p-6 sticky top-8">
+          <h2 class="text-xl font-bold text-slate-900 mb-4">Scoreboard</h2>
+
+          <div class="grid grid-cols-2 gap-3">
+            <div class="rounded-xl bg-amber-50 ring-1 ring-amber-100 p-4">
+              <div class="text-xs font-semibold uppercase tracking-wide text-amber-700">Player 1</div>
+              <div id="score-p1" class="mt-1 text-3xl font-extrabold text-amber-900">0</div>
+            </div>
+            <div class="rounded-xl bg-sky-50 ring-1 ring-sky-100 p-4">
+              <div class="text-xs font-semibold uppercase tracking-wide text-sky-700">Player 2</div>
+              <div id="score-p2" class="mt-1 text-3xl font-extrabold text-sky-900">0</div>
+            </div>
+            <div class="rounded-xl bg-slate-50 ring-1 ring-slate-200 p-4 col-span-2">
+              <div class="text-xs font-semibold uppercase tracking-wide text-slate-600">Games played</div>
+              <div id="games" class="mt-1 text-3xl font-extrabold text-slate-900">0</div>
+            </div>
+          </div>
+
+          <div class="mt-6">
+            <h3 class="text-sm font-bold text-slate-700 mb-2">Rules</h3>
+            <ul class="text-sm text-slate-600 space-y-1">
+              <li>• Draw one line per turn.</li>
+              <li>• Finish a box to claim it.</li>
+              <li>• If you claim a box, you play again.</li>
+              <li>• Game ends when all boxes are claimed.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  const SCORE_KEY = 'dab:scores:v1';
+
+  const canvas = document.getElementById('board');
+  const ctx = canvas.getContext('2d');
+
+  const statusEl = document.getElementById('status');
+  const substatusEl = document.getElementById('substatus');
+  const sizeEl = document.getElementById('size');
+
+  const scoreP1El = document.getElementById('score-p1');
+  const scoreP2El = document.getElementById('score-p2');
+  const gamesEl = document.getElementById('games');
+
+  const COLORS = {
+    p1Line: '#b45309',
+    p2Line: '#0369a1',
+    dot: '#0f172a',
+    boxP1: 'rgba(245, 158, 11, 0.22)',
+    boxP2: 'rgba(56, 189, 248, 0.22)',
+    hover: 'rgba(15, 23, 42, 0.18)'
+  };
+
+  function loadScores() {
+    try {
+      const raw = localStorage.getItem(SCORE_KEY);
+      if (!raw) return { p1Wins: 0, p2Wins: 0, games: 0 };
+      const parsed = JSON.parse(raw);
+      return {
+        p1Wins: Number(parsed.p1Wins) || 0,
+        p2Wins: Number(parsed.p2Wins) || 0,
+        games: Number(parsed.games) || 0,
+      };
+    } catch {
+      return { p1Wins: 0, p2Wins: 0, games: 0 };
+    }
+  }
+
+  function saveScores(scores) {
+    localStorage.setItem(SCORE_KEY, JSON.stringify(scores));
+  }
+
+  function renderScores() {
+    const scores = loadScores();
+    scoreP1El.textContent = String(scores.p1Wins);
+    scoreP2El.textContent = String(scores.p2Wins);
+    gamesEl.textContent = String(scores.games);
+  }
+
+  // Game state
+  let n = 4; // boxes per side
+  let currentPlayer = 1;
+  let p1Points = 0;
+  let p2Points = 0;
+  let gameOver = false;
+
+  // Edges ownership: 0 none, 1 p1, 2 p2
+  let hEdges = null; // (n+1) x n
+  let vEdges = null; // n x (n+1)
+  let boxes = null;  // n x n, owner 0/1/2
+
+  // Rendering geometry
+  let padding = 52;
+  let dotRadius = 5;
+  let lineWidth = 8;
+
+  let hover = null; // { kind: 'h'|'v', r, c }
+
+  function newGame(size) {
+    n = size;
+    currentPlayer = 1;
+    p1Points = 0;
+    p2Points = 0;
+    gameOver = false;
+
+    hEdges = Array.from({ length: n + 1 }, () => Array.from({ length: n }, () => 0));
+    vEdges = Array.from({ length: n }, () => Array.from({ length: n + 1 }, () => 0));
+    boxes = Array.from({ length: n }, () => Array.from({ length: n }, () => 0));
+
+    setStatus();
+    draw();
+  }
+
+  function setStatus(message = null) {
+    if (message) {
+      statusEl.textContent = message;
+      return;
+    }
+
+    if (gameOver) {
+      if (p1Points > p2Points) {
+        statusEl.textContent = 'Player 1 wins';
+      } else if (p2Points > p1Points) {
+        statusEl.textContent = 'Player 2 wins';
+      } else {
+        statusEl.textContent = 'Draw';
+      }
+      substatusEl.textContent = 'Start a new game to play again.';
+      return;
+    }
+
+    statusEl.textContent = `Player ${currentPlayer} to move`;
+    substatusEl.textContent = 'Click near a segment to draw it.';
+  }
+
+  function lerp(a, b, t) { return a + (b - a) * t; }
+
+  function gridToCanvasDot(r, c) {
+    const span = (Math.min(canvas.width, canvas.height) - 2 * padding);
+    const step = span / n;
+    return {
+      x: padding + c * step,
+      y: padding + r * step,
+      step
+    };
+  }
+
+  function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // Background
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // Fill claimed boxes
+    for (let r = 0; r < n; r++) {
+      for (let c = 0; c < n; c++) {
+        const owner = boxes[r][c];
+        if (!owner) continue;
+
+        const topLeft = gridToCanvasDot(r, c);
+        const step = topLeft.step;
+        ctx.fillStyle = owner === 1 ? COLORS.boxP1 : COLORS.boxP2;
+        ctx.fillRect(topLeft.x + lineWidth / 2, topLeft.y + lineWidth / 2, step - lineWidth, step - lineWidth);
+      }
+    }
+
+    // Hover edge preview
+    if (!gameOver && hover) {
+      ctx.strokeStyle = COLORS.hover;
+      ctx.lineWidth = lineWidth;
+      ctx.lineCap = 'round';
+      const seg = segmentEndpoints(hover);
+      if (seg) {
+        ctx.beginPath();
+        ctx.moveTo(seg.x1, seg.y1);
+        ctx.lineTo(seg.x2, seg.y2);
+        ctx.stroke();
+      }
+    }
+
+    // Draw edges
+    ctx.lineWidth = lineWidth;
+    ctx.lineCap = 'round';
+
+    // Horizontal edges
+    for (let r = 0; r < n + 1; r++) {
+      for (let c = 0; c < n; c++) {
+        const owner = hEdges[r][c];
+        if (!owner) continue;
+        ctx.strokeStyle = owner === 1 ? COLORS.p1Line : COLORS.p2Line;
+        const a = gridToCanvasDot(r, c);
+        const b = gridToCanvasDot(r, c + 1);
+        ctx.beginPath();
+        ctx.moveTo(a.x, a.y);
+        ctx.lineTo(b.x, b.y);
+        ctx.stroke();
+      }
+    }
+
+    // Vertical edges
+    for (let r = 0; r < n; r++) {
+      for (let c = 0; c < n + 1; c++) {
+        const owner = vEdges[r][c];
+        if (!owner) continue;
+        ctx.strokeStyle = owner === 1 ? COLORS.p1Line : COLORS.p2Line;
+        const a = gridToCanvasDot(r, c);
+        const b = gridToCanvasDot(r + 1, c);
+        ctx.beginPath();
+        ctx.moveTo(a.x, a.y);
+        ctx.lineTo(b.x, b.y);
+        ctx.stroke();
+      }
+    }
+
+    // Draw dots
+    ctx.fillStyle = COLORS.dot;
+    for (let r = 0; r < n + 1; r++) {
+      for (let c = 0; c < n + 1; c++) {
+        const p = gridToCanvasDot(r, c);
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, dotRadius, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    // Score in-game (points)
+    ctx.font = '600 14px ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial';
+    ctx.fillStyle = '#0f172a';
+    ctx.textAlign = 'left';
+    ctx.fillText(`P1: ${p1Points}   P2: ${p2Points}`, 16, 24);
+  }
+
+  function segmentEndpoints(seg) {
+    if (!seg) return null;
+    if (seg.kind === 'h') {
+      const a = gridToCanvasDot(seg.r, seg.c);
+      const b = gridToCanvasDot(seg.r, seg.c + 1);
+      return { x1: a.x, y1: a.y, x2: b.x, y2: b.y };
+    }
+    if (seg.kind === 'v') {
+      const a = gridToCanvasDot(seg.r, seg.c);
+      const b = gridToCanvasDot(seg.r + 1, seg.c);
+      return { x1: a.x, y1: a.y, x2: b.x, y2: b.y };
+    }
+    return null;
+  }
+
+  function nearestSegment(x, y) {
+    const span = (Math.min(canvas.width, canvas.height) - 2 * padding);
+    const step = span / n;
+
+    const gx = (x - padding) / step;
+    const gy = (y - padding) / step;
+
+    // Quick reject if far outside
+    if (gx < -0.5 || gy < -0.5 || gx > n + 0.5 || gy > n + 0.5) return null;
+
+    // We look at the closest grid intersection neighborhood and compute nearest segment.
+    const c0 = Math.floor(gx);
+    const r0 = Math.floor(gy);
+
+    let best = null;
+    let bestDist = Infinity;
+
+    const threshold = step * 0.24; // click tolerance
+
+    function considerHorizontal(r, c) {
+      if (r < 0 || r > n) return;
+      if (c < 0 || c >= n) return;
+      const p1 = gridToCanvasDot(r, c);
+      const p2 = gridToCanvasDot(r, c + 1);
+      const dist = pointToSegmentDistance(x, y, p1.x, p1.y, p2.x, p2.y);
+      if (dist < bestDist) {
+        bestDist = dist;
+        best = { kind: 'h', r, c };
+      }
+    }
+
+    function considerVertical(r, c) {
+      if (r < 0 || r >= n) return;
+      if (c < 0 || c > n) return;
+      const p1 = gridToCanvasDot(r, c);
+      const p2 = gridToCanvasDot(r + 1, c);
+      const dist = pointToSegmentDistance(x, y, p1.x, p1.y, p2.x, p2.y);
+      if (dist < bestDist) {
+        bestDist = dist;
+        best = { kind: 'v', r, c };
+      }
+    }
+
+    // Check nearby segments around the click cell
+    for (let dr = -1; dr <= 1; dr++) {
+      for (let dc = -1; dc <= 1; dc++) {
+        considerHorizontal(r0 + dr, c0 + dc);
+        considerHorizontal(r0 + dr + 1, c0 + dc);
+        considerVertical(r0 + dr, c0 + dc);
+        considerVertical(r0 + dr, c0 + dc + 1);
+      }
+    }
+
+    if (!best || bestDist > threshold) return null;
+
+    // If already taken, treat as no hover/selection
+    if (best.kind === 'h' && hEdges[best.r][best.c]) return null;
+    if (best.kind === 'v' && vEdges[best.r][best.c]) return null;
+
+    return best;
+  }
+
+  function pointToSegmentDistance(px, py, x1, y1, x2, y2) {
+    const vx = x2 - x1;
+    const vy = y2 - y1;
+    const wx = px - x1;
+    const wy = py - y1;
+
+    const c1 = wx * vx + wy * vy;
+    if (c1 <= 0) return Math.hypot(px - x1, py - y1);
+
+    const c2 = vx * vx + vy * vy;
+    if (c2 <= c1) return Math.hypot(px - x2, py - y2);
+
+    const t = c1 / c2;
+    const projX = x1 + t * vx;
+    const projY = y1 + t * vy;
+    return Math.hypot(px - projX, py - projY);
+  }
+
+  function applyMove(seg) {
+    if (!seg || gameOver) return;
+
+    if (seg.kind === 'h') {
+      if (hEdges[seg.r][seg.c]) return;
+      hEdges[seg.r][seg.c] = currentPlayer;
+    } else {
+      if (vEdges[seg.r][seg.c]) return;
+      vEdges[seg.r][seg.c] = currentPlayer;
+    }
+
+    const boxesCompleted = claimCompletedBoxes(seg);
+    if (boxesCompleted > 0) {
+      if (currentPlayer === 1) p1Points += boxesCompleted;
+      else p2Points += boxesCompleted;
+      // same player continues
+    } else {
+      currentPlayer = currentPlayer === 1 ? 2 : 1;
+    }
+
+    if (p1Points + p2Points === n * n) {
+      gameOver = true;
+      const scores = loadScores();
+      scores.games += 1;
+      if (p1Points > p2Points) scores.p1Wins += 1;
+      else if (p2Points > p1Points) scores.p2Wins += 1;
+      saveScores(scores);
+      renderScores();
+    }
+
+    hover = null;
+    setStatus();
+    draw();
+  }
+
+  function claimCompletedBoxes(seg) {
+    // Only boxes adjacent to the drawn segment could be completed.
+    const candidates = [];
+    if (seg.kind === 'h') {
+      // segment is between (r,c) and (r,c+1), adjacent boxes: above (r-1,c), below (r,c)
+      if (seg.r > 0) candidates.push([seg.r - 1, seg.c]);
+      if (seg.r < n) candidates.push([seg.r, seg.c]);
+    } else {
+      // vertical segment between (r,c) and (r+1,c), adjacent boxes: left (r,c-1), right (r,c)
+      if (seg.c > 0) candidates.push([seg.r, seg.c - 1]);
+      if (seg.c < n) candidates.push([seg.r, seg.c]);
+    }
+
+    let claimed = 0;
+    for (const [br, bc] of candidates) {
+      if (br < 0 || br >= n || bc < 0 || bc >= n) continue;
+      if (boxes[br][bc]) continue;
+      if (isBoxComplete(br, bc)) {
+        boxes[br][bc] = currentPlayer;
+        claimed += 1;
+      }
+    }
+    return claimed;
+  }
+
+  function isBoxComplete(r, c) {
+    // Box at (r,c) has top hEdges[r][c], bottom hEdges[r+1][c], left vEdges[r][c], right vEdges[r][c+1]
+    return (
+      hEdges[r][c] &&
+      hEdges[r + 1][c] &&
+      vEdges[r][c] &&
+      vEdges[r][c + 1]
+    );
+  }
+
+  function getCanvasPoint(evt) {
+    const rect = canvas.getBoundingClientRect();
+    const x = (evt.clientX - rect.left) * (canvas.width / rect.width);
+    const y = (evt.clientY - rect.top) * (canvas.height / rect.height);
+    return { x, y };
+  }
+
+  function onPointerMove(evt) {
+    if (gameOver) return;
+    const p = getCanvasPoint(evt);
+    hover = nearestSegment(p.x, p.y);
+    draw();
+  }
+
+  function onPointerLeave() {
+    hover = null;
+    draw();
+  }
+
+  function onPointerDown(evt) {
+    if (gameOver) return;
+    const p = getCanvasPoint(evt);
+    const seg = nearestSegment(p.x, p.y);
+    applyMove(seg);
+  }
+
+  function wireEvents() {
+    canvas.addEventListener('pointermove', onPointerMove);
+    canvas.addEventListener('pointerleave', onPointerLeave);
+    canvas.addEventListener('pointerdown', onPointerDown);
+
+    document.getElementById('new-game').addEventListener('click', () => {
+      const nextSize = Number(sizeEl.value);
+      newGame(nextSize);
+    });
+
+    sizeEl.addEventListener('change', () => {
+      const nextSize = Number(sizeEl.value);
+      newGame(nextSize);
+    });
+
+    document.getElementById('reset-scores').addEventListener('click', () => {
+      saveScores({ p1Wins: 0, p2Wins: 0, games: 0 });
+      renderScores();
+      newGame(Number(sizeEl.value));
+    });
+  }
+
+  // Init
+  renderScores();
+  wireEvents();
+  newGame(Number(sizeEl.value));
+</script>
+{% endblock %}

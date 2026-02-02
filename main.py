@@ -82,6 +82,12 @@ async def tictactoe(request: Request):
     return templates.TemplateResponse("tictactoe.html", {"request": request})
 
 
+@app.get("/dots-and-boxes", response_class=HTMLResponse)
+async def dots_and_boxes(request: Request):
+    """Dots and Boxes page endpoint."""
+    return templates.TemplateResponse("dots_and_boxes.html", {"request": request})
+
+
 @app.get("/api")
 async def api_root():
     """API root endpoint with API information."""
