@@ -106,6 +106,12 @@ async def connect_four(request: Request):
     return templates.TemplateResponse("connect_four.html", {"request": request})
 
 
+@app.get("/kenken", response_class=HTMLResponse)
+async def kenken(request: Request):
+    """KenKen page endpoint."""
+    return templates.TemplateResponse("kenken.html", {"request": request})
+
+
 @app.get("/api")
 async def api_root():
     """API root endpoint with API information."""
