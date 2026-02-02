@@ -1,10 +1,8 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Tic-Tac-Toe</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+{% extends "base.html" %}
+
+{% block title %}Tic-Tac-Toe{% endblock %}
+
+{% block extra_head %}
     <style>
         .cell {
             width: 96px;
@@ -26,8 +24,11 @@
             }
         }
     </style>
-</head>
-<body class="bg-gradient-to-br from-slate-50 to-emerald-100 min-h-screen">
+{% endblock %}
+
+{% block body_class %}bg-gradient-to-br from-slate-50 to-emerald-100 min-h-screen{% endblock %}
+
+{% block content %}
     <div class="container mx-auto px-4 py-8">
         <!-- Top Nav -->
         <div class="max-w-5xl mx-auto mb-6 flex items-center justify-between">
@@ -114,7 +115,9 @@
             </div>
         </div>
     </div>
+{% endblock %}
 
+{% block extra_scripts %}
     <script>
         const WIN_LINES = [
             [0, 1, 2], [3, 4, 5], [6, 7, 8],
@@ -257,5 +260,4 @@
         wireEvents();
         resetBoard();
     </script>
-</body>
-</html>
+{% endblock %}

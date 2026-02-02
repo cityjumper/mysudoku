@@ -1,10 +1,8 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sudoku for Nicolas</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+{% extends "base.html" %}
+
+{% block title %}Sudoku for Nicolas{% endblock %}
+
+{% block extra_head %}
     <style>
         .sudoku-cell {
             width: 50px;
@@ -45,8 +43,11 @@
             gap: 0;
         }
     </style>
-</head>
-<body class="bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen">
+{% endblock %}
+
+{% block body_class %}bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen{% endblock %}
+
+{% block content %}
     <div class="container mx-auto px-4 py-8">
         <!-- Top Nav -->
         <div class="max-w-7xl mx-auto mb-6">
@@ -181,7 +182,9 @@
             </div>
         </div>
     </div>
+{% endblock %}
 
+{% block extra_scripts %}
     <script>
         let currentGameId = null;
         let initialBoard = null;
@@ -527,5 +530,4 @@
             }
         }
     </script>
-</body>
-</html>
+{% endblock %}
