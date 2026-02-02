@@ -88,6 +88,12 @@ async def dots_and_boxes(request: Request):
     return templates.TemplateResponse("dots_and_boxes.html", {"request": request})
 
 
+@app.get("/minesweeper", response_class=HTMLResponse)
+async def minesweeper(request: Request):
+    """Minesweeper page endpoint."""
+    return templates.TemplateResponse("minesweeper.html", {"request": request})
+
+
 @app.get("/api")
 async def api_root():
     """API root endpoint with API information."""

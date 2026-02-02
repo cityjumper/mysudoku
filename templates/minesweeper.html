@@ -1,0 +1,416 @@
+{% extends "base.html" %}
+
+{% block title %}Minesweeper{% endblock %}
+
+{% block extra_head %}
+<style>
+  .cell {
+    width: 32px;
+    height: 32px;
+    font-size: 14px;
+    font-weight: bold;
+    border: 1px solid #ccc;
+    background-color: #ddd;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    user-select: none;
+  }
+  .cell.revealed {
+    background-color: #fff;
+    cursor: default;
+  }
+  .cell.flagged {
+    background-color: #fdd;
+  }
+  .cell.mine {
+    background-color: #f00;
+  }
+  .cell:hover:not(.revealed):not(.flagged) {
+    background-color: #eee;
+  }
+  .num-1 { color: blue; }
+  .num-2 { color: green; }
+  .num-3 { color: red; }
+  .num-4 { color: purple; }
+  .num-5 { color: maroon; }
+  .num-6 { color: teal; }
+  .num-7 { color: black; }
+  .num-8 { color: gray; }
+</style>
+{% endblock %}
+
+{% block body_class %}bg-gradient-to-br from-slate-50 to-red-100 min-h-screen{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+  <div class="max-w-6xl mx-auto mb-6 flex items-center justify-between">
+    <a href="/" class="inline-flex items-center text-red-800 hover:text-red-950 font-semibold">
+      <svg class="w-5 h-5 mr-2" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+        <path fill-rule="evenodd" d="M12.707 15.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 111.414 1.414L7.414 9H17a1 1 0 110 2H7.414l5.293 5.293a1 1 0 010 1.414z" clip-rule="evenodd" />
+      </svg>
+      Home
+    </a>
+    <div class="flex items-center gap-4">
+      <a href="/sudoku" class="text-sm font-semibold text-indigo-700 hover:text-indigo-900">Sudoku</a>
+      <a href="/tictactoe" class="text-sm font-semibold text-emerald-700 hover:text-emerald-900">Tic-Tac-Toe</a>
+      <a href="/dots-and-boxes" class="text-sm font-semibold text-amber-700 hover:text-amber-900">Dots and Boxes</a>
+    </div>
+  </div>
+
+  <div class="max-w-6xl mx-auto">
+    <header class="text-center mb-8">
+      <h1 class="text-4xl sm:text-5xl font-extrabold tracking-tight text-slate-900">Minesweeper</h1>
+      <p class="mt-2 text-slate-600">Find all the mines without detonating any.</p>
+    </header>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div class="lg:col-span-2">
+        <div class="bg-white rounded-2xl shadow-xl ring-1 ring-slate-200 p-6 sm:p-8">
+          <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
+            <div>
+              <div class="text-sm font-semibold text-slate-500 uppercase tracking-wide">Status</div>
+              <div id="status" class="mt-1 text-2xl font-bold text-slate-900">Ready to play</div>
+              <div id="substatus" class="mt-1 text-slate-600">Left-click to reveal, right-click to flag.</div>
+            </div>
+            <div class="flex flex-wrap gap-2">
+              <label class="text-sm font-semibold text-slate-700 inline-flex items-center gap-2">
+                Difficulty
+                <select id="difficulty" class="border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-500">
+                  <option value="beginner">Beginner (9×9, 10 mines)</option>
+                  <option value="intermediate" selected>Intermediate (16×16, 40 mines)</option>
+                  <option value="expert">Expert (30×16, 99 mines)</option>
+                </select>
+              </label>
+              <button id="new-game" class="rounded-lg bg-red-600 hover:bg-red-700 text-white font-semibold px-4 py-2">New Game</button>
+              <button id="reset-scores" class="rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 font-semibold px-4 py-2">Reset Scores</button>
+            </div>
+          </div>
+
+          <div class="flex justify-center">
+            <div id="board" class="inline-grid gap-0 bg-slate-200 p-2 rounded-lg"></div>
+          </div>
+
+          <div class="mt-6 flex justify-center gap-4 text-sm text-slate-600">
+            <div>⏱️ <span id="timer">0</span>s</div>
+            <div>🚩 <span id="flags">0</span></div>
+            <div>💣 <span id="mines">0</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="lg:col-span-1">
+        <div class="bg-white rounded-2xl shadow-xl ring-1 ring-slate-200 p-6 sticky top-8">
+          <h2 class="text-xl font-bold text-slate-900 mb-4">Scoreboard</h2>
+          <div class="grid grid-cols-2 gap-3">
+            <div class="rounded-xl bg-green-50 ring-1 ring-green-100 p-4">
+              <div class="text-xs font-semibold uppercase tracking-wide text-green-700">Wins</div>
+              <div id="score-wins" class="mt-1 text-3xl font-extrabold text-green-900">0</div>
+            </div>
+            <div class="rounded-xl bg-red-50 ring-1 ring-red-100 p-4">
+              <div class="text-xs font-semibold uppercase tracking-wide text-red-700">Losses</div>
+              <div id="score-losses" class="mt-1 text-3xl font-extrabold text-red-900">0</div>
+            </div>
+            <div class="rounded-xl bg-slate-50 ring-1 ring-slate-200 p-4 col-span-2">
+              <div class="text-xs font-semibold uppercase tracking-wide text-slate-600">Games played</div>
+              <div id="games" class="mt-1 text-3xl font-extrabold text-slate-900">0</div>
+            </div>
+          </div>
+
+          <div class="mt-6">
+            <h3 class="text-sm font-bold text-slate-700 mb-2">Rules</h3>
+            <ul class="text-sm text-slate-600 space-y-1">
+              <li>• Left-click to reveal a cell.</li>
+              <li>• Right-click to flag/unflag a mine.</li>
+              <li>• Numbers show adjacent mines.</li>
+              <li>• Reveal all non-mine cells to win.</li>
+              <li>• Hit a mine and you lose!</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  const SCORE_KEY = 'ms:scores:v1';
+
+  const DIFFICULTIES = {
+    beginner: { rows: 9, cols: 9, mines: 10 },
+    intermediate: { rows: 16, cols: 16, mines: 40 },
+    expert: { rows: 16, cols: 30, mines: 99 }
+  };
+
+  let board = [];
+  let revealed = [];
+  let flagged = [];
+  let mines = [];
+  let gameOver = false;
+  let gameWon = false;
+  let startTime = null;
+  let timerInterval = null;
+  let rows, cols, mineCount;
+
+  const statusEl = document.getElementById('status');
+  const substatusEl = document.getElementById('substatus');
+  const boardEl = document.getElementById('board');
+  const timerEl = document.getElementById('timer');
+  const flagsEl = document.getElementById('flags');
+  const minesEl = document.getElementById('mines');
+
+  const scoreWinsEl = document.getElementById('score-wins');
+  const scoreLossesEl = document.getElementById('score-losses');
+  const gamesEl = document.getElementById('games');
+
+  function loadScores() {
+    try {
+      const raw = localStorage.getItem(SCORE_KEY);
+      if (!raw) return { wins: 0, losses: 0, games: 0 };
+      const parsed = JSON.parse(raw);
+      return {
+        wins: Number(parsed.wins) || 0,
+        losses: Number(parsed.losses) || 0,
+        games: Number(parsed.games) || 0,
+      };
+    } catch {
+      return { wins: 0, losses: 0, games: 0 };
+    }
+  }
+
+  function saveScores(scores) {
+    localStorage.setItem(SCORE_KEY, JSON.stringify(scores));
+  }
+
+  function renderScores() {
+    const scores = loadScores();
+    scoreWinsEl.textContent = String(scores.wins);
+    scoreLossesEl.textContent = String(scores.losses);
+    gamesEl.textContent = String(scores.games);
+  }
+
+  function setStatus(main, sub) {
+    statusEl.textContent = main;
+    substatusEl.textContent = sub;
+  }
+
+  function newGame(difficulty) {
+    const config = DIFFICULTIES[difficulty];
+    rows = config.rows;
+    cols = config.cols;
+    mineCount = config.mines;
+
+    board = Array.from({ length: rows }, () => Array(cols).fill(0));
+    revealed = Array.from({ length: rows }, () => Array(cols).fill(false));
+    flagged = Array.from({ length: rows }, () => Array(cols).fill(false));
+    mines = [];
+    gameOver = false;
+    gameWon = false;
+
+    // Place mines
+    const totalCells = rows * cols;
+    const minePositions = new Set();
+    while (minePositions.size < mineCount) {
+      const pos = Math.floor(Math.random() * totalCells);
+      minePositions.add(pos);
+    }
+    for (const pos of minePositions) {
+      const r = Math.floor(pos / cols);
+      const c = pos % cols;
+      board[r][c] = -1;
+      mines.push([r, c]);
+    }
+
+    // Calculate numbers
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
+        if (board[r][c] === -1) continue;
+        let count = 0;
+        for (let dr = -1; dr <= 1; dr++) {
+          for (let dc = -1; dc <= 1; dc++) {
+            const nr = r + dr, nc = c + dc;
+            if (nr >= 0 && nr < rows && nc >= 0 && nc < cols && board[nr][nc] === -1) count++;
+          }
+        }
+        board[r][c] = count;
+      }
+    }
+
+    stopTimer();
+    startTime = null;
+    updateTimer();
+    updateCounters();
+
+    renderBoard();
+    setStatus('Ready to play', 'Left-click to reveal, right-click to flag.');
+  }
+
+  function renderBoard() {
+    boardEl.innerHTML = '';
+    boardEl.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
+
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
+        const cell = document.createElement('button');
+        cell.className = 'cell';
+        cell.dataset.row = r;
+        cell.dataset.col = c;
+
+        if (revealed[r][c]) {
+          cell.classList.add('revealed');
+          if (board[r][c] === -1) {
+            cell.classList.add('mine');
+            cell.textContent = '💣';
+          } else if (board[r][c] > 0) {
+            cell.textContent = board[r][c];
+            cell.classList.add(`num-${board[r][c]}`);
+          }
+        } else if (flagged[r][c]) {
+          cell.classList.add('flagged');
+          cell.textContent = '🚩';
+        }
+
+        cell.addEventListener('click', () => revealCell(r, c));
+        cell.addEventListener('contextmenu', (e) => {
+          e.preventDefault();
+          toggleFlag(r, c);
+        });
+
+        boardEl.appendChild(cell);
+      }
+    }
+  }
+
+  function revealCell(r, c) {
+    if (gameOver || gameWon || revealed[r][c] || flagged[r][c]) return;
+
+    if (!startTime) {
+      startTimer();
+    }
+
+    revealed[r][c] = true;
+
+    if (board[r][c] === -1) {
+      // Hit mine
+      gameOver = true;
+      stopTimer();
+      revealAllMines();
+      setStatus('Game Over!', 'You hit a mine.');
+      const scores = loadScores();
+      scores.losses += 1;
+      scores.games += 1;
+      saveScores(scores);
+      renderScores();
+      return;
+    }
+
+    if (board[r][c] === 0) {
+      // Reveal adjacent empty cells
+      for (let dr = -1; dr <= 1; dr++) {
+        for (let dc = -1; dc <= 1; dc++) {
+          const nr = r + dr, nc = c + dc;
+          if (nr >= 0 && nr < rows && nc >= 0 && nc < cols && !revealed[nr][nc]) {
+            revealCell(nr, nc);
+          }
+        }
+      }
+    }
+
+    checkWin();
+    renderBoard();
+    updateCounters();
+  }
+
+  function toggleFlag(r, c) {
+    if (gameOver || gameWon || revealed[r][c]) return;
+    flagged[r][c] = !flagged[r][c];
+    renderBoard();
+    updateCounters();
+  }
+
+  function revealAllMines() {
+    for (const [r, c] of mines) {
+      revealed[r][c] = true;
+    }
+    renderBoard();
+  }
+
+  function checkWin() {
+    let revealedCount = 0;
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
+        if (revealed[r][c]) revealedCount++;
+      }
+    }
+    if (revealedCount === rows * cols - mineCount) {
+      gameWon = true;
+      stopTimer();
+      setStatus('You Win!', 'Congratulations!');
+      const scores = loadScores();
+      scores.wins += 1;
+      scores.games += 1;
+      saveScores(scores);
+      renderScores();
+    }
+  }
+
+  function startTimer() {
+    startTime = Date.now();
+    timerInterval = setInterval(updateTimer, 1000);
+  }
+
+  function stopTimer() {
+    if (timerInterval) {
+      clearInterval(timerInterval);
+      timerInterval = null;
+    }
+  }
+
+  function updateTimer() {
+    if (!startTime) {
+      timerEl.textContent = '0';
+      return;
+    }
+    const elapsed = Math.floor((Date.now() - startTime) / 1000);
+    timerEl.textContent = elapsed;
+  }
+
+  function updateCounters() {
+    let flagCount = 0;
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
+        if (flagged[r][c]) flagCount++;
+      }
+    }
+    flagsEl.textContent = flagCount;
+    minesEl.textContent = mineCount;
+  }
+
+  function wireEvents() {
+    document.getElementById('new-game').addEventListener('click', () => {
+      const diff = document.getElementById('difficulty').value;
+      newGame(diff);
+    });
+
+    document.getElementById('difficulty').addEventListener('change', () => {
+      const diff = document.getElementById('difficulty').value;
+      newGame(diff);
+    });
+
+    document.getElementById('reset-scores').addEventListener('click', () => {
+      saveScores({ wins: 0, losses: 0, games: 0 });
+      renderScores();
+      const diff = document.getElementById('difficulty').value;
+      newGame(diff);
+    });
+  }
+
+  // Init
+  renderScores();
+  wireEvents();
+  newGame('intermediate');
+</script>
+{% endblock %}

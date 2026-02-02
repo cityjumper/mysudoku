@@ -59,6 +59,8 @@ Tic-Tac-Toe is available at `http://localhost:8000/tictactoe`.
 
 Dots and Boxes is available at `http://localhost:8000/dots-and-boxes`.
 
+Minesweeper is available at `http://localhost:8000/minesweeper`.
+
 ## API Documentation
 
 Once the server is running, visit:
