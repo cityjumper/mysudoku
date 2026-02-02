@@ -100,6 +100,12 @@ async def chess(request: Request):
     return templates.TemplateResponse("chess.html", {"request": request})
 
 
+@app.get("/connect-four", response_class=HTMLResponse)
+async def connect_four(request: Request):
+    """Connect Four page endpoint."""
+    return templates.TemplateResponse("connect_four.html", {"request": request})
+
+
 @app.get("/api")
 async def api_root():
     """API root endpoint with API information."""

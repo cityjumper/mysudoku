@@ -63,6 +63,8 @@ Minesweeper is available at `http://localhost:8000/minesweeper`.
 
 Chess is available at `http://localhost:8000/chess`.
 
+Connect Four is available at `http://localhost:8000/connect-four`.
+
 ## API Documentation
 
 Once the server is running, visit:

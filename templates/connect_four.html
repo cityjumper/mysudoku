@@ -1,0 +1,304 @@
+{% extends "base.html" %}
+
+{% block title %}Connect Four{% endblock %}
+
+{% block extra_head %}
+<style>
+  .cell {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    border: 2px solid #1e40af;
+    background-color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background-color 0.2s;
+  }
+  .cell.red { background-color: #dc2626; }
+  .cell.yellow { background-color: #eab308; }
+  .cell.winning { border: 3px solid #000; }
+  .column {
+    display: flex;
+    flex-direction: column-reverse;
+    gap: 5px;
+  }
+  .drop-zone {
+    width: 50px;
+    height: 20px;
+    background-color: #e5e7eb;
+    border-radius: 5px;
+    cursor: pointer;
+    margin-bottom: 5px;
+  }
+  .drop-zone:hover { background-color: #d1d5db; }
+  @media (min-width: 640px) {
+    .cell { width: 60px; height: 60px; }
+    .drop-zone { width: 60px; }
+  }
+</style>
+{% endblock %}
+
+{% block body_class %}bg-gradient-to-br from-slate-50 to-cyan-100 min-h-screen{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+  <div class="max-w-6xl mx-auto mb-6 flex items-center justify-between">
+    <a href="/" class="inline-flex items-center text-cyan-800 hover:text-cyan-950 font-semibold">
+      <svg class="w-5 h-5 mr-2" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+        <path fill-rule="evenodd" d="M12.707 15.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 111.414 1.414L7.414 9H17a1 1 0 110 2H7.414l5.293 5.293a1 1 0 010 1.414z" clip-rule="evenodd" />
+      </svg>
+      Home
+    </a>
+    <div class="flex items-center gap-4">
+      <a href="/sudoku" class="text-sm font-semibold text-indigo-700 hover:text-indigo-900">Sudoku</a>
+      <a href="/tictactoe" class="text-sm font-semibold text-emerald-700 hover:text-emerald-900">Tic-Tac-Toe</a>
+      <a href="/dots-and-boxes" class="text-sm font-semibold text-amber-700 hover:text-amber-900">Dots and Boxes</a>
+      <a href="/minesweeper" class="text-sm font-semibold text-red-700 hover:text-red-900">Minesweeper</a>
+      <a href="/chess" class="text-sm font-semibold text-purple-700 hover:text-purple-900">Chess</a>
+    </div>
+  </div>
+
+  <div class="max-w-6xl mx-auto">
+    <header class="text-center mb-8">
+      <h1 class="text-4xl sm:text-5xl font-extrabold tracking-tight text-slate-900">Connect Four</h1>
+      <p class="mt-2 text-slate-600">Drop pieces and connect four in a row to win.</p>
+    </header>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div class="lg:col-span-2">
+        <div class="bg-white rounded-2xl shadow-xl ring-1 ring-slate-200 p-6 sm:p-8">
+          <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
+            <div>
+              <div class="text-sm font-semibold text-slate-500 uppercase tracking-wide">Status</div>
+              <div id="status" class="mt-1 text-2xl font-bold text-slate-900">Red to move</div>
+              <div id="substatus" class="mt-1 text-slate-600">Click a column to drop your piece.</div>
+            </div>
+            <div class="flex gap-2">
+              <button id="new-game" class="rounded-lg bg-cyan-600 hover:bg-cyan-700 text-white font-semibold px-4 py-2">New Game</button>
+              <button id="reset-scores" class="rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 font-semibold px-4 py-2">Reset Scores</button>
+            </div>
+          </div>
+
+          <div class="flex justify-center">
+            <div id="board" class="grid grid-cols-7 gap-2 p-4 bg-blue-600 rounded-lg"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="lg:col-span-1">
+        <div class="bg-white rounded-2xl shadow-xl ring-1 ring-slate-200 p-6 sticky top-8">
+          <h2 class="text-xl font-bold text-slate-900 mb-4">Scoreboard</h2>
+          <div class="grid grid-cols-2 gap-3">
+            <div class="rounded-xl bg-red-50 ring-1 ring-red-100 p-4">
+              <div class="text-xs font-semibold uppercase tracking-wide text-red-700">Red wins</div>
+              <div id="score-red" class="mt-1 text-3xl font-extrabold text-red-900">0</div>
+            </div>
+            <div class="rounded-xl bg-yellow-50 ring-1 ring-yellow-100 p-4">
+              <div class="text-xs font-semibold uppercase tracking-wide text-yellow-700">Yellow wins</div>
+              <div id="score-yellow" class="mt-1 text-3xl font-extrabold text-yellow-900">0</div>
+            </div>
+            <div class="rounded-xl bg-slate-50 ring-1 ring-slate-200 p-4 col-span-2">
+              <div class="text-xs font-semibold uppercase tracking-wide text-slate-600">Games played</div>
+              <div id="games" class="mt-1 text-3xl font-extrabold text-slate-900">0</div>
+            </div>
+          </div>
+
+          <div class="mt-6">
+            <h3 class="text-sm font-bold text-slate-700 mb-2">Rules</h3>
+            <ul class="text-sm text-slate-600 space-y-1">
+              <li>• Take turns dropping pieces into columns.</li>
+              <li>• First to connect 4 in a row wins.</li>
+              <li>• Rows, columns, or diagonals count.</li>
+              <li>• If board fills with no winner: draw.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  const SCORE_KEY = 'c4:scores:v1';
+
+  const ROWS = 6;
+  const COLS = 7;
+
+  let board = Array.from({ length: ROWS }, () => Array(COLS).fill(0)); // 0 empty, 1 red, 2 yellow
+  let currentPlayer = 1;
+  let gameOver = false;
+  let winningCells = [];
+
+  const boardEl = document.getElementById('board');
+  const statusEl = document.getElementById('status');
+  const substatusEl = document.getElementById('substatus');
+
+  const scoreRedEl = document.getElementById('score-red');
+  const scoreYellowEl = document.getElementById('score-yellow');
+  const gamesEl = document.getElementById('games');
+
+  function loadScores() {
+    try {
+      const raw = localStorage.getItem(SCORE_KEY);
+      if (!raw) return { red: 0, yellow: 0, games: 0 };
+      const parsed = JSON.parse(raw);
+      return {
+        red: Number(parsed.red) || 0,
+        yellow: Number(parsed.yellow) || 0,
+        games: Number(parsed.games) || 0,
+      };
+    } catch {
+      return { red: 0, yellow: 0, games: 0 };
+    }
+  }
+
+  function saveScores(scores) {
+    localStorage.setItem(SCORE_KEY, JSON.stringify(scores));
+  }
+
+  function renderScores() {
+    const scores = loadScores();
+    scoreRedEl.textContent = String(scores.red);
+    scoreYellowEl.textContent = String(scores.yellow);
+    gamesEl.textContent = String(scores.games);
+  }
+
+  function renderBoard() {
+    boardEl.innerHTML = '';
+
+    // Drop zones
+    for (let c = 0; c < COLS; c++) {
+      const dropZone = document.createElement('div');
+      dropZone.className = 'drop-zone';
+      dropZone.addEventListener('click', () => dropPiece(c));
+      boardEl.appendChild(dropZone);
+    }
+
+    // Board cells
+    for (let r = 0; r < ROWS; r++) {
+      for (let c = 0; c < COLS; c++) {
+        const cell = document.createElement('div');
+        cell.className = 'cell';
+        const piece = board[r][c];
+        if (piece === 1) cell.classList.add('red');
+        else if (piece === 2) cell.classList.add('yellow');
+
+        if (winningCells.some(([wr, wc]) => wr === r && wc === c)) {
+          cell.classList.add('winning');
+        }
+
+        boardEl.appendChild(cell);
+      }
+    }
+  }
+
+  function dropPiece(col) {
+    if (gameOver) return;
+
+    // Find the lowest empty row in this column
+    for (let r = ROWS - 1; r >= 0; r--) {
+      if (board[r][col] === 0) {
+        board[r][col] = currentPlayer;
+        checkWin(r, col);
+        if (!gameOver) {
+          currentPlayer = currentPlayer === 1 ? 2 : 1;
+          setStatus();
+        }
+        renderBoard();
+        return;
+      }
+    }
+
+    // Column full
+    setStatus('Column full! Try another.', 'error');
+  }
+
+  function checkWin(row, col) {
+    const directions = [
+      [0, 1], [1, 0], [1, 1], [1, -1]
+    ];
+
+    for (const [dr, dc] of directions) {
+      const line = [ [row, col] ];
+      // Check positive direction
+      for (let i = 1; i < 4; i++) {
+        const nr = row + dr * i;
+        const nc = col + dc * i;
+        if (nr < 0 || nr >= ROWS || nc < 0 || nc >= COLS || board[nr][nc] !== currentPlayer) break;
+        line.push([nr, nc]);
+      }
+      // Check negative direction
+      for (let i = 1; i < 4; i++) {
+        const nr = row - dr * i;
+        const nc = col - dc * i;
+        if (nr < 0 || nr >= ROWS || nc < 0 || nc >= COLS || board[nr][nc] !== currentPlayer) break;
+        line.push([nr, nc]);
+      }
+
+      if (line.length >= 4) {
+        winningCells = line;
+        gameOver = true;
+        const winner = currentPlayer === 1 ? 'Red' : 'Yellow';
+        setStatus(`${winner} wins!`, 'success');
+        const scores = loadScores();
+        if (currentPlayer === 1) scores.red += 1;
+        else scores.yellow += 1;
+        scores.games += 1;
+        saveScores(scores);
+        renderScores();
+        return;
+      }
+    }
+
+    // Check for draw
+    if (board.flat().every(cell => cell !== 0)) {
+      gameOver = true;
+      setStatus('Draw!', 'info');
+      const scores = loadScores();
+      scores.games += 1;
+      saveScores(scores);
+      renderScores();
+    }
+  }
+
+  function setStatus(message = null, type = null) {
+    if (message) {
+      statusEl.textContent = message;
+      if (type === 'success') statusEl.style.color = '#16a34a';
+      else if (type === 'error') statusEl.style.color = '#dc2626';
+      else statusEl.style.color = '#0f172a';
+      return;
+    }
+
+    if (gameOver) return;
+
+    statusEl.textContent = `${currentPlayer === 1 ? 'Red' : 'Yellow'} to move`;
+    statusEl.style.color = '#0f172a';
+    substatusEl.textContent = 'Click a column to drop your piece.';
+  }
+
+  function newGame() {
+    board = Array.from({ length: ROWS }, () => Array(COLS).fill(0));
+    currentPlayer = 1;
+    gameOver = false;
+    winningCells = [];
+    setStatus();
+    renderBoard();
+  }
+
+  document.getElementById('new-game').addEventListener('click', newGame);
+  document.getElementById('reset-scores').addEventListener('click', () => {
+    saveScores({ red: 0, yellow: 0, games: 0 });
+    renderScores();
+    newGame();
+  });
+
+  // Init
+  renderScores();
+  newGame();
+</script>
+{% endblock %}
