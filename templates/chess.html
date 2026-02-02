@@ -1,0 +1,376 @@
+{% extends "base.html" %}
+
+{% block title %}Chess{% endblock %}
+
+{% block extra_head %}
+<style>
+  .square {
+    width: 60px;
+    height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 48px;
+    cursor: pointer;
+    user-select: none;
+  }
+  .light { background-color: #f0d9b5; }
+  .dark { background-color: #b58863; }
+  .selected { background-color: #ffff00 !important; }
+  .possible { background-color: #90ee90 !important; border: 3px solid #008000 !important; }
+  .last-move { background-color: #add8e6 !important; }
+  @media (min-width: 640px) {
+    .square { width: 70px; height: 70px; font-size: 56px; }
+  }
+</style>
+{% endblock %}
+
+{% block body_class %}bg-gradient-to-br from-slate-50 to-purple-100 min-h-screen{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+  <div class="max-w-6xl mx-auto mb-6 flex items-center justify-between">
+    <a href="/" class="inline-flex items-center text-purple-800 hover:text-purple-950 font-semibold">
+      <svg class="w-5 h-5 mr-2" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+        <path fill-rule="evenodd" d="M12.707 15.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 111.414 1.414L7.414 9H17a1 1 0 110 2H7.414l5.293 5.293a1 1 0 010 1.414z" clip-rule="evenodd" />
+      </svg>
+      Home
+    </a>
+    <div class="flex items-center gap-4">
+      <a href="/sudoku" class="text-sm font-semibold text-indigo-700 hover:text-indigo-900">Sudoku</a>
+      <a href="/tictactoe" class="text-sm font-semibold text-emerald-700 hover:text-emerald-900">Tic-Tac-Toe</a>
+      <a href="/dots-and-boxes" class="text-sm font-semibold text-amber-700 hover:text-amber-900">Dots and Boxes</a>
+      <a href="/minesweeper" class="text-sm font-semibold text-red-700 hover:text-red-900">Minesweeper</a>
+    </div>
+  </div>
+
+  <div class="max-w-6xl mx-auto">
+    <header class="text-center mb-8">
+      <h1 class="text-4xl sm:text-5xl font-extrabold tracking-tight text-slate-900">Chess</h1>
+      <p class="mt-2 text-slate-600">Classic strategy game with move highlighting.</p>
+    </header>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div class="lg:col-span-2">
+        <div class="bg-white rounded-2xl shadow-xl ring-1 ring-slate-200 p-6 sm:p-8">
+          <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
+            <div>
+              <div class="text-sm font-semibold text-slate-500 uppercase tracking-wide">Status</div>
+              <div id="status" class="mt-1 text-2xl font-bold text-slate-900">White to move</div>
+              <div id="substatus" class="mt-1 text-slate-600">Select a piece to see possible moves.</div>
+            </div>
+            <div class="flex gap-2">
+              <button id="new-game" class="rounded-lg bg-purple-600 hover:bg-purple-700 text-white font-semibold px-4 py-2">New Game</button>
+              <button id="flip-board" class="rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 font-semibold px-4 py-2">Flip Board</button>
+            </div>
+          </div>
+
+          <div class="flex justify-center">
+            <div id="board" class="grid grid-cols-8 gap-0 border-2 border-slate-800"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="lg:col-span-1">
+        <div class="bg-white rounded-2xl shadow-xl ring-1 ring-slate-200 p-6 sticky top-8">
+          <h2 class="text-xl font-bold text-slate-900 mb-4">Captured Pieces</h2>
+          <div class="space-y-2">
+            <div>
+              <div class="text-sm font-semibold text-slate-700">White captured:</div>
+              <div id="white-captured" class="flex flex-wrap gap-1 mt-1"></div>
+            </div>
+            <div>
+              <div class="text-sm font-semibold text-slate-700">Black captured:</div>
+              <div id="black-captured" class="flex flex-wrap gap-1 mt-1"></div>
+            </div>
+          </div>
+
+          <div class="mt-6">
+            <h3 class="text-sm font-bold text-slate-700 mb-2">Rules</h3>
+            <ul class="text-sm text-slate-600 space-y-1">
+              <li>• Click a piece to select it.</li>
+              <li>• Green squares show possible moves.</li>
+              <li>• Yellow square is the selected piece.</li>
+              <li>• Take turns moving pieces.</li>
+              <li>• Checkmate ends the game.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  const PIECES = {
+    'K': '♔', 'Q': '♕', 'R': '♖', 'B': '♗', 'N': '♘', 'P': '♙',
+    'k': '♚', 'q': '♛', 'r': '♜', 'b': '♝', 'n': '♞', 'p': '♟'
+  };
+
+  const INITIAL_BOARD = [
+    ['r', 'n', 'b', 'q', 'k', 'b', 'n', 'r'],
+    ['p', 'p', 'p', 'p', 'p', 'p', 'p', 'p'],
+    ['', '', '', '', '', '', '', ''],
+    ['', '', '', '', '', '', '', ''],
+    ['', '', '', '', '', '', '', ''],
+    ['', '', '', '', '', '', '', ''],
+    ['P', 'P', 'P', 'P', 'P', 'P', 'P', 'P'],
+    ['R', 'N', 'B', 'Q', 'K', 'B', 'N', 'R']
+  ];
+
+  let board = INITIAL_BOARD.map(row => [...row]);
+  let currentPlayer = 'white';
+  let selectedSquare = null;
+  let possibleMoves = [];
+  let lastMove = null;
+  let whiteCaptured = [];
+  let blackCaptured = [];
+  let flipped = false;
+
+  const boardEl = document.getElementById('board');
+  const statusEl = document.getElementById('status');
+  const substatusEl = document.getElementById('substatus');
+  const whiteCapturedEl = document.getElementById('white-captured');
+  const blackCapturedEl = document.getElementById('black-captured');
+
+  function renderBoard() {
+    boardEl.innerHTML = '';
+    for (let row = 0; row < 8; row++) {
+      for (let col = 0; col < 8; col++) {
+        const square = document.createElement('div');
+        square.className = 'square ' + ((row + col) % 2 === 0 ? 'light' : 'dark');
+        square.dataset.row = row;
+        square.dataset.col = col;
+
+        const piece = board[row][col];
+        if (piece) {
+          square.textContent = PIECES[piece];
+        }
+
+        if (selectedSquare && selectedSquare[0] === row && selectedSquare[1] === col) {
+          square.classList.add('selected');
+        }
+
+        if (possibleMoves.some(([r, c]) => r === row && c === col)) {
+          square.classList.add('possible');
+        }
+
+        if (lastMove && ((lastMove.from[0] === row && lastMove.from[1] === col) || (lastMove.to[0] === row && lastMove.to[1] === col))) {
+          square.classList.add('last-move');
+        }
+
+        square.addEventListener('click', () => onSquareClick(row, col));
+        boardEl.appendChild(square);
+      }
+    }
+  }
+
+  function renderCaptured() {
+    whiteCapturedEl.innerHTML = whiteCaptured.map(p => `<span>${PIECES[p]}</span>`).join('');
+    blackCapturedEl.innerHTML = blackCaptured.map(p => `<span>${PIECES[p]}</span>`).join('');
+  }
+
+  function onSquareClick(row, col) {
+    if (selectedSquare) {
+      if (selectedSquare[0] === row && selectedSquare[1] === col) {
+        // Deselect
+        selectedSquare = null;
+        possibleMoves = [];
+        renderBoard();
+        return;
+      }
+
+      // Try to move
+      if (possibleMoves.some(([r, c]) => r === row && c === col)) {
+        makeMove(selectedSquare, [row, col]);
+        selectedSquare = null;
+        possibleMoves = [];
+        renderBoard();
+        return;
+      }
+    }
+
+    // Select piece
+    const piece = board[row][col];
+    if (piece && isPieceColor(piece, currentPlayer)) {
+      selectedSquare = [row, col];
+      possibleMoves = getPossibleMoves(row, col);
+      console.log('Selected piece', piece, 'at', row, col, 'possible moves:', possibleMoves);
+      renderBoard();
+    }
+  }
+
+  function makeMove(from, to) {
+    const [fromRow, fromCol] = from;
+    const [toRow, toCol] = to;
+    const piece = board[fromRow][fromCol];
+    const captured = board[toRow][toCol];
+
+    if (captured) {
+      if (currentPlayer === 'white') {
+        blackCaptured.push(captured);
+      } else {
+        whiteCaptured.push(piece);
+      }
+    }
+
+    board[toRow][toCol] = piece;
+    board[fromRow][fromCol] = '';
+
+    lastMove = { from, to };
+    currentPlayer = currentPlayer === 'white' ? 'black' : 'white';
+    statusEl.textContent = `${currentPlayer.charAt(0).toUpperCase() + currentPlayer.slice(1)} to move`;
+    renderCaptured();
+  }
+
+  function isPieceColor(piece, color) {
+    if (!piece) return false;
+    return (color === 'white' && piece === piece.toUpperCase()) || (color === 'black' && piece === piece.toLowerCase());
+  }
+
+  function getPossibleMoves(row, col) {
+    const piece = board[row][col];
+    const moves = [];
+
+    switch (piece.toLowerCase()) {
+      case 'p':
+        moves.push(...getPawnMoves(row, col, piece));
+        break;
+      case 'r':
+        moves.push(...getRookMoves(row, col));
+        break;
+      case 'n':
+        moves.push(...getKnightMoves(row, col));
+        break;
+      case 'b':
+        moves.push(...getBishopMoves(row, col));
+        break;
+      case 'q':
+        moves.push(...getQueenMoves(row, col));
+        break;
+      case 'k':
+        moves.push(...getKingMoves(row, col));
+        break;
+    }
+
+    const filtered = moves.filter(([r, c]) => r >= 0 && r < 8 && c >= 0 && c < 8 && !isPieceColor(board[r][c], currentPlayer));
+    console.log('Possible moves for', piece, 'at', row, col, ':', filtered);
+    return filtered;
+  }
+
+  function getPawnMoves(row, col, piece) {
+    const moves = [];
+    const dir = piece === 'P' ? -1 : 1;
+    const startRow = piece === 'P' ? 6 : 1;
+
+    // Forward
+    if (!board[row + dir][col]) {
+      moves.push([row + dir, col]);
+      if (row === startRow && !board[row + 2 * dir][col]) {
+        moves.push([row + 2 * dir, col]);
+      }
+    }
+
+    // Captures
+    for (const dc of [-1, 1]) {
+      const nr = row + dir, nc = col + dc;
+      if (nr >= 0 && nr < 8 && nc >= 0 && nc < 8 && board[nr][nc] && !isPieceColor(board[nr][nc], currentPlayer)) {
+        moves.push([nr, nc]);
+      }
+    }
+
+    return moves;
+  }
+
+  function getRookMoves(row, col) {
+    const moves = [];
+    const dirs = [[0, 1], [0, -1], [1, 0], [-1, 0]];
+    for (const [dr, dc] of dirs) {
+      for (let i = 1; i < 8; i++) {
+        const nr = row + dr * i, nc = col + dc * i;
+        if (nr < 0 || nr >= 8 || nc < 0 || nc >= 8) break;
+        if (board[nr][nc]) {
+          if (!isPieceColor(board[nr][nc], currentPlayer)) moves.push([nr, nc]);
+          break;
+        }
+        moves.push([nr, nc]);
+      }
+    }
+    return moves;
+  }
+
+  function getKnightMoves(row, col) {
+    const moves = [];
+    const deltas = [[-2, -1], [-2, 1], [-1, -2], [-1, 2], [1, -2], [1, 2], [2, -1], [2, 1]];
+    for (const [dr, dc] of deltas) {
+      const nr = row + dr, nc = col + dc;
+      if (nr >= 0 && nr < 8 && nc >= 0 && nc < 8 && !isPieceColor(board[nr][nc], currentPlayer)) {
+        moves.push([nr, nc]);
+      }
+    }
+    return moves;
+  }
+
+  function getBishopMoves(row, col) {
+    const moves = [];
+    const dirs = [[1, 1], [1, -1], [-1, 1], [-1, -1]];
+    for (const [dr, dc] of dirs) {
+      for (let i = 1; i < 8; i++) {
+        const nr = row + dr * i, nc = col + dc * i;
+        if (nr < 0 || nr >= 8 || nc < 0 || nc >= 8) break;
+        if (board[nr][nc]) {
+          if (!isPieceColor(board[nr][nc], currentPlayer)) moves.push([nr, nc]);
+          break;
+        }
+        moves.push([nr, nc]);
+      }
+    }
+    return moves;
+  }
+
+  function getQueenMoves(row, col) {
+    return [...getRookMoves(row, col), ...getBishopMoves(row, col)];
+  }
+
+  function getKingMoves(row, col) {
+    const moves = [];
+    for (let dr = -1; dr <= 1; dr++) {
+      for (let dc = -1; dc <= 1; dc++) {
+        if (dr === 0 && dc === 0) continue;
+        const nr = row + dr, nc = col + dc;
+        if (nr >= 0 && nr < 8 && nc >= 0 && nc < 8 && !isPieceColor(board[nr][nc], currentPlayer)) {
+          moves.push([nr, nc]);
+        }
+      }
+    }
+    return moves;
+  }
+
+  function newGame() {
+    board = INITIAL_BOARD.map(row => [...row]);
+    currentPlayer = 'white';
+    selectedSquare = null;
+    possibleMoves = [];
+    lastMove = null;
+    whiteCaptured = [];
+    blackCaptured = [];
+    statusEl.textContent = 'White to move';
+    substatusEl.textContent = 'Select a piece to see possible moves.';
+    renderBoard();
+    renderCaptured();
+  }
+
+  function flipBoard() {
+    flipped = !flipped;
+    // For simplicity, just re-render (no actual flip logic yet)
+    renderBoard();
+  }
+
+  document.getElementById('new-game').addEventListener('click', newGame);
+  document.getElementById('flip-board').addEventListener('click', flipBoard);
+
+  newGame();
+</script>
+{% endblock %}

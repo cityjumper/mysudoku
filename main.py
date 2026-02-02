@@ -94,6 +94,12 @@ async def minesweeper(request: Request):
     return templates.TemplateResponse("minesweeper.html", {"request": request})
 
 
+@app.get("/chess", response_class=HTMLResponse)
+async def chess(request: Request):
+    """Chess page endpoint."""
+    return templates.TemplateResponse("chess.html", {"request": request})
+
+
 @app.get("/api")
 async def api_root():
     """API root endpoint with API information."""

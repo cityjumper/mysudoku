@@ -61,6 +61,8 @@ Dots and Boxes is available at `http://localhost:8000/dots-and-boxes`.
 
 Minesweeper is available at `http://localhost:8000/minesweeper`.
 
+Chess is available at `http://localhost:8000/chess`.
+
 ## API Documentation
 
 Once the server is running, visit:
