@@ -241,27 +241,33 @@
 
         function handleHoleClick(row, col) {
             if (selectedMarble) {
-                // Try to move to this position
-                if (isValidMove(selectedMarble.row, selectedMarble.col, row, col)) {
-                    makeMove(selectedMarble.row, selectedMarble.col, row, col);
-                } else {
-                    // Invalid move - show feedback
-                    statusEl.textContent = 'Invalid move';
-                    statusEl.className = 'mt-1 text-2xl font-bold text-red-600';
-                    substatusEl.textContent = 'Try a different empty hole.';
-                    setTimeout(() => {
-                        statusEl.textContent = 'Marble selected';
-                        statusEl.className = 'mt-1 text-2xl font-bold text-amber-600';
-                        substatusEl.textContent = 'Click an empty hole to jump.';
-                    }, 1500);
+                if (selectedMarble.row === row && selectedMarble.col === col) {
+                    // Clicking on the same marble - deselect it
+                    clearSelection();
+                    statusEl.textContent = 'Select a marble to move';
+                    statusEl.className = 'mt-1 text-2xl font-bold text-slate-900';
+                    substatusEl.textContent = 'Click a marble, then click where to jump.';
+                } else if (board[row][col] === 1) {
+                    // Clicking on a different marble - select it instead
+                    selectMarble(row, col);
+                } else if (board[row][col] === 0) {
+                    // Try to move to this empty position
+                    if (isValidMove(selectedMarble.row, selectedMarble.col, row, col)) {
+                        makeMove(selectedMarble.row, selectedMarble.col, row, col);
+                    } else {
+                        // Invalid move - show feedback
+                        statusEl.textContent = 'Invalid move';
+                        statusEl.className = 'mt-1 text-2xl font-bold text-red-600';
+                        substatusEl.textContent = 'Try a different empty hole.';
+                        setTimeout(() => {
+                            statusEl.textContent = 'Marble selected';
+                            statusEl.className = 'mt-1 text-2xl font-bold text-amber-600';
+                            substatusEl.textContent = 'Click an empty hole to jump.';
+                        }, 1500);
+                    }
                 }
-                // Don't clear selection on invalid move
-                if (!isValidMove(selectedMarble.row, selectedMarble.col, row, col)) {
-                    return;
-                }
-                clearSelection();
             } else {
-                // Select a marble
+                // No marble selected - select this one if it's a marble
                 if (board[row][col] === 1) {
                     selectMarble(row, col);
                 }
