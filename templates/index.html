@@ -5,14 +5,23 @@
 {% block extra_head %}
     <style>
         .sudoku-cell {
-            width: 50px;
-            height: 50px;
-            font-size: 24px;
+            width: 40px;
+            height: 40px;
+            font-size: 20px;
             font-weight: 600;
             text-align: center;
             border: 1px solid #94a3b8;
             transition: all 0.2s;
         }
+        
+        @media (min-width: 640px) {
+            .sudoku-cell {
+                width: 50px;
+                height: 50px;
+                font-size: 24px;
+            }
+        }
+        
         .sudoku-cell:focus {
             outline: none;
             border-color: #3b82f6;
@@ -36,11 +45,40 @@
         }
         .sudoku-grid {
             display: grid;
-            grid-template-columns: repeat(9, 50px);
-            grid-template-rows: repeat(9, 50px);
+            grid-template-columns: repeat(9, 40px);
+            grid-template-rows: repeat(9, 40px);
             border: 4px solid #0f172a;
             background-color: #0f172a;
             gap: 0;
+        }
+        
+        @media (min-width: 640px) {
+            .sudoku-grid {
+                grid-template-columns: repeat(9, 50px);
+                grid-template-rows: repeat(9, 50px);
+            }
+        }
+        
+        /* Number keypad styles */
+        #number-keypad {
+            backdrop-filter: blur(4px);
+        }
+        
+        #number-keypad button {
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
+        }
+        
+        /* Prevent zoom on input focus for iOS */
+        @media screen and (max-width: 767px) {
+            input[type="text"],
+            input[type="number"],
+            input[type="tel"],
+            input[type="email"],
+            textarea,
+            select {
+                font-size: 16px !important;
+            }
         }
     </style>
 {% endblock %}
@@ -71,26 +109,26 @@
                 <div class="flex flex-wrap gap-4 items-center justify-center">
                     <!-- New Game Button -->
                     <div class="flex gap-2">
-                        <button onclick="newGame('easy')" class="bg-green-500 hover:bg-green-600 text-white font-semibold py-3 px-6 rounded-lg shadow-md transition duration-200 transform hover:scale-105">
+                        <button data-difficulty="easy" class="bg-green-500 hover:bg-green-600 text-white font-semibold py-3 px-6 rounded-lg shadow-md transition duration-200 transform hover:scale-105">
                             {{ translate(lang, 'games.sudoku.easy') }}
                         </button>
-                        <button onclick="newGame('medium')" class="bg-yellow-500 hover:bg-yellow-600 text-white font-semibold py-3 px-6 rounded-lg shadow-md transition duration-200 transform hover:scale-105">
+                        <button data-difficulty="medium" class="bg-yellow-500 hover:bg-yellow-600 text-white font-semibold py-3 px-6 rounded-lg shadow-md transition duration-200 transform hover:scale-105">
                             {{ translate(lang, 'games.sudoku.medium') }}
                         </button>
-                        <button onclick="newGame('hard')" class="bg-red-500 hover:bg-red-600 text-white font-semibold py-3 px-6 rounded-lg shadow-md transition duration-200 transform hover:scale-105">
+                        <button data-difficulty="hard" class="bg-red-500 hover:bg-red-600 text-white font-semibold py-3 px-6 rounded-lg shadow-md transition duration-200 transform hover:scale-105">
                             {{ translate(lang, 'games.sudoku.hard') }}
                         </button>
                     </div>
                     
                     <!-- Action Buttons -->
                     <div class="flex gap-2">
-                        <button onclick="validateSolution()" class="bg-blue-500 hover:bg-blue-600 text-white font-semibold py-3 px-6 rounded-lg shadow-md transition duration-200">
+                        <button data-action="validate" class="bg-blue-500 hover:bg-blue-600 text-white font-semibold py-3 px-6 rounded-lg shadow-md transition duration-200">
                             {{ translate(lang, 'games.sudoku.check') }}
                         </button>
-                        <button onclick="showSolution()" class="bg-purple-500 hover:bg-purple-600 text-white font-semibold py-3 px-6 rounded-lg shadow-md transition duration-200">
+                        <button data-action="solution" class="bg-purple-500 hover:bg-purple-600 text-white font-semibold py-3 px-6 rounded-lg shadow-md transition duration-200">
                             {{ translate(lang, 'games.sudoku.solution') }}
                         </button>
-                        <button onclick="clearBoard()" class="bg-gray-500 hover:bg-gray-600 text-white font-semibold py-3 px-6 rounded-lg shadow-md transition duration-200">
+                        <button data-action="clear" class="bg-gray-500 hover:bg-gray-600 text-white font-semibold py-3 px-6 rounded-lg shadow-md transition duration-200">
                             {{ translate(lang, 'games.sudoku.clear') }}
                         </button>
                     </div>
@@ -150,7 +188,7 @@
                         <p class="text-gray-500 text-center py-8">{{ translate(lang, 'games.sudoku.no_scores') }}</p>
                     </div>
                     
-                    <button onclick="clearLeaderboard()" class="mt-4 w-full bg-red-100 hover:bg-red-200 text-red-700 font-semibold py-2 px-4 rounded-lg transition duration-200">
+                    <button data-action="clear-leaderboard" class="mt-4 w-full bg-red-100 hover:bg-red-200 text-red-700 font-semibold py-2 px-4 rounded-lg transition duration-200">
                         {{ translate(lang, 'games.sudoku.clear_all_scores') }}
                     </button>
                 </div>
@@ -193,6 +231,8 @@
         let startTime = null;
         let currentDifficulty = null;
 
+        console.log('Sudoku script loaded');
+
         async function newGame(difficulty) {
             try {
                 console.log('Creating new game with difficulty:', difficulty);
@@ -230,6 +270,7 @@
         }
 
         function renderBoard(board) {
+            console.log('Rendering board:', board);
             const container = document.getElementById('game-container');
             container.innerHTML = '';
             
@@ -262,23 +303,47 @@
                         input.dataset.row = i;
                         input.dataset.col = j;
                         
-                        input.addEventListener('input', async (e) => {
-                            const value = e.target.value;
-                            if (value && !/^[1-9]$/.test(value)) {
-                                e.target.value = '';
-                                return;
-                            }
+                        if (isMobile) {
+                            // Mobile: prevent keyboard and show number keypad
+                            input.addEventListener('focus', (e) => {
+                                e.preventDefault();
+                                e.target.blur(); // Remove focus to prevent keyboard
+                                showNumberKeypad(e.target);
+                            });
                             
-                            const num = value ? parseInt(value) : 0;
-                            await makeMove(parseInt(e.target.dataset.row), parseInt(e.target.dataset.col), num);
-                        });
-                        
-                        input.addEventListener('keydown', (e) => {
-                            if (e.key === 'Backspace' || e.key === 'Delete' || e.key === '0') {
+                            input.addEventListener('click', (e) => {
+                                e.preventDefault();
+                                showNumberKeypad(e.target);
+                            });
+                            
+                            // Prevent any keyboard input
+                            input.addEventListener('input', (e) => {
                                 e.target.value = '';
-                                makeMove(parseInt(e.target.dataset.row), parseInt(e.target.dataset.col), 0);
-                            }
-                        });
+                            });
+                            
+                            input.addEventListener('keydown', (e) => {
+                                e.preventDefault();
+                            });
+                        } else {
+                            // Desktop: allow regular keyboard input
+                            input.addEventListener('input', async (e) => {
+                                const value = e.target.value;
+                                if (value && !/^[1-9]$/.test(value)) {
+                                    e.target.value = '';
+                                    return;
+                                }
+                                
+                                const num = value ? parseInt(value) : 0;
+                                await makeMove(parseInt(e.target.dataset.row), parseInt(e.target.dataset.col), num);
+                            });
+                            
+                            input.addEventListener('keydown', (e) => {
+                                if (e.key === 'Backspace' || e.key === 'Delete' || e.key === '0') {
+                                    e.target.value = '';
+                                    makeMove(parseInt(e.target.dataset.row), parseInt(e.target.dataset.col), 0);
+                                }
+                            });
+                        }
                     }
                     
                     grid.appendChild(input);
@@ -501,9 +566,117 @@
             }
         }
         
+        // Mobile number keypad functionality
+        let isMobile = false;
+        let currentFocusedCell = null;
+
+        function detectMobile() {
+            return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
+                   (window.innerWidth <= 768 && window.innerHeight <= 1024);
+        }
+
+        function createNumberKeypad() {
+            if (!isMobile) return;
+
+            const keypad = document.createElement('div');
+            keypad.id = 'number-keypad';
+            keypad.className = 'fixed bottom-0 left-0 right-0 bg-white border-t border-gray-300 p-4 shadow-lg z-50';
+            keypad.innerHTML = `
+                <div class="grid grid-cols-3 gap-2 max-w-xs mx-auto">
+                    ${[1,2,3,4,5,6,7,8,9].map(num => 
+                        `<button class="number-btn bg-indigo-100 hover:bg-indigo-200 text-indigo-800 font-bold py-3 px-4 rounded-lg text-lg transition-colors" data-number="${num}">${num}</button>`
+                    ).join('')}
+                    <button class="clear-btn bg-red-100 hover:bg-red-200 text-red-800 font-bold py-3 px-4 rounded-lg text-lg col-span-2 transition-colors" data-number="0">Clear</button>
+                    <button class="close-btn bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold py-3 px-4 rounded-lg text-lg transition-colors">✕</button>
+                </div>
+            `;
+
+            document.body.appendChild(keypad);
+
+            // Add event listeners
+            keypad.addEventListener('click', (e) => {
+                if (e.target.classList.contains('number-btn')) {
+                    const number = parseInt(e.target.dataset.number);
+                    if (currentFocusedCell) {
+                        currentFocusedCell.value = number;
+                        currentFocusedCell.blur(); // Remove focus to hide keypad
+                        makeMove(parseInt(currentFocusedCell.dataset.row), parseInt(currentFocusedCell.dataset.col), number);
+                    }
+                } else if (e.target.classList.contains('clear-btn')) {
+                    if (currentFocusedCell) {
+                        currentFocusedCell.value = '';
+                        currentFocusedCell.blur();
+                        makeMove(parseInt(currentFocusedCell.dataset.row), parseInt(currentFocusedCell.dataset.col), 0);
+                    }
+                } else if (e.target.classList.contains('close-btn')) {
+                    hideNumberKeypad();
+                }
+            });
+
+            keypad.style.display = 'none';
+            return keypad;
+        }
+
+        function showNumberKeypad(cell) {
+            if (!isMobile) return;
+
+            currentFocusedCell = cell;
+            const keypad = document.getElementById('number-keypad');
+            if (keypad) {
+                keypad.style.display = 'block';
+                // Prevent scrolling when keypad is open
+                document.body.style.overflow = 'hidden';
+            }
+        }
+
+        function hideNumberKeypad() {
+            const keypad = document.getElementById('number-keypad');
+            if (keypad) {
+                keypad.style.display = 'none';
+                document.body.style.overflow = '';
+            }
+            currentFocusedCell = null;
+        }
+
+        // Initialize mobile detection and keypad
+        isMobile = detectMobile();
+        if (isMobile) {
+            createNumberKeypad();
+        }
+        
         // Load leaderboard on page load
         document.addEventListener('DOMContentLoaded', () => {
+            console.log('DOMContentLoaded fired');
             updateLeaderboard();
+            
+            // Set up difficulty button event listeners
+            document.querySelectorAll('[data-difficulty]').forEach(button => {
+                button.addEventListener('click', () => {
+                    const difficulty = button.dataset.difficulty;
+                    newGame(difficulty);
+                });
+            });
+            
+            // Set up action button event listeners
+            document.querySelectorAll('[data-action]').forEach(button => {
+                button.addEventListener('click', () => {
+                    const action = button.dataset.action;
+                    switch(action) {
+                        case 'validate':
+                            validateSolution();
+                            break;
+                        case 'solution':
+                            showSolution();
+                            break;
+                        case 'clear':
+                            clearBoard();
+                            break;
+                        case 'clear-leaderboard':
+                            clearLeaderboard();
+                            break;
+                    }
+                });
+            });
         });
 
         function showStatus(message, type) {
@@ -529,5 +702,6 @@
                 }, 5000);
             }
         }
+        
     </script>
 {% endblock %}
