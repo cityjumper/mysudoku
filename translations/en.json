@@ -41,6 +41,7 @@
       "new_game": "New Game",
       "reset_scores": "Reset Scores",
       "tip": "Tip: aim near a gap between two dots. Completing a box gives you another turn.",
+      "mobile_tip": "Tip: tap near a gap between two dots. Completing a box gives you another turn.",
       "scoreboard": "Scoreboard",
       "player_1": "Player 1",
       "player_2": "Player 2",

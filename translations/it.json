@@ -41,6 +41,7 @@
       "new_game": "Nuova Partita",
       "reset_scores": "Azzera Punteggi",
       "tip": "Suggerimento: mira vicino a uno spazio tra due punti. Completare un quadro ti dà un altro turno.",
+      "mobile_tip": "Suggerimento: tocca uno spazio tra due punti. Completare un quadro ti dà un altro turno.",
       "scoreboard": "Punteggio",
       "player_1": "Giocatore 1",
       "player_2": "Giocatore 2",

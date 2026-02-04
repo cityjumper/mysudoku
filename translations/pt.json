@@ -41,6 +41,7 @@
       "new_game": "Novo Jogo",
       "reset_scores": "Reiniciar Pontuações",
       "tip": "Dica: aponte perto de uma lacuna entre dois pontos. Completar uma caixa dá-lhe outra jogada.",
+      "mobile_tip": "Dica: toque numa lacuna entre dois pontos. Completar uma caixa dá-lhe outra jogada.",
       "scoreboard": "Marcador",
       "player_1": "Jogador 1",
       "player_2": "Jogador 2",

@@ -25,7 +25,7 @@
     </div>
   </div>
 
-  <div class="max-w-5xl mx-auto">
+  <div class="max-w-7xl mx-auto">
     <header class="text-center mb-8">
       <h1 class="text-4xl sm:text-5xl font-extrabold tracking-tight text-slate-900">{{ translate(lang, 'games.dots_and_boxes.title') }}</h1>
       <p class="mt-2 text-slate-600">{{ translate(lang, 'games.dots_and_boxes.subtitle') }}</p>
@@ -34,59 +34,63 @@
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
       <div class="lg:col-span-2">
         <div class="bg-white rounded-2xl shadow-xl ring-1 ring-slate-200 p-6 sm:p-8">
-          <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
-            <div>
-              <div class="text-sm font-semibold text-slate-500 uppercase tracking-wide">{{ translate(lang, 'games.dots_and_boxes.status') }}</div>
-              <div id="status" class="mt-1 text-2xl font-bold text-slate-900">{{ translate(lang, 'games.dots_and_boxes.player_to_move') }} 1 {{ translate(lang, 'common.to_move') }}</div>
-              <div id="substatus" class="mt-1 text-slate-600">{{ translate(lang, 'games.dots_and_boxes.click_to_draw') }}</div>
-            </div>
-            <div class="flex flex-wrap gap-2">
-              <label class="text-sm font-semibold text-slate-700 inline-flex items-center gap-2">
-                {{ translate(lang, 'games.dots_and_boxes.size') }}
-                <select id="size" class="border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500">
-                  <option value="3">3×3</option>
-                  <option value="4" selected>4×4</option>
-                  <option value="5">5×5</option>
-                  <option value="6">6×6</option>
-                  <option value="7">7×7</option>
-                  <option value="8">8×8</option>
-                </select>
-              </label>
-              <button id="new-game" class="rounded-lg bg-amber-600 hover:bg-amber-700 text-white font-semibold px-4 py-2">{{ translate(lang, 'games.dots_and_boxes.new_game') }}</button>
-              <button id="reset-scores" class="rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 font-semibold px-4 py-2">{{ translate(lang, 'games.dots_and_boxes.reset_scores') }}</button>
+          <div class="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 mb-6">
+              <div class="w-full lg:w-auto">
+                <div class="text-sm font-semibold text-slate-500 uppercase tracking-wide">{{ translate(lang, 'games.dots_and_boxes.status') }}</div>
+                <div id="status" class="mt-1 text-xl lg:text-2xl font-bold text-slate-900">{{ translate(lang, 'games.dots_and_boxes.player_to_move') }} 1 {{ translate(lang, 'common.to_move') }}</div>
+                <div id="substatus" class="mt-1 text-sm lg:text-base text-slate-600">{{ translate(lang, 'games.dots_and_boxes.click_to_draw') }}</div>
+              </div>
+              <div class="flex flex-col sm:flex-row gap-2 w-full lg:w-auto">
+                <label class="text-sm font-semibold text-slate-700 flex items-center gap-2">
+                  {{ translate(lang, 'games.dots_and_boxes.size') }}
+                  <select id="size" class="border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 min-w-[80px]">
+                    <option value="3">3×3</option>
+                    <option value="4" selected>4×4</option>
+                    <option value="5">5×5</option>
+                    <option value="6">6×6</option>
+                    <option value="7">7×7</option>
+                    <option value="8">8×8</option>
+                  </select>
+                </label>
+                <div class="flex gap-2">
+                  <button id="new-game" class="flex-1 sm:flex-none rounded-lg bg-amber-600 hover:bg-amber-700 text-white font-semibold px-4 py-2 text-sm min-h-[40px] transition-colors">{{ translate(lang, 'games.dots_and_boxes.new_game') }}</button>
+                  <button id="reset-scores" class="flex-1 sm:flex-none rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 font-semibold px-4 py-2 text-sm min-h-[40px] transition-colors">{{ translate(lang, 'games.dots_and_boxes.reset_scores') }}</button>
+                </div>
+          </div>
+
+          <div class="flex justify-center mb-4">
+            <div class="w-full">
+              <canvas id="board" class="bg-white rounded-xl ring-1 ring-slate-200 w-full h-auto aspect-square" width="720" height="720" aria-label="Dots and Boxes board"></canvas>
             </div>
           </div>
 
-          <div class="flex justify-center">
-            <canvas id="board" class="bg-white rounded-xl ring-1 ring-slate-200" width="720" height="720" aria-label="Dots and Boxes board"></canvas>
-          </div>
-
-          <div class="mt-6 text-sm text-slate-500">
-            <p>{{ translate(lang, 'games.dots_and_boxes.tip') }}</p>
+          <div class="text-sm text-slate-500">
+            <p class="hidden md:block">{{ translate(lang, 'games.dots_and_boxes.tip') }}</p>
+            <p class="md:hidden">{{ translate(lang, 'games.dots_and_boxes.mobile_tip') }}</p>
           </div>
         </div>
       </div>
 
       <div class="lg:col-span-1">
-        <div class="bg-white rounded-2xl shadow-xl ring-1 ring-slate-200 p-6 sticky top-8">
-          <h2 class="text-xl font-bold text-slate-900 mb-4">{{ translate(lang, 'games.dots_and_boxes.scoreboard') }}</h2>
+        <div class="bg-white rounded-2xl shadow-xl ring-1 ring-slate-200 p-4 lg:p-6 sticky top-8">
+          <h2 class="text-lg lg:text-xl font-bold text-slate-900 mb-4">{{ translate(lang, 'games.dots_and_boxes.scoreboard') }}</h2>
 
-          <div class="grid grid-cols-2 gap-3">
-            <div class="rounded-xl bg-amber-50 ring-1 ring-amber-100 p-4">
+          <div class="flex flex-col sm:flex-row gap-3 mb-4">
+            <div class="rounded-xl bg-amber-50 ring-1 ring-amber-100 p-3 lg:p-4">
               <div class="text-xs font-semibold uppercase tracking-wide text-amber-700">{{ translate(lang, 'games.dots_and_boxes.player_1') }}</div>
-              <div id="score-p1" class="mt-1 text-3xl font-extrabold text-amber-900">0</div>
+              <div id="score-p1" class="mt-1 text-2xl lg:text-3xl font-extrabold text-amber-900">0</div>
             </div>
-            <div class="rounded-xl bg-sky-50 ring-1 ring-sky-100 p-4">
+            <div class="rounded-xl bg-sky-50 ring-1 ring-sky-100 p-3 lg:p-4">
               <div class="text-xs font-semibold uppercase tracking-wide text-sky-700">{{ translate(lang, 'games.dots_and_boxes.player_2') }}</div>
-              <div id="score-p2" class="mt-1 text-3xl font-extrabold text-sky-900">0</div>
+              <div id="score-p2" class="mt-1 text-2xl lg:text-3xl font-extrabold text-sky-900">0</div>
             </div>
-            <div class="rounded-xl bg-slate-50 ring-1 ring-slate-200 p-4 col-span-2">
+            <div class="rounded-xl bg-slate-50 ring-1 ring-slate-200 p-3 lg:p-4">
               <div class="text-xs font-semibold uppercase tracking-wide text-slate-600">{{ translate(lang, 'games.dots_and_boxes.games_played') }}</div>
-              <div id="games" class="mt-1 text-3xl font-extrabold text-slate-900">0</div>
+              <div id="games" class="mt-1 text-2xl lg:text-3xl font-extrabold text-slate-900">0</div>
             </div>
           </div>
 
-          <div class="mt-6">
+          <div class="mt-4 lg:mt-6">
             <h3 class="text-sm font-bold text-slate-700 mb-2">{{ translate(lang, 'games.dots_and_boxes.rules') }}</h3>
             <ul class="text-sm text-slate-600 space-y-1">
               <li>• {{ translate(lang, 'games.dots_and_boxes.rule_1') }}</li>
@@ -164,10 +168,25 @@
   let vEdges = null; // n x (n+1)
   let boxes = null;  // n x n, owner 0/1/2
 
-  // Rendering geometry
+  // Rendering geometry - responsive
   let padding = 52;
   let dotRadius = 5;
   let lineWidth = 8;
+
+  function updateResponsiveSizes() {
+    const minDimension = Math.min(canvas.width, canvas.height);
+    const isMobile = window.innerWidth < 768;
+
+    if (isMobile) {
+      padding = Math.max(20, minDimension * 0.07);
+      dotRadius = Math.max(3, minDimension * 0.007);
+      lineWidth = Math.max(4, minDimension * 0.011);
+    } else {
+      padding = Math.max(32, minDimension * 0.07);
+      dotRadius = Math.max(4, minDimension * 0.007);
+      lineWidth = Math.max(6, minDimension * 0.011);
+    }
+  }
 
   let hover = null; // { kind: 'h'|'v', r, c }
 
@@ -182,6 +201,7 @@
     vEdges = Array.from({ length: n }, () => Array.from({ length: n + 1 }, () => 0));
     boxes = Array.from({ length: n }, () => Array.from({ length: n }, () => 0));
 
+    updateResponsiveSizes();
     setStatus();
     draw();
   }
@@ -501,6 +521,12 @@
     canvas.addEventListener('pointermove', onPointerMove);
     canvas.addEventListener('pointerleave', onPointerLeave);
     canvas.addEventListener('pointerdown', onPointerDown);
+
+    // Handle window resize for responsive canvas
+    window.addEventListener('resize', () => {
+      updateResponsiveSizes();
+      draw();
+    });
 
     document.getElementById('new-game').addEventListener('click', () => {
       const nextSize = Number(sizeEl.value);
