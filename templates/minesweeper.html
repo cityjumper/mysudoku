@@ -80,9 +80,9 @@
         <div class="bg-white rounded-2xl shadow-xl ring-1 ring-slate-200 p-6 sm:p-8">
           <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
             <div>
-              <div class="text-sm font-semibold text-slate-500 uppercase tracking-wide">{{ translate(lang, 'games.minesweeper.status.label') }}</div>
-              <div id="status" class="mt-1 text-2xl font-bold text-slate-900">{{ translate(lang, 'games.minesweeper.status.ready') }}</div>
-              <div id="substatus" class="mt-1 text-slate-600">{{ translate(lang, 'games.minesweeper.status.instructions') }}</div>
+              <div class="text-sm font-semibold text-slate-500 uppercase tracking-wide">{{ translate(lang, 'games.minesweeper.status') }}</div>
+              <div id="status" class="mt-1 text-2xl font-bold text-slate-900">{{ translate(lang, 'games.minesweeper.ready_to_play') }}</div>
+              <div id="substatus" class="mt-1 text-slate-600">{{ translate(lang, 'games.minesweeper.click_instructions') }}</div>
             </div>
             <div class="flex flex-wrap gap-2">
               <label class="text-sm font-semibold text-slate-700 inline-flex items-center gap-2">
@@ -100,7 +100,7 @@
           </div>
 
           <div class="flex justify-center">
-            <div id="board" class="inline-grid gap-0 bg-slate-200 p-2 rounded-lg"></div>
+            <div id="board" class="grid gap-0 bg-slate-200 p-2 rounded-lg min-w-fit"></div>
           </div>
 
           <div class="mt-6 flex justify-center gap-4 text-sm text-slate-600">
@@ -159,12 +159,12 @@
   // Translation data for JavaScript
   const translations = {
     status: {
-      ready: "{{ translate(lang, 'games.minesweeper.status.ready') }}",
-      instructions: "{{ translate(lang, 'games.minesweeper.status.instructions') }}",
-      game_over: "{{ translate(lang, 'games.minesweeper.status.game_over') }}",
-      hit_mine: "{{ translate(lang, 'games.minesweeper.status.hit_mine') }}",
-      you_win: "{{ translate(lang, 'games.minesweeper.status.you_win') }}",
-      congratulations: "{{ translate(lang, 'games.minesweeper.status.congratulations') }}"
+      ready: "{{ translate(lang, 'games.minesweeper.ready_to_play') }}",
+      instructions: "{{ translate(lang, 'games.minesweeper.click_instructions') }}",
+      game_over: "{{ translate(lang, 'games.minesweeper.game_over') }}",
+      hit_mine: "{{ translate(lang, 'games.minesweeper.hit_mine') }}",
+      you_win: "{{ translate(lang, 'games.minesweeper.you_win') }}",
+      congratulations: "{{ translate(lang, 'games.minesweeper.congratulations') }}"
     }
   };
 </script>
@@ -179,6 +179,14 @@
 
   let flagMode = false; // For mobile: toggle between reveal and flag modes
   let isMobile = false; // Detect mobile devices
+  let timerInterval = null; // Timer interval ID
+  let startTime = null; // Game start time
+
+  // Game state variables
+  let rows, cols, mineCount;
+  let board, revealed, flagged, mines;
+  let gameOver = false;
+  let gameWon = false;
 
   const statusEl = document.getElementById('status');
   const substatusEl = document.getElementById('substatus');

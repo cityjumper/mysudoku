@@ -83,22 +83,33 @@
       "status": "Status",
       "ready_to_play": "Ready to play",
       "click_instructions": "Left-click to reveal, right-click to flag.",
-      "difficulty": "Difficulty",
-      "beginner": "Beginner (9×9, 10 mines)",
-      "intermediate": "Intermediate (16×16, 40 mines)",
-      "expert": "Expert (30×16, 99 mines)",
-      "new_game": "New Game",
-      "reset_scores": "Reset Scores",
-      "scoreboard": "Scoreboard",
-      "wins": "Wins",
-      "losses": "Losses",
-      "games_played": "Games played",
-      "rules": "Rules",
-      "rule_1": "Left-click to reveal a cell.",
-      "rule_2": "Right-click to flag/unflag a mine.",
-      "rule_3": "Numbers show adjacent mines.",
-      "rule_4": "Reveal all non-mine cells to win.",
-      "rule_5": "Hit a mine and you lose!"
+      "game_over": "Game Over!",
+      "hit_mine": "You hit a mine.",
+      "you_win": "You Win!",
+      "congratulations": "Congratulations!",
+      "difficulty": {
+        "beginner": "Beginner (9×9, 10 mines)",
+        "intermediate": "Intermediate (16×16, 40 mines)",
+        "expert": "Expert (30×16, 99 mines)"
+      },
+      "buttons": {
+        "new_game": "New Game",
+        "reset_scores": "Reset Scores"
+      },
+      "scoreboard": {
+        "title": "Scoreboard",
+        "wins": "Wins",
+        "losses": "Losses",
+        "games_played": "Games played"
+      },
+      "rules": {
+        "title": "Rules",
+        "reveal": "Left-click to reveal a cell.",
+        "flag": "Right-click to flag/unflag a mine.",
+        "numbers": "Numbers show adjacent mines.",
+        "win": "Reveal all non-mine cells to win.",
+        "lose": "Hit a mine and you lose!"
+      }
     },
     "tictactoe": {
       "name": "Tic-Tac-Toe",

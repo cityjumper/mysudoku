@@ -55,17 +55,14 @@
       "description": "Jogo de quebra-cabeças clássico de desminagem.",
       "title": "Campo Minado",
       "subtitle": "Encontre todas as minas sem detoná-las.",
-      "status": {
-        "label": "Estado",
-        "ready": "Pronto para jogar",
-        "instructions": "Clique esquerdo para revelar, clique direito para marcar.",
-        "game_over": "Fim do jogo!",
-        "hit_mine": "Acertou numa mina.",
-        "you_win": "Ganhou!",
-        "congratulations": "Parabéns!"
-      },
+      "status": "Estado",
+      "ready_to_play": "Pronto para jogar",
+      "click_instructions": "Clique esquerdo para revelar, clique direito para marcar.",
+      "game_over": "Fim do jogo!",
+      "hit_mine": "Acertou numa mina.",
+      "you_win": "Ganhou!",
+      "congratulations": "Parabéns!",
       "difficulty": {
-        "label": "Dificuldade",
         "beginner": "Principiante (9×9, 10 minas)",
         "intermediate": "Intermédio (16×16, 40 minas)",
         "expert": "Especialista (30×16, 99 minas)"

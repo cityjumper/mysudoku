@@ -83,22 +83,33 @@
       "status": "Status",
       "ready_to_play": "Klaar om te spelen",
       "click_instructions": "Linkerklik om te onthullen, rechterklik om te markeren.",
-      "difficulty": "Moeilijkheidsgraad",
-      "beginner": "Beginner (9×9, 10 mijnen)",
-      "intermediate": "Gemiddeld (16×16, 40 mijnen)",
-      "expert": "Expert (30×16, 99 mijnen)",
-      "new_game": "Nieuw Spel",
-      "reset_scores": "Scores Resetten",
-      "scoreboard": "Scorebord",
-      "wins": "Overwinningen",
-      "losses": "Verliezen",
-      "games_played": "Gespeelde spellen",
-      "rules": "Regels",
-      "rule_1": "Linkerklik om een cel te onthullen.",
-      "rule_2": "Rechterklik om een mijn te markeren/demarkeren.",
-      "rule_3": "Cijfers tonen aangrenzende mijnen.",
-      "rule_4": "Onthull alle niet-mijn cellen om te winnen.",
-      "rule_5": "Raak een mijn en je verliest!"
+      "game_over": "Spel Voorbij!",
+      "hit_mine": "Je raakte een mijn.",
+      "you_win": "Je Wint!",
+      "congratulations": "Gefeliciteerd!",
+      "difficulty": {
+        "beginner": "Beginner (9×9, 10 mijnen)",
+        "intermediate": "Gemiddeld (16×16, 40 mijnen)",
+        "expert": "Expert (30×16, 99 mijnen)"
+      },
+      "buttons": {
+        "new_game": "Nieuw Spel",
+        "reset_scores": "Scores Resetten"
+      },
+      "scoreboard": {
+        "title": "Scorebord",
+        "wins": "Overwinningen",
+        "losses": "Verliezen",
+        "games_played": "Gespeelde spellen"
+      },
+      "rules": {
+        "title": "Regels",
+        "reveal": "Linkerklik om een cel te onthullen.",
+        "flag": "Rechterklik om een mijn te markeren/demarkeren.",
+        "numbers": "Cijfers tonen aangrenzende mijnen.",
+        "win": "Onthull alle niet-mijn cellen om te winnen.",
+        "lose": "Raak een mijn en je verliest!"
+      }
     },
     "tictactoe": {
       "name": "Boter-Kaas-en-Eieren",

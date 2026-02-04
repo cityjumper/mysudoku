@@ -29,7 +29,12 @@ def get_translation(lang: str, key_path: str) -> str:
     keys = key_path.split('.')
     value = translations.get(lang, translations['en'])
     for key in keys:
-        value = value.get(key, {})
+        if isinstance(value, dict):
+            value = value.get(key, {})
+        else:
+            # If we encounter a non-dict value before traversing all keys,
+            # return the key_path as fallback
+            return key_path
     return value if isinstance(value, str) else key_path
 
 # Add translation function to Jinja2 globals

@@ -83,22 +83,33 @@
       "status": "Stato",
       "ready_to_play": "Pronto a giocare",
       "click_instructions": "Clic sinistro per rivelare, clic destro per contrassegnare.",
-      "difficulty": "Difficoltà",
-      "beginner": "Principiante (9×9, 10 mine)",
-      "intermediate": "Intermedio (16×16, 40 mine)",
-      "expert": "Esperto (30×16, 99 mine)",
-      "new_game": "Nuova Partita",
-      "reset_scores": "Azzera Punteggi",
-      "scoreboard": "Punteggio",
-      "wins": "Vittorie",
-      "losses": "Sconfitte",
-      "games_played": "Partite giocate",
-      "rules": "Regole",
-      "rule_1": "Clic sinistro per rivelare una cella.",
-      "rule_2": "Clic destro per contrassegnare/rimuovere contrassegno da una mina.",
-      "rule_3": "I numeri mostrano le mine adiacenti.",
-      "rule_4": "Rivelare tutte le celle non mine per vincere.",
-      "rule_5": "Colpisci una mina e perdi!"
+      "game_over": "Partita Terminata!",
+      "hit_mine": "Hai colpito una mina.",
+      "you_win": "Hai Vinto!",
+      "congratulations": "Congratulazioni!",
+      "difficulty": {
+        "beginner": "Principiante (9×9, 10 mine)",
+        "intermediate": "Intermedio (16×16, 40 mine)",
+        "expert": "Esperto (30×16, 99 mine)"
+      },
+      "buttons": {
+        "new_game": "Nuova Partita",
+        "reset_scores": "Azzera Punteggi"
+      },
+      "scoreboard": {
+        "title": "Punteggio",
+        "wins": "Vittorie",
+        "losses": "Sconfitte",
+        "games_played": "Partite giocate"
+      },
+      "rules": {
+        "title": "Regole",
+        "reveal": "Clic sinistro per rivelare una cella.",
+        "flag": "Clic destro per contrassegnare/rimuovere contrassegno da una mina.",
+        "numbers": "I numeri mostrano le mine adiacenti.",
+        "win": "Rivelare tutte le celle non mine per vincere.",
+        "lose": "Colpisci una mina e perdi!"
+      }
     },
     "tictactoe": {
       "name": "Tris",
