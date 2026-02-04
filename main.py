@@ -20,7 +20,7 @@ games: Dict[str, SudokuBoard] = {}
 
 # Load translations
 translations = {}
-for lang in ['en', 'nl', 'it']:
+for lang in ['en', 'nl', 'it', 'pt', 'fa']:
     with open(f'translations/{lang}.json', 'r', encoding='utf-8') as f:
         translations[lang] = json.load(f)
 
@@ -42,7 +42,7 @@ def get_current_lang(request: Request) -> str:
 @app.get("/set-lang/{lang}")
 async def set_language(lang: str, request: Request):
     """Set language preference and redirect back."""
-    if lang not in ['en', 'nl', 'it']:
+    if lang not in ['en', 'nl', 'it', 'pt', 'fa']:
         lang = 'en'
     response = RedirectResponse(url=request.headers.get('referer', '/'), status_code=302)
     response.set_cookie(key='lang', value=lang, max_age=365*24*60*60)  # 1 year
