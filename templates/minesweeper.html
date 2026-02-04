@@ -17,6 +17,13 @@
     justify-content: center;
     user-select: none;
   }
+  @media (max-width: 768px) {
+    .cell {
+      width: 40px;
+      height: 40px;
+      font-size: 16px;
+    }
+  }
   .cell.revealed {
     background-color: #fff;
     cursor: default;
@@ -29,6 +36,9 @@
   }
   .cell:hover:not(.revealed):not(.flagged) {
     background-color: #eee;
+  }
+  .cell:active {
+    background-color: #ccc !important;
   }
   .num-1 { color: blue; }
   .num-2 { color: green; }
@@ -84,6 +94,7 @@
                 </select>
               </label>
               <button id="new-game" class="rounded-lg bg-red-600 hover:bg-red-700 text-white font-semibold px-4 py-2">{{ translate(lang, 'games.minesweeper.buttons.new_game') }}</button>
+              <button id="flag-mode" class="rounded-lg bg-yellow-600 hover:bg-yellow-700 text-white font-semibold px-4 py-2 hidden md:hidden" style="display: none;">🚩 Flag Mode</button>
               <button id="reset-scores" class="rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 font-semibold px-4 py-2">{{ translate(lang, 'games.minesweeper.buttons.reset_scores') }}</button>
             </div>
           </div>
@@ -127,6 +138,14 @@
               <li>• {{ translate(lang, 'games.minesweeper.rules.win') }}</li>
               <li>• {{ translate(lang, 'games.minesweeper.rules.lose') }}</li>
             </ul>
+            <div id="mobile-instructions" class="mt-3 p-3 bg-blue-50 rounded-lg text-sm text-blue-800" style="display: none;">
+              <strong>Mobile Controls:</strong>
+              <ul class="mt-1 space-y-1">
+                <li>• Tap cells to reveal or flag (based on mode)</li>
+                <li>• Long press any cell to toggle flag</li>
+                <li>• Use Flag Mode button to switch between reveal/flag</li>
+              </ul>
+            </div>
           </div>
         </div>
       </div>
@@ -158,15 +177,8 @@
     expert: { rows: 16, cols: 30, mines: 99 }
   };
 
-  let board = [];
-  let revealed = [];
-  let flagged = [];
-  let mines = [];
-  let gameOver = false;
-  let gameWon = false;
-  let startTime = null;
-  let timerInterval = null;
-  let rows, cols, mineCount;
+  let flagMode = false; // For mobile: toggle between reveal and flag modes
+  let isMobile = false; // Detect mobile devices
 
   const statusEl = document.getElementById('status');
   const substatusEl = document.getElementById('substatus');
@@ -178,6 +190,15 @@
   const scoreWinsEl = document.getElementById('score-wins');
   const scoreLossesEl = document.getElementById('score-losses');
   const gamesEl = document.getElementById('games');
+
+  // Detect mobile devices
+  function detectMobile() {
+    return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
+           (window.innerWidth <= 768 && window.innerHeight <= 1024);
+  }
+
+  // Initialize mobile detection
+  isMobile = detectMobile();
 
   function loadScores() {
     try {
@@ -258,12 +279,27 @@
     updateCounters();
 
     renderBoard();
-    setStatus(translations.status.ready, translations.status.instructions);
+    setStatus(translations.status.ready, isMobile ?
+      (flagMode ? "Tap cells to flag mines" : "Tap cells to reveal, long press to flag") :
+      translations.status.instructions);
   }
 
   function renderBoard() {
     boardEl.innerHTML = '';
     boardEl.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
+
+    // Show/hide flag mode button based on device type
+    const flagModeBtn = document.getElementById('flag-mode');
+    const mobileInstructions = document.getElementById('mobile-instructions');
+    if (isMobile) {
+      flagModeBtn.style.display = 'inline-block';
+      flagModeBtn.textContent = flagMode ? '🔍 Reveal Mode' : '🚩 Flag Mode';
+      flagModeBtn.className = `rounded-lg ${flagMode ? 'bg-blue-600 hover:bg-blue-700' : 'bg-yellow-600 hover:bg-yellow-700'} text-white font-semibold px-4 py-2`;
+      mobileInstructions.style.display = 'block';
+    } else {
+      flagModeBtn.style.display = 'none';
+      mobileInstructions.style.display = 'none';
+    }
 
     for (let r = 0; r < rows; r++) {
       for (let c = 0; c < cols; c++) {
@@ -286,11 +322,38 @@
           cell.textContent = '🚩';
         }
 
-        cell.addEventListener('click', () => revealCell(r, c));
-        cell.addEventListener('contextmenu', (e) => {
-          e.preventDefault();
-          toggleFlag(r, c);
-        });
+        // Different event handling for mobile vs desktop
+        if (isMobile) {
+          // Mobile: single tap based on flag mode, long press to toggle flag
+          let pressTimer;
+          cell.addEventListener('touchstart', (e) => {
+            pressTimer = setTimeout(() => {
+              e.preventDefault();
+              toggleFlag(r, c);
+            }, 500); // Long press = 500ms
+          });
+          cell.addEventListener('touchend', (e) => {
+            clearTimeout(pressTimer);
+            if (e.changedTouches.length > 0) {
+              // Short tap
+              if (flagMode) {
+                toggleFlag(r, c);
+              } else {
+                revealCell(r, c);
+              }
+            }
+          });
+          cell.addEventListener('touchmove', () => {
+            clearTimeout(pressTimer); // Cancel long press if finger moves
+          });
+        } else {
+          // Desktop: left click to reveal, right click to flag
+          cell.addEventListener('click', () => revealCell(r, c));
+          cell.addEventListener('contextmenu', (e) => {
+            e.preventDefault();
+            toggleFlag(r, c);
+          });
+        }
 
         boardEl.appendChild(cell);
       }
@@ -411,6 +474,11 @@
     document.getElementById('difficulty').addEventListener('change', () => {
       const diff = document.getElementById('difficulty').value;
       newGame(diff);
+    });
+
+    document.getElementById('flag-mode').addEventListener('click', () => {
+      flagMode = !flagMode;
+      renderBoard(); // Re-render to update button text and instructions
     });
 
     document.getElementById('reset-scores').addEventListener('click', () => {
