@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Minesweeper{% endblock %}
+{% block title %}{{ translate(lang, 'games.minesweeper.title') }}{% endblock %}
 
 {% block extra_head %}
 <style>
@@ -50,19 +50,19 @@
       <svg class="w-5 h-5 mr-2" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
         <path fill-rule="evenodd" d="M12.707 15.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 111.414 1.414L7.414 9H17a1 1 0 110 2H7.414l5.293 5.293a1 1 0 010 1.414z" clip-rule="evenodd" />
       </svg>
-      Home
+      {{ translate(lang, 'common.home') }}
     </a>
     <div class="flex items-center gap-4">
-      <a href="/sudoku" class="text-sm font-semibold text-indigo-700 hover:text-indigo-900">Sudoku</a>
-      <a href="/tictactoe" class="text-sm font-semibold text-emerald-700 hover:text-emerald-900">Tic-Tac-Toe</a>
-      <a href="/dots-and-boxes" class="text-sm font-semibold text-amber-700 hover:text-amber-900">Dots and Boxes</a>
+      <a href="/sudoku" class="text-sm font-semibold text-indigo-700 hover:text-indigo-900">{{ translate(lang, 'games.sudoku.name') }}</a>
+      <a href="/tictactoe" class="text-sm font-semibold text-emerald-700 hover:text-emerald-900">{{ translate(lang, 'games.tictactoe.name') }}</a>
+      <a href="/dots-and-boxes" class="text-sm font-semibold text-amber-700 hover:text-amber-900">{{ translate(lang, 'games.dots_and_boxes.name') }}</a>
     </div>
   </div>
 
   <div class="max-w-6xl mx-auto">
     <header class="text-center mb-8">
-      <h1 class="text-4xl sm:text-5xl font-extrabold tracking-tight text-slate-900">Minesweeper</h1>
-      <p class="mt-2 text-slate-600">Find all the mines without detonating any.</p>
+      <h1 class="text-4xl sm:text-5xl font-extrabold tracking-tight text-slate-900">{{ translate(lang, 'games.minesweeper.title') }}</h1>
+      <p class="mt-2 text-slate-600">{{ translate(lang, 'games.minesweeper.subtitle') }}</p>
     </header>
 
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -70,21 +70,21 @@
         <div class="bg-white rounded-2xl shadow-xl ring-1 ring-slate-200 p-6 sm:p-8">
           <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
             <div>
-              <div class="text-sm font-semibold text-slate-500 uppercase tracking-wide">Status</div>
-              <div id="status" class="mt-1 text-2xl font-bold text-slate-900">Ready to play</div>
-              <div id="substatus" class="mt-1 text-slate-600">Left-click to reveal, right-click to flag.</div>
+              <div class="text-sm font-semibold text-slate-500 uppercase tracking-wide">{{ translate(lang, 'games.minesweeper.status.label') }}</div>
+              <div id="status" class="mt-1 text-2xl font-bold text-slate-900">{{ translate(lang, 'games.minesweeper.status.ready') }}</div>
+              <div id="substatus" class="mt-1 text-slate-600">{{ translate(lang, 'games.minesweeper.status.instructions') }}</div>
             </div>
             <div class="flex flex-wrap gap-2">
               <label class="text-sm font-semibold text-slate-700 inline-flex items-center gap-2">
                 Difficulty
                 <select id="difficulty" class="border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-500">
-                  <option value="beginner">Beginner (9×9, 10 mines)</option>
-                  <option value="intermediate" selected>Intermediate (16×16, 40 mines)</option>
-                  <option value="expert">Expert (30×16, 99 mines)</option>
+                  <option value="beginner">{{ translate(lang, 'games.minesweeper.difficulty.beginner') }}</option>
+                  <option value="intermediate" selected>{{ translate(lang, 'games.minesweeper.difficulty.intermediate') }}</option>
+                  <option value="expert">{{ translate(lang, 'games.minesweeper.difficulty.expert') }}</option>
                 </select>
               </label>
-              <button id="new-game" class="rounded-lg bg-red-600 hover:bg-red-700 text-white font-semibold px-4 py-2">New Game</button>
-              <button id="reset-scores" class="rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 font-semibold px-4 py-2">Reset Scores</button>
+              <button id="new-game" class="rounded-lg bg-red-600 hover:bg-red-700 text-white font-semibold px-4 py-2">{{ translate(lang, 'games.minesweeper.buttons.new_game') }}</button>
+              <button id="reset-scores" class="rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 font-semibold px-4 py-2">{{ translate(lang, 'games.minesweeper.buttons.reset_scores') }}</button>
             </div>
           </div>
 
@@ -102,30 +102,30 @@
 
       <div class="lg:col-span-1">
         <div class="bg-white rounded-2xl shadow-xl ring-1 ring-slate-200 p-6 sticky top-8">
-          <h2 class="text-xl font-bold text-slate-900 mb-4">Scoreboard</h2>
+          <h2 class="text-xl font-bold text-slate-900 mb-4">{{ translate(lang, 'games.minesweeper.scoreboard.title') }}</h2>
           <div class="grid grid-cols-2 gap-3">
             <div class="rounded-xl bg-green-50 ring-1 ring-green-100 p-4">
-              <div class="text-xs font-semibold uppercase tracking-wide text-green-700">Wins</div>
+              <div class="text-xs font-semibold uppercase tracking-wide text-green-700">{{ translate(lang, 'games.minesweeper.scoreboard.wins') }}</div>
               <div id="score-wins" class="mt-1 text-3xl font-extrabold text-green-900">0</div>
             </div>
             <div class="rounded-xl bg-red-50 ring-1 ring-red-100 p-4">
-              <div class="text-xs font-semibold uppercase tracking-wide text-red-700">Losses</div>
+              <div class="text-xs font-semibold uppercase tracking-wide text-red-700">{{ translate(lang, 'games.minesweeper.scoreboard.losses') }}</div>
               <div id="score-losses" class="mt-1 text-3xl font-extrabold text-red-900">0</div>
             </div>
             <div class="rounded-xl bg-slate-50 ring-1 ring-slate-200 p-4 col-span-2">
-              <div class="text-xs font-semibold uppercase tracking-wide text-slate-600">Games played</div>
+              <div class="text-xs font-semibold uppercase tracking-wide text-slate-600">{{ translate(lang, 'games.minesweeper.scoreboard.games_played') }}</div>
               <div id="games" class="mt-1 text-3xl font-extrabold text-slate-900">0</div>
             </div>
           </div>
 
           <div class="mt-6">
-            <h3 class="text-sm font-bold text-slate-700 mb-2">Rules</h3>
+            <h3 class="text-sm font-bold text-slate-700 mb-2">{{ translate(lang, 'games.minesweeper.rules.title') }}</h3>
             <ul class="text-sm text-slate-600 space-y-1">
-              <li>• Left-click to reveal a cell.</li>
-              <li>• Right-click to flag/unflag a mine.</li>
-              <li>• Numbers show adjacent mines.</li>
-              <li>• Reveal all non-mine cells to win.</li>
-              <li>• Hit a mine and you lose!</li>
+              <li>• {{ translate(lang, 'games.minesweeper.rules.reveal') }}</li>
+              <li>• {{ translate(lang, 'games.minesweeper.rules.flag') }}</li>
+              <li>• {{ translate(lang, 'games.minesweeper.rules.numbers') }}</li>
+              <li>• {{ translate(lang, 'games.minesweeper.rules.win') }}</li>
+              <li>• {{ translate(lang, 'games.minesweeper.rules.lose') }}</li>
             </ul>
           </div>
         </div>
@@ -136,6 +136,19 @@
 {% endblock %}
 
 {% block extra_scripts %}
+<script>
+  // Translation data for JavaScript
+  const translations = {
+    status: {
+      ready: "{{ translate(lang, 'games.minesweeper.status.ready') }}",
+      instructions: "{{ translate(lang, 'games.minesweeper.status.instructions') }}",
+      game_over: "{{ translate(lang, 'games.minesweeper.status.game_over') }}",
+      hit_mine: "{{ translate(lang, 'games.minesweeper.status.hit_mine') }}",
+      you_win: "{{ translate(lang, 'games.minesweeper.status.you_win') }}",
+      congratulations: "{{ translate(lang, 'games.minesweeper.status.congratulations') }}"
+    }
+  };
+</script>
 <script>
   const SCORE_KEY = 'ms:scores:v1';
 
@@ -245,7 +258,7 @@
     updateCounters();
 
     renderBoard();
-    setStatus('Ready to play', 'Left-click to reveal, right-click to flag.');
+    setStatus(translations.status.ready, translations.status.instructions);
   }
 
   function renderBoard() {
@@ -298,7 +311,7 @@
       gameOver = true;
       stopTimer();
       revealAllMines();
-      setStatus('Game Over!', 'You hit a mine.');
+      setStatus(translations.status.game_over, translations.status.hit_mine);
       const scores = loadScores();
       scores.losses += 1;
       scores.games += 1;
@@ -348,7 +361,7 @@
     if (revealedCount === rows * cols - mineCount) {
       gameWon = true;
       stopTimer();
-      setStatus('You Win!', 'Congratulations!');
+      setStatus(translations.status.you_win, translations.status.congratulations);
       const scores = loadScores();
       scores.wins += 1;
       scores.games += 1;

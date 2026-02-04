@@ -1,18 +1,17 @@
 {% extends "base.html" %}
 
-{% block title %}Games{% endblock %}
+{% block title %}{{ translate(lang, 'home.title') }}{% endblock %}
 
 {% block body_class %}bg-gradient-to-br from-slate-50 to-indigo-100 min-h-screen{% endblock %}
 
 {% block content %}
     <div class="container mx-auto px-4 py-6 sm:py-10">
         <header class="mb-8 sm:mb-10">
-            <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 sm:gap-6">
+            <div class="flex flex-col sm:flex-row sm:items-start gap-4 sm:gap-6">
                 <div>
-                    <h1 class="text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-slate-900">Game Hub</h1>
-                    <p class="mt-2 text-sm sm:text-base text-slate-600">Pick a game to play. Made by the Thomas Family (with some help from AI).</p>
+                    <h1 class="text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-slate-900">{{ translate(lang, 'home.title') }}</h1>
+                    <p class="mt-2 text-sm sm:text-base text-slate-600">{{ translate(lang, 'home.subtitle') }}</p>
                 </div>
-                <a href="/docs" class="text-sm font-semibold text-indigo-700 hover:text-indigo-900 self-start sm:self-auto">API Docs</a>
             </div>
         </header>
 
@@ -21,16 +20,16 @@
                 <!-- Sudoku tile -->
                 <a href="/sudoku" class="group rounded-2xl bg-white shadow-lg ring-1 ring-slate-200 hover:shadow-xl hover:ring-indigo-200 transition overflow-hidden touch-manipulation">
                     <div class="p-4 sm:p-6">
-                        <h2 class="text-xl sm:text-2xl font-bold text-slate-900 group-hover:text-indigo-900">Sudoku</h2>
-                        <p class="mt-2 sm:mt-3 text-sm sm:text-base text-slate-600">Classic 9×9 puzzle with timer and leaderboard.</p>
+                        <h2 class="text-xl sm:text-2xl font-bold text-slate-900 group-hover:text-indigo-900">{{ translate(lang, 'games.sudoku.name') }}</h2>
+                        <p class="mt-2 sm:mt-3 text-sm sm:text-base text-slate-600">{{ translate(lang, 'games.sudoku.description') }}</p>
                         <div class="mt-4 sm:mt-6 flex items-center text-indigo-700 font-semibold text-sm sm:text-base">
-                            <span>Open</span>
+                            <span>{{ translate(lang, 'home.open') }}</span>
                             <svg class="ml-2 h-4 w-4 sm:h-5 sm:w-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
                                 <path fill-rule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clip-rule="evenodd" />
                             </svg>
                         </div>
                         <div class="mt-3 flex justify-center">
-                            <span class="inline-flex items-center rounded-full bg-blue-50 px-2 py-1 text-xs font-semibold text-blue-700 ring-1 ring-blue-200">1 Player</span>
+                            <span class="inline-flex items-center rounded-full bg-blue-50 px-2 py-1 text-xs font-semibold text-blue-700 ring-1 ring-blue-200">{{ translate(lang, 'player_badges.one_player') }}</span>
                         </div>
                     </div>
                     <div class="h-2 bg-gradient-to-r from-indigo-500 to-purple-500"></div>
@@ -39,16 +38,16 @@
                 <!-- Dots and Boxes tile -->
                 <a href="/dots-and-boxes" class="group rounded-2xl bg-white shadow-lg ring-1 ring-slate-200 hover:shadow-xl hover:ring-amber-200 transition overflow-hidden touch-manipulation">
                     <div class="p-4 sm:p-6">
-                        <h2 class="text-xl sm:text-2xl font-bold text-slate-900 group-hover:text-amber-900">Dots and Boxes</h2>
-                        <p class="mt-2 sm:mt-3 text-sm sm:text-base text-slate-600">Draw lines, complete boxes, and rack up points.</p>
+                        <h2 class="text-xl sm:text-2xl font-bold text-slate-900 group-hover:text-amber-900">{{ translate(lang, 'games.dots_and_boxes.name') }}</h2>
+                        <p class="mt-2 sm:mt-3 text-sm sm:text-base text-slate-600">{{ translate(lang, 'games.dots_and_boxes.description') }}</p>
                         <div class="mt-4 sm:mt-6 flex items-center text-amber-700 font-semibold text-sm sm:text-base">
-                            <span>Open</span>
+                            <span>{{ translate(lang, 'home.open') }}</span>
                             <svg class="ml-2 h-4 w-4 sm:h-5 sm:w-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
                                 <path fill-rule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clip-rule="evenodd" />
                             </svg>
                         </div>
                         <div class="mt-3 flex justify-center">
-                            <span class="inline-flex items-center rounded-full bg-green-50 px-2 py-1 text-xs font-semibold text-green-700 ring-1 ring-green-200">2 Players</span>
+                            <span class="inline-flex items-center rounded-full bg-green-50 px-2 py-1 text-xs font-semibold text-green-700 ring-1 ring-green-200">{{ translate(lang, 'player_badges.two_players') }}</span>
                         </div>
                     </div>
                     <div class="h-2 bg-gradient-to-r from-amber-500 to-orange-500"></div>
@@ -57,16 +56,16 @@
                 <!-- Connect Four tile -->
                 <a href="/connect-four" class="group rounded-2xl bg-white shadow-lg ring-1 ring-slate-200 hover:shadow-xl hover:ring-cyan-200 transition overflow-hidden touch-manipulation">
                     <div class="p-4 sm:p-6">
-                        <h2 class="text-xl sm:text-2xl font-bold text-slate-900 group-hover:text-cyan-900">Connect Four</h2>
-                        <p class="mt-2 sm:mt-3 text-sm sm:text-base text-slate-600">Drop pieces and connect four in a row.</p>
+                        <h2 class="text-xl sm:text-2xl font-bold text-slate-900 group-hover:text-cyan-900">{{ translate(lang, 'games.connect_four.name') }}</h2>
+                        <p class="mt-2 sm:mt-3 text-sm sm:text-base text-slate-600">{{ translate(lang, 'games.connect_four.description') }}</p>
                         <div class="mt-4 sm:mt-6 flex items-center text-cyan-700 font-semibold text-sm sm:text-base">
-                            <span>Open</span>
+                            <span>{{ translate(lang, 'home.open') }}</span>
                             <svg class="ml-2 h-4 w-4 sm:h-5 sm:w-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
                                 <path fill-rule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clip-rule="evenodd" />
                             </svg>
                         </div>
                         <div class="mt-3 flex justify-center">
-                            <span class="inline-flex items-center rounded-full bg-green-50 px-2 py-1 text-xs font-semibold text-green-700 ring-1 ring-green-200">2 Players</span>
+                            <span class="inline-flex items-center rounded-full bg-green-50 px-2 py-1 text-xs font-semibold text-green-700 ring-1 ring-green-200">{{ translate(lang, 'player_badges.two_players') }}</span>
                         </div>
                     </div>
                     <div class="h-2 bg-gradient-to-r from-cyan-500 to-blue-500"></div>
@@ -75,16 +74,16 @@
                 <!-- Minesweeper tile -->
                 <a href="/minesweeper" class="group rounded-2xl bg-white shadow-lg ring-1 ring-slate-200 hover:shadow-xl hover:ring-red-200 transition overflow-hidden touch-manipulation">
                     <div class="p-4 sm:p-6">
-                        <h2 class="text-xl sm:text-2xl font-bold text-slate-900 group-hover:text-red-900">Minesweeper</h2>
-                        <p class="mt-2 sm:mt-3 text-sm sm:text-base text-slate-600">Clear the minefield without detonating any mines.</p>
+                        <h2 class="text-xl sm:text-2xl font-bold text-slate-900 group-hover:text-red-900">{{ translate(lang, 'games.minesweeper.name') }}</h2>
+                        <p class="mt-2 sm:mt-3 text-sm sm:text-base text-slate-600">{{ translate(lang, 'games.minesweeper.description') }}</p>
                         <div class="mt-4 sm:mt-6 flex items-center text-red-700 font-semibold text-sm sm:text-base">
-                            <span>Open</span>
+                            <span>{{ translate(lang, 'home.open') }}</span>
                             <svg class="ml-2 h-4 w-4 sm:h-5 sm:w-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
                                 <path fill-rule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clip-rule="evenodd" />
                             </svg>
                         </div>
                         <div class="mt-3 flex justify-center">
-                            <span class="inline-flex items-center rounded-full bg-blue-50 px-2 py-1 text-xs font-semibold text-blue-700 ring-1 ring-blue-200">1 Player</span>
+                            <span class="inline-flex items-center rounded-full bg-blue-50 px-2 py-1 text-xs font-semibold text-blue-700 ring-1 ring-blue-200">{{ translate(lang, 'player_badges.one_player') }}</span>
                         </div>
                     </div>
                     <div class="h-2 bg-gradient-to-r from-red-500 to-pink-500"></div>
@@ -92,16 +91,16 @@
 
                 <a href="/tictactoe" class="group rounded-2xl bg-white shadow-lg ring-1 ring-slate-200 hover:shadow-xl hover:ring-emerald-200 transition overflow-hidden touch-manipulation">
                     <div class="p-4 sm:p-6">
-                        <h2 class="text-xl sm:text-2xl font-bold text-slate-900 group-hover:text-emerald-900">Tic-Tac-Toe</h2>
-                        <p class="mt-2 sm:mt-3 text-sm sm:text-base text-slate-600">Quick, simple, and surprisingly tactical.</p>
+                        <h2 class="text-xl sm:text-2xl font-bold text-slate-900 group-hover:text-emerald-900">{{ translate(lang, 'games.tictactoe.name') }}</h2>
+                        <p class="mt-2 sm:mt-3 text-sm sm:text-base text-slate-600">{{ translate(lang, 'games.tictactoe.description') }}</p>
                         <div class="mt-4 sm:mt-6 flex items-center text-emerald-700 font-semibold text-sm sm:text-base">
-                            <span>Open</span>
+                            <span>{{ translate(lang, 'home.open') }}</span>
                             <svg class="ml-2 h-4 w-4 sm:h-5 sm:w-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
                                 <path fill-rule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clip-rule="evenodd" />
                             </svg>
                         </div>
                         <div class="mt-3 flex justify-center">
-                            <span class="inline-flex items-center rounded-full bg-green-50 px-2 py-1 text-xs font-semibold text-green-700 ring-1 ring-green-200">2 Players</span>
+                            <span class="inline-flex items-center rounded-full bg-green-50 px-2 py-1 text-xs font-semibold text-green-700 ring-1 ring-green-200">{{ translate(lang, 'player_badges.two_players') }}</span>
                         </div>
                     </div>
                     <div class="h-2 bg-gradient-to-r from-emerald-500 to-teal-500"></div>
@@ -110,16 +109,16 @@
                 <!-- Chess tile -->
                 <a href="/chess" class="group rounded-2xl bg-white shadow-lg ring-1 ring-slate-200 hover:shadow-xl hover:ring-purple-200 transition overflow-hidden touch-manipulation">
                     <div class="p-4 sm:p-6">
-                        <h2 class="text-xl sm:text-2xl font-bold text-slate-900 group-hover:text-purple-900">Chess</h2>
-                        <p class="mt-2 sm:mt-3 text-sm sm:text-base text-slate-600">Strategic battle of wits on the chessboard.</p>
+                        <h2 class="text-xl sm:text-2xl font-bold text-slate-900 group-hover:text-purple-900">{{ translate(lang, 'games.chess.name') }}</h2>
+                        <p class="mt-2 sm:mt-3 text-sm sm:text-base text-slate-600">{{ translate(lang, 'games.chess.description') }}</p>
                         <div class="mt-4 sm:mt-6 flex items-center text-purple-700 font-semibold text-sm sm:text-base">
-                            <span>Open</span>
+                            <span>{{ translate(lang, 'home.open') }}</span>
                             <svg class="ml-2 h-4 w-4 sm:h-5 sm:w-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
                                 <path fill-rule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clip-rule="evenodd" />
                             </svg>
                         </div>
                         <div class="mt-3 flex justify-center">
-                            <span class="inline-flex items-center rounded-full bg-green-50 px-2 py-1 text-xs font-semibold text-green-700 ring-1 ring-green-200">2 Players</span>
+                            <span class="inline-flex items-center rounded-full bg-green-50 px-2 py-1 text-xs font-semibold text-green-700 ring-1 ring-green-200">{{ translate(lang, 'player_badges.two_players') }}</span>
                         </div>
                     </div>
                     <div class="h-2 bg-gradient-to-r from-purple-500 to-pink-500"></div>
@@ -128,16 +127,16 @@
                 <!-- KenKen tile -->
                 <a href="/kenken" class="group rounded-2xl bg-white shadow-lg ring-1 ring-slate-200 hover:shadow-xl hover:ring-orange-200 transition overflow-hidden touch-manipulation">
                     <div class="p-4 sm:p-6">
-                        <h2 class="text-xl sm:text-2xl font-bold text-slate-900 group-hover:text-orange-900">KenKen</h2>
-                        <p class="mt-2 sm:mt-3 text-sm sm:text-base text-slate-600">Math puzzles with arithmetic operations.</p>
+                        <h2 class="text-xl sm:text-2xl font-bold text-slate-900 group-hover:text-orange-900">{{ translate(lang, 'games.kenken.name') }}</h2>
+                        <p class="mt-2 sm:mt-3 text-sm sm:text-base text-slate-600">{{ translate(lang, 'games.kenken.description') }}</p>
                         <div class="mt-4 sm:mt-6 flex items-center text-orange-700 font-semibold text-sm sm:text-base">
-                            <span>Open</span>
+                            <span>{{ translate(lang, 'home.open') }}</span>
                             <svg class="ml-2 h-4 w-4 sm:h-5 sm:w-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
                                 <path fill-rule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clip-rule="evenodd" />
                             </svg>
                         </div>
                         <div class="mt-3 flex justify-center">
-                            <span class="inline-flex items-center rounded-full bg-blue-50 px-2 py-1 text-xs font-semibold text-blue-700 ring-1 ring-blue-200">1 Player</span>
+                            <span class="inline-flex items-center rounded-full bg-blue-50 px-2 py-1 text-xs font-semibold text-blue-700 ring-1 ring-blue-200">{{ translate(lang, 'player_badges.one_player') }}</span>
                         </div>
                     </div>
                     <div class="h-2 bg-gradient-to-r from-orange-500 to-red-500"></div>
@@ -146,16 +145,16 @@
                 <!-- Solitaire tile -->
                 <a href="/solitaire" class="group rounded-2xl bg-white shadow-lg ring-1 ring-slate-200 hover:shadow-xl hover:ring-amber-200 transition overflow-hidden touch-manipulation">
                     <div class="p-4 sm:p-6">
-                        <h2 class="text-xl sm:text-2xl font-bold text-slate-900 group-hover:text-amber-900">Solitaire</h2>
-                        <p class="mt-2 sm:mt-3 text-sm sm:text-base text-slate-600">Jump over marbles to remove them.</p>
+                        <h2 class="text-xl sm:text-2xl font-bold text-slate-900 group-hover:text-amber-900">{{ translate(lang, 'games.solitaire.name') }}</h2>
+                        <p class="mt-2 sm:mt-3 text-sm sm:text-base text-slate-600">{{ translate(lang, 'games.solitaire.description') }}</p>
                         <div class="mt-4 sm:mt-6 flex items-center text-amber-700 font-semibold text-sm sm:text-base">
-                            <span>Open</span>
+                            <span>{{ translate(lang, 'home.open') }}</span>
                             <svg class="ml-2 h-4 w-4 sm:h-5 sm:w-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
                                 <path fill-rule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clip-rule="evenodd" />
                             </svg>
                         </div>
                         <div class="mt-3 flex justify-center">
-                            <span class="inline-flex items-center rounded-full bg-blue-50 px-2 py-1 text-xs font-semibold text-blue-700 ring-1 ring-blue-200">1 Player</span>
+                            <span class="inline-flex items-center rounded-full bg-blue-50 px-2 py-1 text-xs font-semibold text-blue-700 ring-1 ring-blue-200">{{ translate(lang, 'player_badges.one_player') }}</span>
                         </div>
                     </div>
                     <div class="h-2 bg-gradient-to-r from-amber-500 to-yellow-500"></div>
@@ -163,7 +162,7 @@
             </div>
 
             <div class="mt-8 sm:mt-10 text-center sm:text-left text-sm text-slate-500">
-                <p>Tip: bookmark <a href="/sudoku" class="font-semibold text-indigo-700 hover:text-indigo-900">/sudoku</a> to jump straight into Sudoku.</p>
+                <p>{{ translate(lang, 'home.tip') }}</p>
             </div>
         </main>
     </div>

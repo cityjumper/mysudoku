@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}KenKen{% endblock %}
+{% block title %}{{ translate(lang, 'games.kenken.title') }}{% endblock %}
 
 {% block extra_head %}
     <style>
@@ -78,15 +78,15 @@
                 <svg class="w-5 h-5 mr-2" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
                     <path fill-rule="evenodd" d="M12.707 15.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 111.414 1.414L7.414 9H17a1 1 0 110 2H7.414l5.293 5.293a1 1 0 010 1.414z" clip-rule="evenodd" />
                 </svg>
-                Home
+                {{ translate(lang, 'common.home') }}
             </a>
-            <a href="/sudoku" class="text-sm font-semibold text-indigo-700 hover:text-indigo-900">Sudoku</a>
+            <a href="/sudoku" class="text-sm font-semibold text-indigo-700 hover:text-indigo-900">{{ translate(lang, 'games.sudoku.name') }}</a>
         </div>
 
         <div class="max-w-6xl mx-auto">
             <header class="text-center mb-8">
-                <h1 class="text-4xl sm:text-5xl font-extrabold tracking-tight text-slate-900">KenKen</h1>
-                <p class="mt-2 text-slate-600">Mathematical logic puzzles with arithmetic operations.</p>
+                <h1 class="text-4xl sm:text-5xl font-extrabold tracking-tight text-slate-900">{{ translate(lang, 'games.kenken.title') }}</h1>
+                <p class="mt-2 text-slate-600">{{ translate(lang, 'games.kenken.subtitle') }}</p>
             </header>
 
             <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
@@ -95,13 +95,13 @@
                     <div class="bg-white rounded-2xl shadow-xl ring-1 ring-slate-200 p-6 sm:p-8">
                         <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
                             <div>
-                                <div class="text-sm font-semibold text-slate-500 uppercase tracking-wide">Status</div>
-                                <div id="status" class="mt-1 text-2xl font-bold text-slate-900">Fill the grid</div>
+                                <div class="text-sm font-semibold text-slate-500 uppercase tracking-wide">{{ translate(lang, 'games.kenken.status') }}</div>
+                                <div id="status" class="mt-1 text-2xl font-bold text-slate-900">{{ translate(lang, 'games.kenken.ready_to_play') }}</div>
                                 <div id="substatus" class="mt-1 text-slate-600">Use numbers 1-4, each once per row/column.</div>
                             </div>
                             <div class="flex gap-2">
-                                <button id="new-game" class="rounded-lg bg-orange-600 hover:bg-orange-700 text-white font-semibold px-4 py-2">New Game</button>
-                                <button id="check-solution" class="rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold px-4 py-2">Check</button>
+                                <button id="new-game" class="rounded-lg bg-orange-600 hover:bg-orange-700 text-white font-semibold px-4 py-2">{{ translate(lang, 'games.kenken.new_puzzle') }}</button>
+                                <button id="check-solution" class="rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold px-4 py-2">{{ translate(lang, 'games.kenken.check_solution') }}</button>
                                 <button id="show-hint" class="rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 font-semibold px-4 py-2">Hint</button>
                                 <button id="show-solution" class="rounded-lg bg-red-600 hover:bg-red-700 text-white font-semibold px-4 py-2">Solution</button>
                             </div>
@@ -126,12 +126,12 @@
                         </div>
 
                         <div class="mt-6">
-                            <h3 class="text-sm font-bold text-slate-700 mb-2">Rules</h3>
+                            <h3 class="text-sm font-bold text-slate-700 mb-2">{{ translate(lang, 'games.kenken.rules') }}</h3>
                             <ul class="text-sm text-slate-600 space-y-1">
-                                <li>• Fill grid with 1-4, no repeats in rows/columns</li>
-                                <li>• Each cage has a target number and operation</li>
-                                <li>• Operations: + (sum), × (product), − (difference), ÷ (quotient)</li>
-                                <li>• Single cells have no operation, just the number</li>
+                                <li>• {{ translate(lang, 'games.kenken.rule_1') }}</li>
+                                <li>• {{ translate(lang, 'games.kenken.rule_2') }}</li>
+                                <li>• {{ translate(lang, 'games.kenken.rule_3') }}</li>
+                                <li>• {{ translate(lang, 'games.kenken.rule_4') }}</li>
                             </ul>
                         </div>
 
@@ -151,6 +151,19 @@
 {% endblock %}
 
 {% block extra_scripts %}
+    <script>
+        // Translation data for JavaScript
+        const translations = {
+            status: {
+                ready_to_play: "{{ translate(lang, 'games.kenken.ready_to_play') }}",
+                puzzle_complete: "{{ translate(lang, 'games.kenken.puzzle_complete') }}",
+                invalid_solution: "{{ translate(lang, 'games.kenken.invalid_solution') }}",
+                valid_so_far: "Valid so far",
+                solution_shown: "Solution shown",
+                no_hints: "No hints available"
+            }
+        };
+    </script>
     <script>
         // Multiple KenKen puzzles for random selection
         const PUZZLES = [
@@ -366,11 +379,11 @@
             // Check if complete
             const filled = board.flat().filter(x => x !== '').length;
             if (filled === 16) {
-                statusEl.textContent = 'Congratulations!';
+                statusEl.textContent = translations.status.puzzle_complete;
                 statusEl.className = 'mt-1 text-2xl font-bold text-green-600';
                 substatusEl.textContent = 'You solved the KenKen puzzle!';
             } else {
-                statusEl.textContent = 'Valid so far';
+                statusEl.textContent = translations.status.valid_so_far;
                 statusEl.className = 'mt-1 text-2xl font-bold text-blue-600';
             }
         }
@@ -412,7 +425,7 @@
 
             // Reset board
             board = Array(4).fill().map(() => Array(4).fill(''));
-            statusEl.textContent = 'Fill the grid';
+            statusEl.textContent = translations.status.ready_to_play;
             statusEl.className = 'mt-1 text-2xl font-bold text-slate-900';
             substatusEl.textContent = 'Use numbers 1-4, each once per row/column.';
 
@@ -449,7 +462,7 @@
                     }
                 }
             }
-            statusEl.textContent = 'No hints available';
+            statusEl.textContent = translations.status.no_hints;
             statusEl.className = 'mt-1 text-2xl font-bold text-orange-600';
         }
 
@@ -462,7 +475,7 @@
                 }
             }
             createBoard();
-            statusEl.textContent = 'Solution shown';
+            statusEl.textContent = translations.status.solution_shown;
             statusEl.className = 'mt-1 text-2xl font-bold text-green-600';
             substatusEl.textContent = 'The puzzle has been completed for you.';
         }

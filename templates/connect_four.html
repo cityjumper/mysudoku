@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Connect Four{% endblock %}
+{% block title %}{{ translate(lang, 'games.connect_four.title') }}{% endblock %}
 
 {% block extra_head %}
 <style>
@@ -49,21 +49,21 @@
       <svg class="w-5 h-5 mr-2" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
         <path fill-rule="evenodd" d="M12.707 15.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 111.414 1.414L7.414 9H17a1 1 0 110 2H7.414l5.293 5.293a1 1 0 010 1.414z" clip-rule="evenodd" />
       </svg>
-      Home
+      {{ translate(lang, 'common.home') }}
     </a>
     <div class="flex items-center gap-4">
-      <a href="/sudoku" class="text-sm font-semibold text-indigo-700 hover:text-indigo-900">Sudoku</a>
-      <a href="/tictactoe" class="text-sm font-semibold text-emerald-700 hover:text-emerald-900">Tic-Tac-Toe</a>
-      <a href="/dots-and-boxes" class="text-sm font-semibold text-amber-700 hover:text-amber-900">Dots and Boxes</a>
-      <a href="/minesweeper" class="text-sm font-semibold text-red-700 hover:text-red-900">Minesweeper</a>
-      <a href="/chess" class="text-sm font-semibold text-purple-700 hover:text-purple-900">Chess</a>
+      <a href="/sudoku" class="text-sm font-semibold text-indigo-700 hover:text-indigo-900">{{ translate(lang, 'games.sudoku.name') }}</a>
+      <a href="/tictactoe" class="text-sm font-semibold text-emerald-700 hover:text-emerald-900">{{ translate(lang, 'games.tictactoe.name') }}</a>
+      <a href="/dots-and-boxes" class="text-sm font-semibold text-amber-700 hover:text-amber-900">{{ translate(lang, 'games.dots_and_boxes.name') }}</a>
+      <a href="/minesweeper" class="text-sm font-semibold text-red-700 hover:text-red-900">{{ translate(lang, 'games.minesweeper.name') }}</a>
+      <a href="/chess" class="text-sm font-semibold text-purple-700 hover:text-purple-900">{{ translate(lang, 'games.chess.name') }}</a>
     </div>
   </div>
 
   <div class="max-w-6xl mx-auto">
     <header class="text-center mb-8">
-      <h1 class="text-4xl sm:text-5xl font-extrabold tracking-tight text-slate-900">Connect Four</h1>
-      <p class="mt-2 text-slate-600">Drop pieces and connect four in a row to win.</p>
+      <h1 class="text-4xl sm:text-5xl font-extrabold tracking-tight text-slate-900">{{ translate(lang, 'games.connect_four.title') }}</h1>
+      <p class="mt-2 text-slate-600">{{ translate(lang, 'games.connect_four.subtitle') }}</p>
     </header>
 
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -71,13 +71,13 @@
         <div class="bg-white rounded-2xl shadow-xl ring-1 ring-slate-200 p-6 sm:p-8">
           <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
             <div>
-              <div class="text-sm font-semibold text-slate-500 uppercase tracking-wide">Status</div>
-              <div id="status" class="mt-1 text-2xl font-bold text-slate-900">Red to move</div>
+              <div class="text-sm font-semibold text-slate-500 uppercase tracking-wide">{{ translate(lang, 'games.connect_four.status') }}</div>
+              <div id="status" class="mt-1 text-2xl font-bold text-slate-900">{{ translate(lang, 'games.connect_four.red_to_move') }}</div>
               <div id="substatus" class="mt-1 text-slate-600">Click a column to drop your piece.</div>
             </div>
             <div class="flex gap-2">
-              <button id="new-game" class="rounded-lg bg-cyan-600 hover:bg-cyan-700 text-white font-semibold px-4 py-2">New Game</button>
-              <button id="reset-scores" class="rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 font-semibold px-4 py-2">Reset Scores</button>
+              <button id="new-game" class="rounded-lg bg-cyan-600 hover:bg-cyan-700 text-white font-semibold px-4 py-2">{{ translate(lang, 'games.connect_four.new_game') }}</button>
+              <button id="reset-scores" class="rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 font-semibold px-4 py-2">{{ translate(lang, 'games.connect_four.reset_scores') }}</button>
             </div>
           </div>
 
@@ -89,29 +89,29 @@
 
       <div class="lg:col-span-1">
         <div class="bg-white rounded-2xl shadow-xl ring-1 ring-slate-200 p-6 sticky top-8">
-          <h2 class="text-xl font-bold text-slate-900 mb-4">Scoreboard</h2>
+          <h2 class="text-xl font-bold text-slate-900 mb-4">{{ translate(lang, 'games.connect_four.scoreboard') }}</h2>
           <div class="grid grid-cols-2 gap-3">
             <div class="rounded-xl bg-red-50 ring-1 ring-red-100 p-4">
-              <div class="text-xs font-semibold uppercase tracking-wide text-red-700">Red wins</div>
+              <div class="text-xs font-semibold uppercase tracking-wide text-red-700">{{ translate(lang, 'games.connect_four.red_wins_label') }}</div>
               <div id="score-red" class="mt-1 text-3xl font-extrabold text-red-900">0</div>
             </div>
             <div class="rounded-xl bg-yellow-50 ring-1 ring-yellow-100 p-4">
-              <div class="text-xs font-semibold uppercase tracking-wide text-yellow-700">Yellow wins</div>
+              <div class="text-xs font-semibold uppercase tracking-wide text-yellow-700">{{ translate(lang, 'games.connect_four.yellow_wins_label') }}</div>
               <div id="score-yellow" class="mt-1 text-3xl font-extrabold text-yellow-900">0</div>
             </div>
             <div class="rounded-xl bg-slate-50 ring-1 ring-slate-200 p-4 col-span-2">
-              <div class="text-xs font-semibold uppercase tracking-wide text-slate-600">Games played</div>
+              <div class="text-xs font-semibold uppercase tracking-wide text-slate-600">{{ translate(lang, 'games.connect_four.games_played') }}</div>
               <div id="games" class="mt-1 text-3xl font-extrabold text-slate-900">0</div>
             </div>
           </div>
 
           <div class="mt-6">
-            <h3 class="text-sm font-bold text-slate-700 mb-2">Rules</h3>
+            <h3 class="text-sm font-bold text-slate-700 mb-2">{{ translate(lang, 'games.connect_four.rules') }}</h3>
             <ul class="text-sm text-slate-600 space-y-1">
-              <li>• Take turns dropping pieces into columns.</li>
-              <li>• First to connect 4 in a row wins.</li>
-              <li>• Rows, columns, or diagonals count.</li>
-              <li>• If board fills with no winner: draw.</li>
+              <li>• {{ translate(lang, 'games.connect_four.rule_1') }}</li>
+              <li>• {{ translate(lang, 'games.connect_four.rule_2') }}</li>
+              <li>• {{ translate(lang, 'games.connect_four.rule_3') }}</li>
+              <li>• {{ translate(lang, 'games.connect_four.rule_4') }}</li>
             </ul>
           </div>
         </div>
@@ -122,6 +122,19 @@
 {% endblock %}
 
 {% block extra_scripts %}
+<script>
+  // Translation data for JavaScript
+  const translations = {
+    status: {
+      red_to_move: "{{ translate(lang, 'games.connect_four.red_to_move') }}",
+      yellow_to_move: "{{ translate(lang, 'games.connect_four.yellow_to_move') }}",
+      red_wins: "{{ translate(lang, 'games.connect_four.red_wins') }}",
+      yellow_wins: "{{ translate(lang, 'games.connect_four.yellow_wins') }}",
+      draw: "{{ translate(lang, 'games.connect_four.draw') }}",
+      click_column: "Click a column to drop your piece."
+    }
+  };
+</script>
 <script>
   const SCORE_KEY = 'c4:scores:v1';
 
@@ -242,8 +255,8 @@
       if (line.length >= 4) {
         winningCells = line;
         gameOver = true;
-        const winner = currentPlayer === 1 ? 'Red' : 'Yellow';
-        setStatus(`${winner} wins!`, 'success');
+        const winner = currentPlayer === 1 ? translations.status.red_wins : translations.status.yellow_wins;
+        setStatus(winner, 'success');
         const scores = loadScores();
         if (currentPlayer === 1) scores.red += 1;
         else scores.yellow += 1;
@@ -257,7 +270,7 @@
     // Check for draw
     if (board.flat().every(cell => cell !== 0)) {
       gameOver = true;
-      setStatus('Draw!', 'info');
+      setStatus(translations.status.draw, 'info');
       const scores = loadScores();
       scores.games += 1;
       saveScores(scores);
@@ -276,9 +289,9 @@
 
     if (gameOver) return;
 
-    statusEl.textContent = `${currentPlayer === 1 ? 'Red' : 'Yellow'} to move`;
+    statusEl.textContent = currentPlayer === 1 ? translations.status.red_to_move : translations.status.yellow_to_move;
     statusEl.style.color = '#0f172a';
-    substatusEl.textContent = 'Click a column to drop your piece.';
+    substatusEl.textContent = translations.status.click_column;
   }
 
   function newGame() {

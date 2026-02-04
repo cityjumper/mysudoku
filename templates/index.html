@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Sudoku for Nicolas{% endblock %}
+{% block title %}{{ translate(lang, 'games.sudoku.title') }}{% endblock %}
 
 {% block extra_head %}
     <style>
@@ -55,14 +55,14 @@
                 <svg class="w-5 h-5 mr-2" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
                     <path fill-rule="evenodd" d="M12.707 15.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 111.414 1.414L7.414 9H17a1 1 0 110 2H7.414l5.293 5.293a1 1 0 010 1.414z" clip-rule="evenodd" />
                 </svg>
-                Home
+                {{ translate(lang, 'common.home') }}
             </a>
         </div>
 
         <!-- Header -->
         <div class="text-center mb-8">
-            <h1 class="text-5xl font-bold text-indigo-900 mb-2">Sudoku</h1>
-            <p class="text-gray-600">Challenge your mind with this classic puzzle game</p>
+            <h1 class="text-5xl font-bold text-indigo-900 mb-2">{{ translate(lang, 'games.sudoku.title') }}</h1>
+            <p class="text-gray-600">{{ translate(lang, 'games.sudoku.subtitle') }}</p>
         </div>
 
         <!-- Game Controls -->
@@ -72,26 +72,26 @@
                     <!-- New Game Button -->
                     <div class="flex gap-2">
                         <button onclick="newGame('easy')" class="bg-green-500 hover:bg-green-600 text-white font-semibold py-3 px-6 rounded-lg shadow-md transition duration-200 transform hover:scale-105">
-                            Easy
+                            {{ translate(lang, 'games.sudoku.easy') }}
                         </button>
                         <button onclick="newGame('medium')" class="bg-yellow-500 hover:bg-yellow-600 text-white font-semibold py-3 px-6 rounded-lg shadow-md transition duration-200 transform hover:scale-105">
-                            Medium
+                            {{ translate(lang, 'games.sudoku.medium') }}
                         </button>
                         <button onclick="newGame('hard')" class="bg-red-500 hover:bg-red-600 text-white font-semibold py-3 px-6 rounded-lg shadow-md transition duration-200 transform hover:scale-105">
-                            Hard
+                            {{ translate(lang, 'games.sudoku.hard') }}
                         </button>
                     </div>
                     
                     <!-- Action Buttons -->
                     <div class="flex gap-2">
                         <button onclick="validateSolution()" class="bg-blue-500 hover:bg-blue-600 text-white font-semibold py-3 px-6 rounded-lg shadow-md transition duration-200">
-                            Check
+                            {{ translate(lang, 'games.sudoku.check') }}
                         </button>
                         <button onclick="showSolution()" class="bg-purple-500 hover:bg-purple-600 text-white font-semibold py-3 px-6 rounded-lg shadow-md transition duration-200">
-                            Solution
+                            {{ translate(lang, 'games.sudoku.solution') }}
                         </button>
                         <button onclick="clearBoard()" class="bg-gray-500 hover:bg-gray-600 text-white font-semibold py-3 px-6 rounded-lg shadow-md transition duration-200">
-                            Clear
+                            {{ translate(lang, 'games.sudoku.clear') }}
                         </button>
                     </div>
                 </div>
@@ -109,7 +109,7 @@
                     <!-- Timer -->
                     <div class="text-center mb-6">
                         <div class="inline-block bg-gradient-to-r from-indigo-500 to-purple-500 text-white px-6 py-3 rounded-lg shadow-lg">
-                            <div class="text-sm font-semibold uppercase tracking-wide">Time</div>
+                            <div class="text-sm font-semibold uppercase tracking-wide">{{ translate(lang, 'games.sudoku.time') }}</div>
                             <div id="timer" class="text-3xl font-bold">00:00</div>
                         </div>
                     </div>
@@ -119,7 +119,7 @@
                             <svg class="w-24 h-24 mx-auto mb-4 text-indigo-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 10l-2 1m0 0l-2-1m2 1v2.5M20 7l-2 1m2-1l-2-1m2 1v2.5M14 4l-2-1-2 1M4 7l2-1M4 7l2 1M4 7v2.5M12 21l-2-1m2 1l2-1m-2 1v-2.5M6 18l-2-1v-2.5M18 18l2-1v-2.5"></path>
                             </svg>
-                            <p class="text-xl font-semibold text-gray-600">Select difficulty to start a new game</p>
+                            <p class="text-xl font-semibold text-gray-600">{{ translate(lang, 'games.sudoku.select_difficulty') }}</p>
                         </div>
                     </div>
                 </div>
@@ -133,25 +133,25 @@
                             <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z"></path>
                             <path fill-rule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z" clip-rule="evenodd"></path>
                         </svg>
-                        Leaderboard
+                        {{ translate(lang, 'games.sudoku.leaderboard') }}
                     </h2>
                     
                     <!-- Difficulty Filter -->
                     <div class="mb-4">
                         <select id="difficulty-filter" onchange="updateLeaderboard()" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                            <option value="all">All Difficulties</option>
-                            <option value="easy">Easy</option>
-                            <option value="medium">Medium</option>
-                            <option value="hard">Hard</option>
+                            <option value="all">{{ translate(lang, 'games.sudoku.all_difficulties') }}</option>
+                            <option value="easy">{{ translate(lang, 'games.sudoku.easy') }}</option>
+                            <option value="medium">{{ translate(lang, 'games.sudoku.medium') }}</option>
+                            <option value="hard">{{ translate(lang, 'games.sudoku.hard') }}</option>
                         </select>
                     </div>
                     
                     <div id="leaderboard" class="space-y-2 max-h-96 overflow-y-auto">
-                        <p class="text-gray-500 text-center py-8">No scores yet. Complete a puzzle to get on the board!</p>
+                        <p class="text-gray-500 text-center py-8">{{ translate(lang, 'games.sudoku.no_scores') }}</p>
                     </div>
                     
                     <button onclick="clearLeaderboard()" class="mt-4 w-full bg-red-100 hover:bg-red-200 text-red-700 font-semibold py-2 px-4 rounded-lg transition duration-200">
-                        Clear All Scores
+                        {{ translate(lang, 'games.sudoku.clear_all_scores') }}
                     </button>
                 </div>
             </div>
@@ -160,23 +160,23 @@
         <!-- Instructions -->
         <div class="max-w-2xl mx-auto mt-8">
             <div class="bg-white rounded-lg shadow-lg p-6">
-                <h2 class="text-2xl font-bold text-indigo-900 mb-4">How to Play</h2>
+                <h2 class="text-2xl font-bold text-indigo-900 mb-4">{{ translate(lang, 'games.sudoku.how_to_play') }}</h2>
                 <ul class="space-y-2 text-gray-700">
                     <li class="flex items-start">
                         <span class="text-indigo-500 mr-2">•</span>
-                        <span>Fill the 9×9 grid so that each row, column, and 3×3 box contains digits 1-9</span>
+                        <span>{{ translate(lang, 'games.sudoku.instruction_1') }}</span>
                     </li>
                     <li class="flex items-start">
                         <span class="text-indigo-500 mr-2">•</span>
-                        <span>Click on a cell and type a number to fill it (1-9)</span>
+                        <span>{{ translate(lang, 'games.sudoku.instruction_2') }}</span>
                     </li>
                     <li class="flex items-start">
                         <span class="text-indigo-500 mr-2">•</span>
-                        <span>Press 0 or Backspace to clear a cell</span>
+                        <span>{{ translate(lang, 'games.sudoku.instruction_3') }}</span>
                     </li>
                     <li class="flex items-start">
                         <span class="text-indigo-500 mr-2">•</span>
-                        <span>Click "Check" to validate your solution when complete</span>
+                        <span>{{ translate(lang, 'games.sudoku.instruction_4') }}</span>
                     </li>
                 </ul>
             </div>

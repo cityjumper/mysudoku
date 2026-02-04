@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Chess{% endblock %}
+{% block title %}{{ translate(lang, 'games.chess.title') }}{% endblock %}
 
 {% block extra_head %}
 <style>
@@ -34,20 +34,20 @@
       <svg class="w-5 h-5 mr-2" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
         <path fill-rule="evenodd" d="M12.707 15.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 111.414 1.414L7.414 9H17a1 1 0 110 2H7.414l5.293 5.293a1 1 0 010 1.414z" clip-rule="evenodd" />
       </svg>
-      Home
+      {{ translate(lang, 'common.home') }}
     </a>
     <div class="flex items-center gap-4">
-      <a href="/sudoku" class="text-sm font-semibold text-indigo-700 hover:text-indigo-900">Sudoku</a>
-      <a href="/tictactoe" class="text-sm font-semibold text-emerald-700 hover:text-emerald-900">Tic-Tac-Toe</a>
-      <a href="/dots-and-boxes" class="text-sm font-semibold text-amber-700 hover:text-amber-900">Dots and Boxes</a>
-      <a href="/minesweeper" class="text-sm font-semibold text-red-700 hover:text-red-900">Minesweeper</a>
+      <a href="/sudoku" class="text-sm font-semibold text-indigo-700 hover:text-indigo-900">{{ translate(lang, 'games.sudoku.name') }}</a>
+      <a href="/tictactoe" class="text-sm font-semibold text-emerald-700 hover:text-emerald-900">{{ translate(lang, 'games.tictactoe.name') }}</a>
+      <a href="/dots-and-boxes" class="text-sm font-semibold text-amber-700 hover:text-amber-900">{{ translate(lang, 'games.dots_and_boxes.name') }}</a>
+      <a href="/minesweeper" class="text-sm font-semibold text-red-700 hover:text-red-900">{{ translate(lang, 'games.minesweeper.name') }}</a>
     </div>
   </div>
 
   <div class="max-w-6xl mx-auto">
     <header class="text-center mb-8">
-      <h1 class="text-4xl sm:text-5xl font-extrabold tracking-tight text-slate-900">Chess</h1>
-      <p class="mt-2 text-slate-600">Classic strategy game with move highlighting.</p>
+      <h1 class="text-4xl sm:text-5xl font-extrabold tracking-tight text-slate-900">{{ translate(lang, 'games.chess.title') }}</h1>
+      <p class="mt-2 text-slate-600">{{ translate(lang, 'games.chess.subtitle') }}</p>
     </header>
 
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -55,13 +55,13 @@
         <div class="bg-white rounded-2xl shadow-xl ring-1 ring-slate-200 p-6 sm:p-8">
           <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
             <div>
-              <div class="text-sm font-semibold text-slate-500 uppercase tracking-wide">Status</div>
-              <div id="status" class="mt-1 text-2xl font-bold text-slate-900">White to move</div>
+              <div class="text-sm font-semibold text-slate-500 uppercase tracking-wide">{{ translate(lang, 'games.chess.status') }}</div>
+              <div id="status" class="mt-1 text-2xl font-bold text-slate-900">{{ translate(lang, 'games.chess.white_to_move') }}</div>
               <div id="substatus" class="mt-1 text-slate-600">Select a piece to see possible moves.</div>
             </div>
             <div class="flex gap-2">
-              <button id="new-game" class="rounded-lg bg-purple-600 hover:bg-purple-700 text-white font-semibold px-4 py-2">New Game</button>
-              <button id="flip-board" class="rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 font-semibold px-4 py-2">Flip Board</button>
+              <button id="new-game" class="rounded-lg bg-purple-600 hover:bg-purple-700 text-white font-semibold px-4 py-2">{{ translate(lang, 'games.chess.new_game') }}</button>
+              <button id="flip-board" class="rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 font-semibold px-4 py-2">{{ translate(lang, 'games.chess.flip_board') }}</button>
             </div>
           </div>
 
@@ -86,13 +86,15 @@
           </div>
 
           <div class="mt-6">
-            <h3 class="text-sm font-bold text-slate-700 mb-2">Rules</h3>
+            <h3 class="text-sm font-bold text-slate-700 mb-2">{{ translate(lang, 'games.chess.rules') }}</h3>
             <ul class="text-sm text-slate-600 space-y-1">
-              <li>• Click a piece to select it.</li>
+              <li>• {{ translate(lang, 'games.chess.rule_1') }}</li>
+              <li>• {{ translate(lang, 'games.chess.rule_2') }}</li>
               <li>• Green squares show possible moves.</li>
               <li>• Yellow square is the selected piece.</li>
-              <li>• Take turns moving pieces.</li>
-              <li>• Checkmate ends the game.</li>
+              <li>• {{ translate(lang, 'games.chess.rule_3') }}</li>
+              <li>• {{ translate(lang, 'games.chess.rule_4') }}</li>
+              <li>• {{ translate(lang, 'games.chess.rule_5') }}</li>
             </ul>
           </div>
         </div>
@@ -103,6 +105,21 @@
 {% endblock %}
 
 {% block extra_scripts %}
+<script>
+  // Translation data for JavaScript
+  const translations = {
+    status: {
+      white_to_move: "{{ translate(lang, 'games.chess.white_to_move') }}",
+      black_to_move: "{{ translate(lang, 'games.chess.black_to_move') }}",
+      white_wins: "{{ translate(lang, 'games.chess.white_wins') }}",
+      black_wins: "{{ translate(lang, 'games.chess.black_wins') }}",
+      stalemate: "{{ translate(lang, 'games.chess.stalemate') }}",
+      check: "{{ translate(lang, 'games.chess.check') }}",
+      checkmate: "{{ translate(lang, 'games.chess.checkmate') }}",
+      select_piece: "Select a piece to see possible moves."
+    }
+  };
+</script>
 <script>
   const PIECES = {
     'K': '♔', 'Q': '♕', 'R': '♖', 'B': '♗', 'N': '♘', 'P': '♙',
@@ -221,7 +238,7 @@
 
     lastMove = { from, to };
     currentPlayer = currentPlayer === 'white' ? 'black' : 'white';
-    statusEl.textContent = `${currentPlayer.charAt(0).toUpperCase() + currentPlayer.slice(1)} to move`;
+    statusEl.textContent = currentPlayer === 'white' ? translations.status.white_to_move : translations.status.black_to_move;
     renderCaptured();
   }
 
@@ -356,8 +373,8 @@
     lastMove = null;
     whiteCaptured = [];
     blackCaptured = [];
-    statusEl.textContent = 'White to move';
-    substatusEl.textContent = 'Select a piece to see possible moves.';
+    statusEl.textContent = translations.status.white_to_move;
+    substatusEl.textContent = translations.status.select_piece;
     renderBoard();
     renderCaptured();
   }

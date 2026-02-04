@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Solitaire{% endblock %}
+{% block title %}{{ translate(lang, 'games.solitaire.title') }}{% endblock %}
 
 {% block extra_head %}
     <style>
@@ -88,15 +88,15 @@
                 <svg class="w-5 h-5 mr-2" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
                     <path fill-rule="evenodd" d="M12.707 15.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 111.414 1.414L7.414 9H17a1 1 0 110 2H7.414l5.293 5.293a1 1 0 010 1.414z" clip-rule="evenodd" />
                 </svg>
-                Home
+                {{ translate(lang, 'common.home') }}
             </a>
-            <a href="/sudoku" class="text-sm font-semibold text-indigo-700 hover:text-indigo-900">Sudoku</a>
+            <a href="/sudoku" class="text-sm font-semibold text-indigo-700 hover:text-indigo-900">{{ translate(lang, 'games.sudoku.name') }}</a>
         </div>
 
         <div class="max-w-5xl mx-auto">
             <header class="text-center mb-8">
-                <h1 class="text-4xl sm:text-5xl font-extrabold tracking-tight text-slate-900">Peg Solitaire</h1>
-                <p class="mt-2 text-slate-600">Jump over marbles to remove them. Center starts empty - try to leave one there!</p>
+                <h1 class="text-4xl sm:text-5xl font-extrabold tracking-tight text-slate-900">{{ translate(lang, 'games.solitaire.title') }}</h1>
+                <p class="mt-2 text-slate-600">{{ translate(lang, 'games.solitaire.subtitle') }}</p>
             </header>
 
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -105,12 +105,12 @@
                     <div class="bg-white rounded-2xl shadow-xl ring-1 ring-slate-200 p-6 sm:p-8">
                         <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
                             <div>
-                                <div class="text-sm font-semibold text-slate-500 uppercase tracking-wide">Status</div>
-                                <div id="status" class="mt-1 text-2xl font-bold text-slate-900">Select a marble to move</div>
+                                <div class="text-sm font-semibold text-slate-500 uppercase tracking-wide">{{ translate(lang, 'games.solitaire.status') }}</div>
+                                <div id="status" class="mt-1 text-2xl font-bold text-slate-900">{{ translate(lang, 'games.solitaire.select_marble') }}</div>
                                 <div id="substatus" class="mt-1 text-slate-600">Click a marble, then click where to jump.</div>
                             </div>
                             <div class="flex gap-2">
-                                <button id="new-game" class="rounded-lg bg-amber-600 hover:bg-amber-700 text-white font-semibold px-4 py-2">New Game</button>
+                                <button id="new-game" class="rounded-lg bg-amber-600 hover:bg-amber-700 text-white font-semibold px-4 py-2">{{ translate(lang, 'games.solitaire.new_game') }}</button>
                                 <button id="undo" class="rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 font-semibold px-4 py-2">Undo</button>
                             </div>
                         </div>
@@ -129,30 +129,30 @@
                 <!-- Sidebar -->
                 <div class="lg:col-span-1">
                     <div class="bg-white rounded-2xl shadow-xl ring-1 ring-slate-200 p-6 sticky top-8">
-                        <h2 class="text-xl font-bold text-slate-900 mb-4">Game Stats</h2>
+                        <h2 class="text-xl font-bold text-slate-900 mb-4">{{ translate(lang, 'games.solitaire.scoreboard') }}</h2>
                         <div class="grid grid-cols-1 gap-3">
                             <div class="rounded-xl bg-amber-50 ring-1 ring-amber-100 p-4">
-                                <div class="text-xs font-semibold uppercase tracking-wide text-amber-700">Marbles Left</div>
+                                <div class="text-xs font-semibold uppercase tracking-wide text-amber-700">{{ translate(lang, 'games.solitaire.marbles_left') }}</div>
                                 <div id="marbles-left" class="mt-1 text-3xl font-extrabold text-amber-900">32</div>
                             </div>
                             <div class="rounded-xl bg-blue-50 ring-1 ring-blue-100 p-4">
-                                <div class="text-xs font-semibold uppercase tracking-wide text-blue-700">Moves Made</div>
+                                <div class="text-xs font-semibold uppercase tracking-wide text-blue-700">{{ translate(lang, 'games.solitaire.moves_made') }}</div>
                                 <div id="moves-made" class="mt-1 text-3xl font-extrabold text-blue-900">0</div>
                             </div>
                             <div class="rounded-xl bg-green-50 ring-1 ring-green-100 p-4">
-                                <div class="text-xs font-semibold uppercase tracking-wide text-green-700">Best Score</div>
+                                <div class="text-xs font-semibold uppercase tracking-wide text-green-700">{{ translate(lang, 'games.solitaire.best_scores') }}</div>
                                 <div id="best-score" class="mt-1 text-3xl font-extrabold text-green-900">1</div>
                             </div>
                         </div>
 
                         <div class="mt-6">
-                            <h3 class="text-sm font-bold text-slate-700 mb-2">How to Play</h3>
+                            <h3 class="text-sm font-bold text-slate-700 mb-2">{{ translate(lang, 'games.solitaire.rules') }}</h3>
                             <ul class="text-sm text-slate-600 space-y-1">
-                                <li>• Click a marble to select it (yellow)</li>
-                                <li>• Green holes show where you can jump</li>
-                                <li>• Jump over adjacent marbles to remove them</li>
-                                <li>• Can only jump horizontally or vertically</li>
-                                <li>• Goal: Leave only 1 marble in center</li>
+                                <li>• {{ translate(lang, 'games.solitaire.rule_1') }}</li>
+                                <li>• {{ translate(lang, 'games.solitaire.rule_2') }}</li>
+                                <li>• {{ translate(lang, 'games.solitaire.rule_3') }}</li>
+                                <li>• {{ translate(lang, 'games.solitaire.rule_4') }}</li>
+                                <li>• {{ translate(lang, 'games.solitaire.rule_5') }}</li>
                             </ul>
                         </div>
 
@@ -173,6 +173,23 @@
 {% endblock %}
 
 {% block extra_scripts %}
+    <script>
+        // Translation data for JavaScript
+        const translations = {
+            status: {
+                select_marble: "{{ translate(lang, 'games.solitaire.select_marble') }}",
+                select_destination: "{{ translate(lang, 'games.solitaire.select_destination') }}",
+                invalid_move: "{{ translate(lang, 'games.solitaire.invalid_move') }}",
+                no_moves: "{{ translate(lang, 'games.solitaire.no_moves') }}",
+                one_marble_left: "{{ translate(lang, 'games.solitaire.one_marble_left') }}",
+                marble_selected: "Marble selected",
+                click_empty_hole: "Click an empty hole to jump.",
+                try_different_hole: "Try a different empty hole.",
+                keep_playing: "Keep playing",
+                move_undone: "Move undone"
+            }
+        };
+    </script>
     <script>
         // Cross-shaped peg solitaire board layout
         const BOARD_LAYOUT = [
@@ -244,7 +261,7 @@
                 if (selectedMarble.row === row && selectedMarble.col === col) {
                     // Clicking on the same marble - deselect it
                     clearSelection();
-                    statusEl.textContent = 'Select a marble to move';
+                    statusEl.textContent = translations.status.select_marble;
                     statusEl.className = 'mt-1 text-2xl font-bold text-slate-900';
                     substatusEl.textContent = 'Click a marble, then click where to jump.';
                 } else if (board[row][col] === 1) {
@@ -256,13 +273,13 @@
                         makeMove(selectedMarble.row, selectedMarble.col, row, col);
                     } else {
                         // Invalid move - show feedback
-                        statusEl.textContent = 'Invalid move';
+                        statusEl.textContent = translations.status.invalid_move;
                         statusEl.className = 'mt-1 text-2xl font-bold text-red-600';
-                        substatusEl.textContent = 'Try a different empty hole.';
+                        substatusEl.textContent = translations.status.try_different_hole;
                         setTimeout(() => {
-                            statusEl.textContent = 'Marble selected';
+                            statusEl.textContent = translations.status.marble_selected;
                             statusEl.className = 'mt-1 text-2xl font-bold text-amber-600';
-                            substatusEl.textContent = 'Click an empty hole to jump.';
+                            substatusEl.textContent = translations.status.click_empty_hole;
                         }, 1500);
                     }
                 }
@@ -282,9 +299,9 @@
             const hole = getHoleElement(row, col);
             hole.classList.add('selected');
 
-            statusEl.textContent = 'Marble selected';
+            statusEl.textContent = translations.status.marble_selected;
             statusEl.className = 'mt-1 text-2xl font-bold text-amber-600';
-            substatusEl.textContent = 'Click an empty hole to jump.';
+            substatusEl.textContent = translations.status.click_empty_hole;
         }
 
         function showPossibleMoves(row, col) {
@@ -379,9 +396,9 @@
             const marblesLeft = board.flat().reduce((sum, cell) => sum + cell, 0);
 
             if (marblesLeft === 1) {
-                statusEl.textContent = 'Perfect! 🎉';
+                statusEl.textContent = translations.status.one_marble_left;
                 statusEl.className = 'mt-1 text-2xl font-bold text-green-600';
-                substatusEl.textContent = 'You left only one marble!';
+                substatusEl.textContent = 'You solved the puzzle!';
             } else {
                 // Check if any moves are possible
                 let hasMoves = false;
@@ -394,14 +411,13 @@
                 }
 
                 if (!hasMoves) {
-                    const message = marblesLeft <= 3 ? 'Excellent!' : marblesLeft <= 6 ? 'Well done!' : 'Good try!';
-                    statusEl.textContent = `Game Over - ${message}`;
+                    statusEl.textContent = translations.status.no_moves;
                     statusEl.className = 'mt-1 text-2xl font-bold text-blue-600';
                     substatusEl.textContent = `${marblesLeft} marbles left.`;
                 } else {
-                    statusEl.textContent = 'Keep playing';
+                    statusEl.textContent = translations.status.keep_playing;
                     statusEl.className = 'mt-1 text-2xl font-bold text-slate-900';
-                    substatusEl.textContent = 'Select a marble to move.';
+                    substatusEl.textContent = translations.status.select_marble;
                 }
             }
         }
@@ -412,7 +428,7 @@
             possibleMoves = [];
             movesHistory = [];
             movesCount = 0;
-            statusEl.textContent = 'Select a marble to move';
+            statusEl.textContent = translations.status.select_marble;
             statusEl.className = 'mt-1 text-2xl font-bold text-slate-900';
             substatusEl.textContent = 'Click a marble, then click where to jump.';
             createBoard();
@@ -424,9 +440,9 @@
                 board = lastMove.board;
                 movesCount--;
                 createBoard();
-                statusEl.textContent = 'Move undone';
+                statusEl.textContent = translations.status.move_undone;
                 statusEl.className = 'mt-1 text-2xl font-bold text-slate-900';
-                substatusEl.textContent = 'Select a marble to move.';
+                substatusEl.textContent = translations.status.select_marble;
             }
         }
 

@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Tic-Tac-Toe{% endblock %}
+{% block title %}{{ translate(lang, 'games.tictactoe.name') }}{% endblock %}
 
 {% block extra_head %}
     <style>
@@ -57,15 +57,15 @@
                 <svg class="w-5 h-5 mr-2" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
                     <path fill-rule="evenodd" d="M12.707 15.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 111.414 1.414L7.414 9H17a1 1 0 110 2H7.414l5.293 5.293a1 1 0 010 1.414z" clip-rule="evenodd" />
                 </svg>
-                Home
+                {{ translate(lang, 'common.home') }}
             </a>
-            <a href="/sudoku" class="text-sm font-semibold text-indigo-700 hover:text-indigo-900">Sudoku</a>
+            <a href="/sudoku" class="text-sm font-semibold text-indigo-700 hover:text-indigo-900">{{ translate(lang, 'games.sudoku.name') }}</a>
         </div>
 
         <div class="max-w-5xl mx-auto">
             <header class="text-center mb-8">
-                <h1 class="text-4xl sm:text-5xl font-extrabold tracking-tight text-slate-900">Tic-Tac-Toe</h1>
-                <p class="mt-2 text-slate-600">Local two-player on one device.</p>
+                <h1 class="text-4xl sm:text-5xl font-extrabold tracking-tight text-slate-900">{{ translate(lang, 'games.tictactoe.name') }}</h1>
+                <p class="mt-2 text-slate-600">{{ translate(lang, 'games.tictactoe.description') }}</p>
             </header>
 
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -74,13 +74,13 @@
                     <div class="bg-white rounded-2xl shadow-xl ring-1 ring-slate-200 p-6 sm:p-8">
                         <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
                             <div>
-                                <div class="text-sm font-semibold text-slate-500 uppercase tracking-wide">Status</div>
-                                <div id="status" class="mt-1 text-2xl font-bold text-slate-900">X to move</div>
-                                <div id="substatus" class="mt-1 text-slate-600">Click a square to place your mark.</div>
+                                <div class="text-sm font-semibold text-slate-500 uppercase tracking-wide">{{ translate(lang, 'common.status') }}</div>
+                                <div id="status" class="mt-1 text-2xl font-bold text-slate-900">X {{ translate(lang, 'common.to_move') }}</div>
+                                <div id="substatus" class="mt-1 text-slate-600">{{ translate(lang, 'common.click_to_place') }}</div>
                             </div>
                             <div class="flex gap-2">
-                                <button id="new-game" class="rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-4 py-2">New Game</button>
-                                <button id="reset-scores" class="rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 font-semibold px-4 py-2">Reset Scores</button>
+                                <button id="new-game" class="rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-4 py-2">{{ translate(lang, 'common.new_game') }}</button>
+                                <button id="reset-scores" class="rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 font-semibold px-4 py-2">{{ translate(lang, 'common.reset_scores') }}</button>
                             </div>
                         </div>
 
@@ -102,7 +102,7 @@
                         <div id="trophy" class="trophy">🏆</div>
 
                         <div class="mt-6 text-sm text-slate-500">
-                            <p>Keyboard: Use Tab/Shift+Tab to focus a cell, then press Enter/Space to play.</p>
+                            <p>{{ translate(lang, 'common.keyboard_help') }}</p>
                         </div>
                     </div>
                 </div>
@@ -110,28 +110,28 @@
                 <!-- Sidebar -->
                 <div class="lg:col-span-1">
                     <div class="bg-white rounded-2xl shadow-xl ring-1 ring-slate-200 p-6 sticky top-8">
-                        <h2 class="text-xl font-bold text-slate-900 mb-4">Scoreboard</h2>
+                        <h2 class="text-xl font-bold text-slate-900 mb-4">{{ translate(lang, 'common.scoreboard') }}</h2>
                         <div class="grid grid-cols-2 gap-3">
                             <div class="rounded-xl bg-emerald-50 ring-1 ring-emerald-100 p-4">
-                                <div class="text-xs font-semibold uppercase tracking-wide text-emerald-700">X wins</div>
+                                <div class="text-xs font-semibold uppercase tracking-wide text-emerald-700">X {{ translate(lang, 'common.wins') }}</div>
                                 <div id="score-x" class="mt-1 text-3xl font-extrabold text-emerald-900">0</div>
                             </div>
                             <div class="rounded-xl bg-indigo-50 ring-1 ring-indigo-100 p-4">
-                                <div class="text-xs font-semibold uppercase tracking-wide text-indigo-700">O wins</div>
+                                <div class="text-xs font-semibold uppercase tracking-wide text-indigo-700">O {{ translate(lang, 'common.wins') }}</div>
                                 <div id="score-o" class="mt-1 text-3xl font-extrabold text-indigo-900">0</div>
                             </div>
                             <div class="rounded-xl bg-slate-50 ring-1 ring-slate-200 p-4 col-span-2">
-                                <div class="text-xs font-semibold uppercase tracking-wide text-slate-600">Draws</div>
+                                <div class="text-xs font-semibold uppercase tracking-wide text-slate-600">{{ translate(lang, 'common.draws') }}</div>
                                 <div id="score-d" class="mt-1 text-3xl font-extrabold text-slate-900">0</div>
                             </div>
                         </div>
 
                         <div class="mt-6">
-                            <h3 class="text-sm font-bold text-slate-700 mb-2">Rules</h3>
+                            <h3 class="text-sm font-bold text-slate-700 mb-2">{{ translate(lang, 'common.rules') }}</h3>
                             <ul class="text-sm text-slate-600 space-y-1">
-                                <li>• First to get 3 in a row wins.</li>
-                                <li>• Rows, columns, and diagonals count.</li>
-                                <li>• If all squares fill with no winner: draw.</li>
+                                <li>• {{ translate(lang, 'common.first_to_three') }}</li>
+                                <li>• {{ translate(lang, 'common.rows_columns_diagonals') }}</li>
+                                <li>• {{ translate(lang, 'common.draw_if_full') }}</li>
                             </ul>
                         </div>
                     </div>
