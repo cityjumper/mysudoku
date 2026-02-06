@@ -9,7 +9,7 @@
 </head>
 <body class="{% block body_class %}bg-slate-50 min-h-screen{% endblock %}">
     <!-- Language Selector -->
-    <div class="fixed top-4 right-4 z-50">
+    <div class="fixed top-4 {% if lang == 'fa' %}left-4{% else %}right-4{% endif %} z-50">
         <div class="flex space-x-1 bg-white rounded-lg shadow-lg ring-1 ring-slate-200 p-1">
             <a href="/set-lang/en" class="flex items-center justify-center w-8 h-8 rounded-md hover:bg-slate-100 transition-colors {% if lang == 'en' %}bg-blue-100 ring-2 ring-blue-200{% endif %}" title="English">
                 🇺🇸
