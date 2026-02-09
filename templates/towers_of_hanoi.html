@@ -5,24 +5,48 @@
 {% block extra_head %}
     <style>
         .tower {
-            width: 120px;
-            height: 200px;
+            width: 80px;
+            height: 140px;
             border: 2px solid #374151;
             border-radius: 4px;
             position: relative;
             background: linear-gradient(to bottom, #f9fafb 0%, #e5e7eb 100%);
         }
+        @media (min-width: 640px) {
+            .tower {
+                width: 100px;
+                height: 180px;
+            }
+        }
+        @media (min-width: 768px) {
+            .tower {
+                width: 120px;
+                height: 200px;
+            }
+        }
         .tower-base {
-            width: 140px;
-            height: 10px;
+            width: 100px;
+            height: 8px;
             background: #374151;
             border-radius: 4px;
             margin: 0 auto;
-            margin-top: 10px;
+            margin-top: 8px;
+        }
+        @media (min-width: 640px) {
+            .tower-base {
+                width: 120px;
+                height: 10px;
+                margin-top: 10px;
+            }
+        }
+        @media (min-width: 768px) {
+            .tower-base {
+                width: 140px;
+            }
         }
         .disk {
-            height: 20px;
-            border-radius: 10px;
+            height: 16px;
+            border-radius: 8px;
             position: absolute;
             bottom: 0;
             left: 50%;
@@ -30,6 +54,8 @@
             border: 1px solid #6b7280;
             cursor: pointer;
             transition: all 0.3s ease;
+            min-height: 44px; /* Touch target minimum */
+            min-width: 44px; /* Touch target minimum */
         }
         .disk:hover {
             transform: translateX(-50%) scale(1.05);
@@ -37,31 +63,76 @@
         .disk.selected {
             box-shadow: 0 0 10px rgba(59, 130, 246, 0.5);
         }
-        .disk-1 { width: 40px; background: #ef4444; }
-        .disk-2 { width: 60px; background: #f97316; }
-        .disk-3 { width: 80px; background: #eab308; }
-        .disk-4 { width: 100px; background: #22c55e; }
-        .disk-5 { width: 120px; background: #3b82f6; }
-        .disk-6 { width: 140px; background: #8b5cf6; }
-        .disk-7 { width: 160px; background: #ec4899; }
-        .disk-8 { width: 180px; background: #06b6d4; }
+        .disk-1 { width: 32px; background: #ef4444; }
+        .disk-2 { width: 44px; background: #f97316; }
+        .disk-3 { width: 56px; background: #eab308; }
+        .disk-4 { width: 68px; background: #22c55e; }
+        .disk-5 { width: 80px; background: #3b82f6; }
+        .disk-6 { width: 92px; background: #8b5cf6; }
+        .disk-7 { width: 104px; background: #ec4899; }
+        .disk-8 { width: 116px; background: #06b6d4; }
+        @media (min-width: 640px) {
+            .disk {
+                height: 18px;
+                border-radius: 9px;
+            }
+            .disk-1 { width: 36px; }
+            .disk-2 { width: 48px; }
+            .disk-3 { width: 60px; }
+            .disk-4 { width: 72px; }
+            .disk-5 { width: 84px; }
+            .disk-6 { width: 96px; }
+            .disk-7 { width: 108px; }
+            .disk-8 { width: 120px; }
+        }
+        @media (min-width: 768px) {
+            .disk {
+                height: 20px;
+                border-radius: 10px;
+            }
+            .disk-1 { width: 40px; }
+            .disk-2 { width: 60px; }
+            .disk-3 { width: 80px; }
+            .disk-4 { width: 100px; }
+            .disk-5 { width: 120px; }
+            .disk-6 { width: 140px; }
+            .disk-7 { width: 160px; }
+            .disk-8 { width: 180px; }
+        }
 
         .tower-label {
             text-align: center;
-            margin-top: 8px;
+            margin-top: 6px;
             font-weight: 600;
             color: #374151;
+            font-size: 0.75rem;
+        }
+        @media (min-width: 640px) {
+            .tower-label {
+                margin-top: 8px;
+                font-size: 0.875rem;
+            }
         }
 
         .move-counter {
-            font-size: 1.5rem;
+            font-size: 1.25rem;
             font-weight: bold;
             color: #1f2937;
         }
+        @media (min-width: 640px) {
+            .move-counter {
+                font-size: 1.5rem;
+            }
+        }
 
         .optimal-moves {
-            font-size: 0.875rem;
+            font-size: 0.75rem;
             color: #6b7280;
+        }
+        @media (min-width: 640px) {
+            .optimal-moves {
+                font-size: 0.875rem;
+            }
         }
 
         .celebration {
@@ -69,12 +140,17 @@
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            font-size: 120px;
+            font-size: 80px;
             color: gold;
             z-index: 1000;
             opacity: 0;
             animation: celebration-flash 2s ease-in-out;
             pointer-events: none;
+        }
+        @media (min-width: 640px) {
+            .celebration {
+                font-size: 120px;
+            }
         }
 
         @keyframes celebration-flash {
@@ -83,6 +159,32 @@
             20% { transform: translate(-50%, -50%) scale(1); }
             80% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
             100% { opacity: 0; transform: translate(-50%, -50%) scale(1.5); }
+        }
+
+        /* Mobile-specific adjustments */
+        @media (max-width: 639px) {
+            .tower-container {
+                margin-bottom: 1rem;
+            }
+            .control-buttons {
+                flex-direction: column;
+                gap: 0.5rem;
+                width: 100%;
+            }
+            .control-buttons select,
+            .control-buttons button {
+                width: 100%;
+                min-height: 44px; /* Touch target */
+            }
+            /* Prevent text selection on touch devices */
+            .disk, .tower {
+                -webkit-touch-callout: none;
+                -webkit-user-select: none;
+                -khtml-user-select: none;
+                -moz-user-select: none;
+                -ms-user-select: none;
+                user-select: none;
+            }
         }
     </style>
 {% endblock %}
@@ -103,9 +205,9 @@
         </div>
 
         <div class="max-w-5xl mx-auto">
-            <header class="text-center mb-8">
-                <h1 class="text-4xl sm:text-5xl font-extrabold tracking-tight text-slate-900">{{ translate(lang, 'games.towers_of_hanoi.name') }}</h1>
-                <p class="mt-2 text-slate-600">Move all disks from the left tower to the right tower. Only one disk can be moved at a time, and a larger disk cannot be placed on a smaller one.</p>
+            <header class="text-center mb-6 sm:mb-8 px-2">
+                <h1 class="text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-slate-900">{{ translate(lang, 'games.towers_of_hanoi.name') }}</h1>
+                <p class="mt-2 text-sm sm:text-base text-slate-600 max-w-2xl mx-auto">Move all disks from the left tower to the right tower. Only one disk can be moved at a time, and a larger disk cannot be placed on a smaller one.</p>
             </header>
 
             <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
@@ -113,13 +215,13 @@
                 <div class="lg:col-span-3">
                     <div class="bg-white rounded-2xl shadow-xl ring-1 ring-slate-200 p-6 sm:p-8">
                         <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
-                            <div>
+                            <div class="flex-1 min-w-0">
                                 <div class="text-sm font-semibold text-slate-500 uppercase tracking-wide">Status</div>
-                                <div id="status" class="mt-1 text-2xl font-bold text-slate-900">Select number of disks</div>
-                                <div id="substatus" class="mt-1 text-slate-600">Choose difficulty to start</div>
+                                <div id="status" class="mt-1 text-lg sm:text-2xl font-bold text-slate-900">Select number of disks</div>
+                                <div id="substatus" class="mt-1 text-sm sm:text-base text-slate-600">Choose difficulty to start</div>
                             </div>
-                            <div class="flex gap-2">
-                                <select id="disk-count" class="rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 font-semibold px-4 py-2">
+                            <div class="control-buttons flex flex-col sm:flex-row gap-2 sm:gap-2 w-full sm:w-auto">
+                                <select id="disk-count" class="rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 font-semibold px-3 sm:px-4 py-2 text-sm sm:text-base min-h-[44px]">
                                     <option value="3">3 disks</option>
                                     <option value="4">4 disks</option>
                                     <option value="5" selected>5 disks</option>
@@ -127,24 +229,24 @@
                                     <option value="7">7 disks</option>
                                     <option value="8">8 disks</option>
                                 </select>
-                                <button id="new-game" class="rounded-lg bg-purple-600 hover:bg-purple-700 text-white font-semibold px-4 py-2">New Game</button>
-                                <button id="solve" class="rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-4 py-2">Solve</button>
+                                <button id="new-game" class="rounded-lg bg-purple-600 hover:bg-purple-700 text-white font-semibold px-3 sm:px-4 py-2 text-sm sm:text-base min-h-[44px]">New Game</button>
+                                <button id="solve" class="rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-3 sm:px-4 py-2 text-sm sm:text-base min-h-[44px]">Solve</button>
                             </div>
                         </div>
 
                         <!-- Towers -->
-                        <div class="flex justify-center items-end gap-8 mb-6">
-                            <div class="flex flex-col items-center">
+                        <div class="flex justify-center items-end gap-4 sm:gap-6 lg:gap-8 mb-6 px-2 sm:px-0">
+                            <div class="flex flex-col items-center tower-container">
                                 <div class="tower" id="tower-0" data-tower="0"></div>
                                 <div class="tower-base"></div>
                                 <div class="tower-label">Start</div>
                             </div>
-                            <div class="flex flex-col items-center">
+                            <div class="flex flex-col items-center tower-container">
                                 <div class="tower" id="tower-1" data-tower="1"></div>
                                 <div class="tower-base"></div>
                                 <div class="tower-label">Auxiliary</div>
                             </div>
-                            <div class="flex flex-col items-center">
+                            <div class="flex flex-col items-center tower-container">
                                 <div class="tower" id="tower-2" data-tower="2"></div>
                                 <div class="tower-base"></div>
                                 <div class="tower-label">Target</div>
@@ -154,34 +256,35 @@
                         <!-- Celebration -->
                         <div id="celebration" class="celebration">🎉</div>
 
-                        <div class="text-center text-sm text-slate-500">
-                            <p>Click on a disk to select it, then click on a tower to move it there.</p>
+                        <div class="text-center text-xs sm:text-sm text-slate-500 px-2">
+                            <p class="hidden sm:block">Click on a disk to select it, then click on a tower to move it there.</p>
+                            <p class="sm:hidden">Tap a disk to select it, then tap a tower to move it there.</p>
                         </div>
                     </div>
                 </div>
 
                 <!-- Sidebar -->
                 <div class="lg:col-span-1">
-                    <div class="bg-white rounded-2xl shadow-xl ring-1 ring-slate-200 p-6 sticky top-8">
-                        <h2 class="text-xl font-bold text-slate-900 mb-4">Statistics</h2>
-                        <div class="grid grid-cols-1 gap-4">
-                            <div class="rounded-xl bg-purple-50 ring-1 ring-purple-100 p-4">
+                    <div class="bg-white rounded-2xl shadow-xl ring-1 ring-slate-200 p-4 sm:p-6 sticky top-8">
+                        <h2 class="text-lg sm:text-xl font-bold text-slate-900 mb-4">Statistics</h2>
+                        <div class="grid grid-cols-1 gap-3 sm:gap-4">
+                            <div class="rounded-xl bg-purple-50 ring-1 ring-purple-100 p-3 sm:p-4">
                                 <div class="text-xs font-semibold uppercase tracking-wide text-purple-700">Moves Made</div>
-                                <div id="moves" class="mt-1 text-3xl font-extrabold text-purple-900">0</div>
+                                <div id="moves" class="mt-1 text-2xl sm:text-3xl font-extrabold text-purple-900">0</div>
                             </div>
-                            <div class="rounded-xl bg-emerald-50 ring-1 ring-emerald-100 p-4">
+                            <div class="rounded-xl bg-emerald-50 ring-1 ring-emerald-100 p-3 sm:p-4">
                                 <div class="text-xs font-semibold uppercase tracking-wide text-emerald-700">Optimal Moves</div>
-                                <div id="optimal" class="mt-1 text-3xl font-extrabold text-emerald-900">31</div>
+                                <div id="optimal" class="mt-1 text-2xl sm:text-3xl font-extrabold text-emerald-900">31</div>
                             </div>
-                            <div class="rounded-xl bg-slate-50 ring-1 ring-slate-200 p-4">
+                            <div class="rounded-xl bg-slate-50 ring-1 ring-slate-200 p-3 sm:p-4">
                                 <div class="text-xs font-semibold uppercase tracking-wide text-slate-600">Efficiency</div>
-                                <div id="efficiency" class="mt-1 text-2xl font-extrabold text-slate-900">0%</div>
+                                <div id="efficiency" class="mt-1 text-xl sm:text-2xl font-extrabold text-slate-900">0%</div>
                             </div>
                         </div>
 
-                        <div class="mt-6">
+                        <div class="mt-4 sm:mt-6">
                             <h3 class="text-sm font-bold text-slate-700 mb-2">Rules</h3>
-                            <ul class="text-sm text-slate-600 space-y-1">
+                            <ul class="text-xs sm:text-sm text-slate-600 space-y-1">
                                 <li>• Only one disk can be moved at a time</li>
                                 <li>• A disk can only be placed on an empty tower or on a larger disk</li>
                                 <li>• All disks must end up on the rightmost tower</li>
@@ -330,15 +433,39 @@
         }
 
         function setStatus(main, sub) {
+            // Update instructions based on device type
+            const isMobile = window.innerWidth < 640;
+            if (sub.includes('Click')) {
+                sub = sub.replace('Click', isMobile ? 'Tap' : 'Click');
+            }
             statusEl.textContent = main;
             substatusEl.textContent = sub;
         }
 
-        // Tower click handlers
-        document.querySelectorAll('.tower').forEach((towerEl, index) => {
-            towerEl.addEventListener('click', () => {
+        // Event handlers for disks and towers
+        function addInteractionEvents(element, handler) {
+            // Add both mouse and touch events
+            element.addEventListener('click', handler);
+            element.addEventListener('touchend', (e) => {
+                e.preventDefault(); // Prevent mouse events from firing
+                handler(e);
+            });
+        }
+
+        // Disk selection handlers
+        document.querySelectorAll('.tower').forEach((towerEl) => {
+            addInteractionEvents(towerEl, () => {
                 if (isSolving) return;
-                if (selectedDisk !== null && selectedTower !== index) {
+                // This will be handled by individual disk clicks
+            });
+        });
+
+        // Tower click handlers (for moving to empty towers)
+        document.querySelectorAll('.tower').forEach((towerEl, index) => {
+            addInteractionEvents(towerEl, (e) => {
+                if (isSolving) return;
+                // Only handle if clicking on tower background (not on a disk)
+                if (e.target === towerEl && selectedDisk !== null && selectedTower !== index) {
                     moveDisk(selectedTower, index);
                 }
             });
