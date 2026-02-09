@@ -116,6 +116,10 @@
       "name": "Boter-Kaas-en-Eieren",
       "description": "Lokaal twee spelers op één apparaat."
     },
+    "towers_of_hanoi": {
+      "name": "Torens van Hanoi",
+      "description": "Klassieke puzzel met drie torens en schijven."
+    },
     "chess": {
       "name": "Schaak",
       "description": "Klassiek strategisch bordspel.",

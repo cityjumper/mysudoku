@@ -116,6 +116,10 @@
       "name": "Tic-Tac-Toe",
       "description": "Local two-player on one device."
     },
+    "towers_of_hanoi": {
+      "name": "Towers of Hanoi",
+      "description": "Classic puzzle with three towers and disks."
+    },
     "chess": {
       "name": "Chess",
       "description": "Classic strategy board game.",

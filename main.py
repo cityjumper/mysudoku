@@ -121,6 +121,13 @@ async def tictactoe(request: Request):
     return templates.TemplateResponse("tictactoe.html", {"request": request, "lang": lang})
 
 
+@app.get("/towers-of-hanoi", response_class=HTMLResponse)
+async def towers_of_hanoi(request: Request):
+    """Towers of Hanoi page endpoint."""
+    lang = get_current_lang(request)
+    return templates.TemplateResponse("towers_of_hanoi.html", {"request": request, "lang": lang})
+
+
 @app.get("/dots-and-boxes", response_class=HTMLResponse)
 async def dots_and_boxes(request: Request):
     """Dots and Boxes page endpoint."""

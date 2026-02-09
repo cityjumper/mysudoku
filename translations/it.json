@@ -116,6 +116,10 @@
       "name": "Tris",
       "description": "Due giocatori locali su un dispositivo."
     },
+    "towers_of_hanoi": {
+      "name": "Torri di Hanoi",
+      "description": "Rompicapo classico con tre torri e dischi."
+    },
     "chess": {
       "name": "Scacchi",
       "description": "Gioco da tavolo strategico classico.",

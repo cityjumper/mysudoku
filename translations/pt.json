@@ -91,6 +91,10 @@
       "name": "Jogo do Galo",
       "description": "Dois jogadores locais num dispositivo."
     },
+    "towers_of_hanoi": {
+      "name": "Torres de Hanoi",
+      "description": "Quebra-cabeça clássico com três torres e discos."
+    },
     "chess": {
       "name": "Xadrez",
       "description": "Jogo de tabuleiro estratégico clássico.",
