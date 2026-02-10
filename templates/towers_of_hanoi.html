@@ -207,7 +207,7 @@
         <div class="max-w-5xl mx-auto">
             <header class="text-center mb-6 sm:mb-8 px-2">
                 <h1 class="text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-slate-900">{{ translate(lang, 'games.towers_of_hanoi.name') }}</h1>
-                <p class="mt-2 text-sm sm:text-base text-slate-600 max-w-2xl mx-auto">Move all disks from the left tower to the right tower. Only one disk can be moved at a time, and a larger disk cannot be placed on a smaller one.</p>
+                <p class="mt-2 text-sm sm:text-base text-slate-600 max-w-2xl mx-auto">{{ translate(lang, 'games.towers_of_hanoi.subtitle') }}</p>
             </header>
 
             <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
@@ -216,9 +216,9 @@
                     <div class="bg-white rounded-2xl shadow-xl ring-1 ring-slate-200 p-6 sm:p-8">
                         <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
                             <div class="flex-1 min-w-0">
-                                <div class="text-sm font-semibold text-slate-500 uppercase tracking-wide">Status</div>
+                                <div class="text-sm font-semibold text-slate-500 uppercase tracking-wide">{{ translate(lang, 'games.towers_of_hanoi.status') }}</div>
                                 <div id="status" class="mt-1 text-lg sm:text-2xl font-bold text-slate-900">Select number of disks</div>
-                                <div id="substatus" class="mt-1 text-sm sm:text-base text-slate-600">Choose difficulty to start</div>
+                                <div id="substatus" class="mt-1 text-sm sm:text-base text-slate-600">{{ translate(lang, 'games.towers_of_hanoi.choose_difficulty') }}</div>
                             </div>
                             <div class="control-buttons flex flex-col sm:flex-row gap-2 sm:gap-2 w-full sm:w-auto">
                                 <select id="disk-count" class="rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 font-semibold px-3 sm:px-4 py-2 text-sm sm:text-base min-h-[44px]">
@@ -229,8 +229,8 @@
                                     <option value="7">7 disks</option>
                                     <option value="8">8 disks</option>
                                 </select>
-                                <button id="new-game" class="rounded-lg bg-purple-600 hover:bg-purple-700 text-white font-semibold px-3 sm:px-4 py-2 text-sm sm:text-base min-h-[44px]">New Game</button>
-                                <button id="solve" class="rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-3 sm:px-4 py-2 text-sm sm:text-base min-h-[44px]">Solve</button>
+                                <button id="new-game" class="rounded-lg bg-purple-600 hover:bg-purple-700 text-white font-semibold px-3 sm:px-4 py-2 text-sm sm:text-base min-h-[44px]">{{ translate(lang, 'games.towers_of_hanoi.new_game') }}</button>
+                                <button id="solve" class="rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-3 sm:px-4 py-2 text-sm sm:text-base min-h-[44px]">{{ translate(lang, 'games.towers_of_hanoi.solve') }}</button>
                             </div>
                         </div>
 
@@ -257,8 +257,8 @@
                         <div id="celebration" class="celebration">🎉</div>
 
                         <div class="text-center text-xs sm:text-sm text-slate-500 px-2">
-                            <p class="hidden sm:block">Drag a disk to move it, or click to select and then click a tower.</p>
-                            <p class="sm:hidden">Drag a disk to move it, or tap to select and then tap a tower.</p>
+                            <p class="hidden sm:block">{{ translate(lang, 'games.towers_of_hanoi.instructions_desktop') }}</p>
+                            <p class="sm:hidden">{{ translate(lang, 'games.towers_of_hanoi.instructions_mobile') }}</p>
                         </div>
                     </div>
                 </div>
@@ -269,26 +269,26 @@
                         <h2 class="text-lg sm:text-xl font-bold text-slate-900 mb-4">Statistics</h2>
                         <div class="grid grid-cols-1 gap-3 sm:gap-4">
                             <div class="rounded-xl bg-purple-50 ring-1 ring-purple-100 p-3 sm:p-4">
-                                <div class="text-xs font-semibold uppercase tracking-wide text-purple-700">Moves Made</div>
+                                <div class="text-xs font-semibold uppercase tracking-wide text-purple-700">{{ translate(lang, 'games.towers_of_hanoi.moves_made') }}</div>
                                 <div id="moves" class="mt-1 text-2xl sm:text-3xl font-extrabold text-purple-900">0</div>
                             </div>
                             <div class="rounded-xl bg-emerald-50 ring-1 ring-emerald-100 p-3 sm:p-4">
-                                <div class="text-xs font-semibold uppercase tracking-wide text-emerald-700">Optimal Moves</div>
+                                <div class="text-xs font-semibold uppercase tracking-wide text-emerald-700">{{ translate(lang, 'games.towers_of_hanoi.optimal_moves') }}</div>
                                 <div id="optimal" class="mt-1 text-2xl sm:text-3xl font-extrabold text-emerald-900">31</div>
                             </div>
                             <div class="rounded-xl bg-slate-50 ring-1 ring-slate-200 p-3 sm:p-4">
-                                <div class="text-xs font-semibold uppercase tracking-wide text-slate-600">Efficiency</div>
+                                <div class="text-xs font-semibold uppercase tracking-wide text-slate-600">{{ translate(lang, 'games.towers_of_hanoi.efficiency') }}</div>
                                 <div id="efficiency" class="mt-1 text-xl sm:text-2xl font-extrabold text-slate-900">0%</div>
                             </div>
                         </div>
 
                         <div class="mt-4 sm:mt-6">
-                            <h3 class="text-sm font-bold text-slate-700 mb-2">Rules</h3>
+                            <h3 class="text-sm font-bold text-slate-700 mb-2">{{ translate(lang, 'games.towers_of_hanoi.rules') }}</h3>
                             <ul class="text-xs sm:text-sm text-slate-600 space-y-1">
-                                <li>• Only one disk can be moved at a time</li>
-                                <li>• A disk can only be placed on an empty tower or on a larger disk</li>
-                                <li>• All disks must end up on the rightmost tower</li>
-                                <li>• Goal: Move the entire stack from left to right</li>
+                                <li>• {{ translate(lang, 'games.towers_of_hanoi.rule_1') }}</li>
+                                <li>• {{ translate(lang, 'games.towers_of_hanoi.rule_2') }}</li>
+                                <li>• {{ translate(lang, 'games.towers_of_hanoi.rule_3') }}</li>
+                                <li>• {{ translate(lang, 'games.towers_of_hanoi.rule_4') }}</li>
                             </ul>
                         </div>
                     </div>
@@ -299,6 +299,30 @@
 {% endblock %}
 
 {% block extra_scripts %}
+    <script>
+        const towersTranslations = {
+            game_started: "{{ translate(lang, 'games.towers_of_hanoi.game_started') }}",
+            click_select_disk: "{{ translate(lang, 'games.towers_of_hanoi.click_select_disk') }}",
+            drag_or_click: "{{ translate(lang, 'games.towers_of_hanoi.drag_or_click') }}",
+            disk_deselected: "{{ translate(lang, 'games.towers_of_hanoi.disk_deselected') }}",
+            disk_selected: "{{ translate(lang, 'games.towers_of_hanoi.disk_selected') }}",
+            click_tower_move: "{{ translate(lang, 'games.towers_of_hanoi.click_tower_move') }}",
+            dragging_disk: "{{ translate(lang, 'games.towers_of_hanoi.dragging_disk') }}",
+            drop_valid_tower: "{{ translate(lang, 'games.towers_of_hanoi.drop_valid_tower') }}",
+            invalid_selection: "{{ translate(lang, 'games.towers_of_hanoi.invalid_selection') }}",
+            only_top_disk: "{{ translate(lang, 'games.towers_of_hanoi.only_top_disk') }}",
+            invalid_move: "{{ translate(lang, 'games.towers_of_hanoi.invalid_move') }}",
+            larger_on_smaller: "{{ translate(lang, 'games.towers_of_hanoi.larger_on_smaller') }}",
+            move_completed: "{{ translate(lang, 'games.towers_of_hanoi.move_completed') }}",
+            congratulations: "{{ translate(lang, 'games.towers_of_hanoi.congratulations') }}",
+            puzzle_solved: "{{ translate(lang, 'games.towers_of_hanoi.puzzle_solved') }}",
+            auto_solve_stopped: "{{ translate(lang, 'games.towers_of_hanoi.auto_solve_stopped') }}",
+            auto_solve_completed: "{{ translate(lang, 'games.towers_of_hanoi.auto_solve_completed') }}",
+            try_manually: "{{ translate(lang, 'games.towers_of_hanoi.try_manually') }}",
+            stop_solving: "{{ translate(lang, 'games.towers_of_hanoi.stop_solving') }}",
+            solve: "{{ translate(lang, 'games.towers_of_hanoi.solve') }}"
+        };
+    </script>
     <script>
         let towers = [[], [], []];
         let selectedDisk = null;
@@ -333,7 +357,7 @@
 
             updateDisplay();
             updateStats();
-            setStatus('Game started', 'Drag a disk or click to select it');
+            setStatus(towersTranslations.game_started, towersTranslations.drag_or_click);
         }
 
         function updateDisplay() {
@@ -359,7 +383,7 @@
                         if (towers[towerIndex][towers[towerIndex].length - 1] === diskSize) {
                             e.dataTransfer.setData('text/plain', JSON.stringify({ size: diskSize, fromTower: towerIndex }));
                             diskEl.classList.add('selected');
-                            setStatus(`Dragging disk ${diskSize}`, 'Drop on a valid tower');
+                            setStatus(towersTranslations.dragging_disk.replace('{size}', diskSize), towersTranslations.drop_valid_tower);
                         } else {
                             e.preventDefault();
                         }
@@ -381,7 +405,7 @@
                 selectedDisk = null;
                 selectedTower = null;
                 document.querySelectorAll('.disk.selected').forEach(el => el.classList.remove('selected'));
-                setStatus('Disk deselected', 'Drag a disk or click to select it');
+                setStatus(towersTranslations.disk_deselected, towersTranslations.drag_or_click);
                 return;
             }
 
@@ -392,9 +416,9 @@
                     selectedTower = towerIndex;
                     document.querySelectorAll('.disk.selected').forEach(el => el.classList.remove('selected'));
                     document.querySelector(`[data-tower="${towerIndex}"][data-size="${diskSize}"]`).classList.add('selected');
-                    setStatus(`Disk ${diskSize} selected`, 'Click on a tower to move it there');
+                    setStatus(towersTranslations.disk_selected.replace('{size}', diskSize), towersTranslations.click_tower_move);
                 } else {
-                    setStatus('Invalid selection', 'You can only move the top disk');
+                    setStatus(towersTranslations.invalid_selection, towersTranslations.only_top_disk);
                 }
                 return;
             }
@@ -411,7 +435,7 @@
             // Check if move is valid
             const targetTop = towers[toTower][towers[toTower].length - 1];
             if (targetTop && targetTop < diskSize) {
-                setStatus('Invalid move', 'Cannot place a larger disk on a smaller one');
+                setStatus(towersTranslations.invalid_move, towersTranslations.larger_on_smaller);
                 return;
             }
 
@@ -429,13 +453,13 @@
 
             // Check win condition
             if (towers[2].length === diskCount) {
-                setStatus('Congratulations!', 'You solved the puzzle!');
+                setStatus(towersTranslations.congratulations, towersTranslations.puzzle_solved);
                 celebrationEl.style.animation = 'none';
                 setTimeout(() => {
                     celebrationEl.style.animation = 'celebration-flash 2s ease-in-out';
                 }, 10);
             } else {
-                setStatus('Move completed', 'Drag a disk or click to select it');
+                setStatus(towersTranslations.move_completed, towersTranslations.drag_or_click);
             }
         }
 
@@ -448,11 +472,6 @@
         }
 
         function setStatus(main, sub) {
-            // Update instructions based on device type
-            const isMobile = window.innerWidth < 640;
-            const action = isMobile ? 'Tap' : 'Click';
-            const dragAction = isMobile ? 'Drag' : 'Drag';
-            sub = sub.replace(/Click/g, action).replace(/Drag/g, dragAction);
             statusEl.textContent = main;
             substatusEl.textContent = sub;
         }
@@ -513,7 +532,7 @@
                     // Check if move is valid
                     const targetTop = towers[toTower][towers[toTower].length - 1];
                     if (targetTop && targetTop < size) {
-                        setStatus('Invalid move', 'Cannot place a larger disk on a smaller one');
+                        setStatus(towersTranslations.invalid_move, towersTranslations.larger_on_smaller);
                         return;
                     }
 
@@ -535,8 +554,8 @@
         document.getElementById('solve').addEventListener('click', () => {
             if (isSolving) {
                 isSolving = false;
-                document.getElementById('solve').textContent = 'Solve';
-                setStatus('Auto-solve stopped', 'Drag a disk or click to select it');
+                document.getElementById('solve').textContent = towersTranslations.solve;
+                setStatus(towersTranslations.auto_solve_stopped, towersTranslations.drag_or_click);
                 return;
             }
 
@@ -545,7 +564,7 @@
             generateSolution(diskCount, 0, 2, 1);
             solveIndex = 0;
             isSolving = true;
-            document.getElementById('solve').textContent = 'Stop Solving';
+            document.getElementById('solve').textContent = towersTranslations.stop_solving;
 
             // Reset game state
             initializeGame();
@@ -567,9 +586,9 @@
         function solveNextStep() {
             if (!isSolving || solveIndex >= solveSteps.length) {
                 isSolving = false;
-                document.getElementById('solve').textContent = 'Solve';
+                document.getElementById('solve').textContent = towersTranslations.solve;
                 if (towers[2].length === diskCount) {
-                    setStatus('Auto-solve completed!', 'You can try manually now');
+                    setStatus(towersTranslations.auto_solve_completed, towersTranslations.try_manually);
                 }
                 return;
             }
