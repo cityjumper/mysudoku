@@ -298,6 +298,16 @@
                                 <li>• {{ translate(lang, 'games.towers_of_hanoi.rule_4') }}</li>
                             </ul>
                         </div>
+
+                        <div class="mt-4 sm:mt-6">
+                            <div class="flex items-center justify-between mb-3">
+                                <h3 class="text-sm font-bold text-slate-700">{{ translate(lang, 'games.towers_of_hanoi.best_scores') }}</h3>
+                                <button id="clear-scores" class="text-xs text-red-600 hover:text-red-800 font-medium">{{ translate(lang, 'games.towers_of_hanoi.clear_scores') }}</button>
+                            </div>
+                            <div id="leaderboard" class="space-y-2 max-h-64 overflow-y-auto">
+                                <p class="text-xs text-slate-500 text-center py-4">{{ translate(lang, 'games.towers_of_hanoi.no_scores') }}</p>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -364,6 +374,7 @@
 
             updateDisplay();
             updateStats();
+            updateLeaderboard();
             setStatus(towersTranslations.game_started, towersTranslations.drag_or_click);
         }
 
@@ -586,6 +597,15 @@
                 setTimeout(() => {
                     celebrationEl.style.animation = 'celebration-flash 2s ease-in-out';
                 }, 10);
+
+                // Prompt for name and save score
+                setTimeout(() => {
+                    const playerName = prompt(towersTranslations.enter_name);
+                    if (playerName && playerName.trim()) {
+                        saveScore(playerName.trim(), moves, diskCount);
+                        updateLeaderboard();
+                    }
+                }, 500);
             } else {
                 setStatus(towersTranslations.move_completed, towersTranslations.drag_or_click);
             }
@@ -678,6 +698,9 @@
             initializeGame();
         });
 
+        // Clear scores button
+        document.getElementById('clear-scores').addEventListener('click', clearScores);
+
         // Solve button
         document.getElementById('solve').addEventListener('click', () => {
             if (isSolving) {
@@ -730,6 +753,69 @@
 
         // Global touch event handlers for iOS compatibility
         let globalIsDragging = false;
+
+        // Leaderboard Functions
+        function saveScore(name, moves, diskCount) {
+            const scores = getScores();
+            scores.push({
+                name: name,
+                moves: moves,
+                diskCount: diskCount,
+                date: new Date().toISOString()
+            });
+            localStorage.setItem('towersOfHanoiScores', JSON.stringify(scores));
+        }
+
+        function getScores() {
+            const scores = localStorage.getItem('towersOfHanoiScores');
+            return scores ? JSON.parse(scores) : [];
+        }
+
+        function updateLeaderboard() {
+            const leaderboard = document.getElementById('leaderboard');
+            let scores = getScores();
+
+            // Sort by moves (ascending - fewer moves is better)
+            scores.sort((a, b) => a.moves - b.moves);
+
+            // Take top 10
+            scores = scores.slice(0, 10);
+
+            if (scores.length === 0) {
+                leaderboard.innerHTML = `<p class="text-xs text-slate-500 text-center py-4">${towersTranslations.no_scores}</p>`;
+                return;
+            }
+
+            leaderboard.innerHTML = scores.map((score, index) => {
+                const medal = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `${index + 1}.`;
+                const bgColor = index < 3 ? 'bg-gradient-to-r from-yellow-50 to-yellow-100' : 'bg-slate-50';
+
+                return `
+                    <div class="${bgColor} rounded-lg p-2 border border-slate-200">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center space-x-2">
+                                <span class="text-sm font-bold ${index < 3 ? 'text-yellow-600' : 'text-slate-600'}">${medal}</span>
+                                <div>
+                                    <div class="font-semibold text-slate-900 text-sm">${score.name}</div>
+                                    <div class="text-xs text-slate-500">${score.diskCount} disks</div>
+                                </div>
+                            </div>
+                            <div class="text-right">
+                                <div class="font-bold text-indigo-600 text-sm">${score.moves} ${towersTranslations.moves}</div>
+                                <div class="text-xs text-slate-500">${new Date(score.date).toLocaleDateString()}</div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function clearScores() {
+            if (confirm('Are you sure you want to clear all scores?')) {
+                localStorage.removeItem('towersOfHanoiScores');
+                updateLeaderboard();
+            }
+        }
 
         document.addEventListener('touchmove', (e) => {
             if (globalIsDragging) {

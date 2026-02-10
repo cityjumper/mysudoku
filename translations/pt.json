@@ -129,7 +129,13 @@
       "rule_3": "Todos os discos devem acabar na torre mais à direita",
       "rule_4": "Objetivo: Mover toda a pilha da esquerda para a direita",
       "instructions_desktop": "Arraste um disco para movê-lo, ou clique para selecionar e depois clique numa torre.",
-      "instructions_mobile": "Arraste um disco para movê-lo, ou toque para selecionar e depois toque numa torre."
+      "instructions_mobile": "Arraste um disco para movê-lo, ou toque para selecionar e depois toque numa torre.",
+      "leaderboard": "Tabela de Classificação",
+      "best_scores": "Melhores Pontuações",
+      "moves": "movimentos",
+      "clear_scores": "Limpar Pontuações",
+      "no_scores": "Sem pontuações ainda. Complete um puzzle para entrar na tabela!",
+      "enter_name": "🎉 Parabéns! Digite seu nome para a tabela de classificação:"
     },
     "chess": {
       "name": "Xadrez",

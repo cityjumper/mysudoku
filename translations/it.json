@@ -154,7 +154,13 @@
       "rule_3": "Tutti i dischi devono finire sulla torre più a destra",
       "rule_4": "Obiettivo: Sposta l'intera pila da sinistra a destra",
       "instructions_desktop": "Trascina un disco per spostarlo, o clicca per selezionare e poi clicca una torre.",
-      "instructions_mobile": "Trascina un disco per spostarlo, o tocca per selezionare e poi tocca una torre."
+      "instructions_mobile": "Trascina un disco per spostarlo, o tocca per selezionare e poi tocca una torre.",
+      "leaderboard": "Classifica",
+      "best_scores": "Migliori Punteggi",
+      "moves": "mosse",
+      "clear_scores": "Cancella Punteggi",
+      "no_scores": "Nessun punteggio ancora. Completa un puzzle per salire in classifica!",
+      "enter_name": "🎉 Congratulazioni! Inserisci il tuo nome per la classifica:"
     },
     "chess": {
       "name": "Scacchi",

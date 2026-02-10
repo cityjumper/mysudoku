@@ -154,7 +154,13 @@
       "rule_3": "All disks must end up on the rightmost tower",
       "rule_4": "Goal: Move the entire stack from left to right",
       "instructions_desktop": "Drag a disk to move it, or click to select and then click a tower.",
-      "instructions_mobile": "Drag a disk to move it, or tap to select and then tap a tower."
+      "instructions_mobile": "Drag a disk to move it, or tap to select and then tap a tower.",
+      "leaderboard": "Leaderboard",
+      "best_scores": "Best Scores",
+      "moves": "moves",
+      "clear_scores": "Clear Scores",
+      "no_scores": "No scores yet. Complete a puzzle to get on the board!",
+      "enter_name": "🎉 Congratulations! Enter your name for the leaderboard:"
     },
     "chess": {
       "name": "Chess",

@@ -154,7 +154,13 @@
       "rule_3": "Alle schijven moeten eindigen op de rechtertoren",
       "rule_4": "Doel: Verplaats de hele stapel van links naar rechts",
       "instructions_desktop": "Sleep een schijf om te verplaatsen, of klik om te selecteren en klik dan op een toren.",
-      "instructions_mobile": "Sleep een schijf om te verplaatsen, of tik om te selecteren en tik dan op een toren."
+      "instructions_mobile": "Sleep een schijf om te verplaatsen, of tik om te selecteren en tik dan op een toren.",
+      "leaderboard": "Scorebord",
+      "best_scores": "Beste Scores",
+      "moves": "zetten",
+      "clear_scores": "Scores Wissen",
+      "no_scores": "Nog geen scores. Voltooi een puzzel om op het bord te komen!",
+      "enter_name": "🎉 Gefeliciteerd! Voer je naam in voor het scorebord:"
     },
     "chess": {
       "name": "Schaak",
