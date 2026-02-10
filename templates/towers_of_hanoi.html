@@ -184,6 +184,13 @@
                 -moz-user-select: none;
                 -ms-user-select: none;
                 user-select: none;
+                -webkit-tap-highlight-color: transparent;
+                touch-action: none;
+            }
+            /* iOS-specific fixes for dragging */
+            .disk {
+                -webkit-transform: translateZ(0);
+                transform: translateZ(0);
             }
         }
     </style>
@@ -404,19 +411,27 @@
                         // Only allow dragging the top disk
                         if (towers[towerIndex][towers[towerIndex].length - 1] !== diskSize) return;
 
+                        // Prevent default behaviors for iOS
                         e.preventDefault();
+                        e.stopPropagation();
+
                         const touch = e.touches[0];
-                        touchStartX = touch.clientX;
-                        touchStartY = touch.clientY;
+                        touchStartX = touch.pageX;
+                        touchStartY = touch.pageY;
                         isDragging = true;
                         hasDragged = false;
+                        globalIsDragging = true;
 
                         // Create a visual clone for dragging
                         dragClone = diskEl.cloneNode(true);
                         dragClone.style.position = 'fixed';
                         dragClone.style.zIndex = '1000';
                         dragClone.style.pointerEvents = 'none';
-                        dragClone.style.transform = 'rotate(5deg)';
+                        dragClone.style.transform = 'rotate(5deg) translateZ(0)';
+                        dragClone.style.left = `${touch.pageX - dragClone.offsetWidth / 2}px`;
+                        dragClone.style.top = `${touch.pageY - dragClone.offsetHeight / 2}px`;
+                        dragClone.style.width = `${diskEl.offsetWidth}px`;
+                        dragClone.style.height = `${diskEl.offsetHeight}px`;
                         document.body.appendChild(dragClone);
 
                         diskEl.classList.add('selected');
@@ -427,23 +442,23 @@
                     diskEl.addEventListener('touchmove', (e) => {
                         if (!isDragging || !dragClone) return;
                         e.preventDefault();
+                        e.stopPropagation();
                         hasDragged = true;
 
                         const touch = e.touches[0];
-                        const deltaX = touch.clientX - touchStartX;
-                        const deltaY = touch.clientY - touchStartY;
 
-                        dragClone.style.left = `${touch.clientX - dragClone.offsetWidth / 2}px`;
-                        dragClone.style.top = `${touch.clientY - dragClone.offsetHeight / 2}px`;
+                        dragClone.style.left = `${touch.pageX - dragClone.offsetWidth / 2}px`;
+                        dragClone.style.top = `${touch.pageY - dragClone.offsetHeight / 2}px`;
 
                         // Prevent page scrolling during drag
                         document.body.style.overflow = 'hidden';
+                        document.body.style.touchAction = 'none';
 
                         // Highlight towers on hover
                         document.querySelectorAll('.tower').forEach(towerEl => {
                             const rect = towerEl.getBoundingClientRect();
-                            if (touch.clientX >= rect.left && touch.clientX <= rect.right &&
-                                touch.clientY >= rect.top && touch.clientY <= rect.bottom) {
+                            if (touch.pageX >= rect.left && touch.pageX <= rect.right &&
+                                touch.pageY >= rect.top && touch.pageY <= rect.bottom) {
                                 towerEl.style.background = 'rgba(59, 130, 246, 0.1)';
                             } else {
                                 towerEl.style.background = '';
@@ -454,13 +469,16 @@
                     diskEl.addEventListener('touchend', (e) => {
                         if (!isDragging) return;
                         e.preventDefault();
+                        e.stopPropagation();
 
                         isDragging = false;
+                        globalIsDragging = false;
                         diskEl.classList.remove('selected');
                         diskEl.style.opacity = '1';
 
-                        // Restore scrolling
+                        // Restore scrolling and touch action
                         document.body.style.overflow = '';
+                        document.body.style.touchAction = '';
 
                         const touch = e.changedTouches[0];
                         let targetTower = null;
@@ -468,8 +486,8 @@
                         // Find which tower the touch ended over
                         document.querySelectorAll('.tower').forEach((towerEl, index) => {
                             const rect = towerEl.getBoundingClientRect();
-                            if (touch.clientX >= rect.left && touch.clientX <= rect.right &&
-                                touch.clientY >= rect.top && touch.clientY <= rect.bottom) {
+                            if (touch.pageX >= rect.left && touch.pageX <= rect.right &&
+                                touch.pageY >= rect.top && touch.pageY <= rect.bottom) {
                                 targetTower = index;
                             }
                             towerEl.style.background = ''; // Clear highlights
@@ -710,7 +728,18 @@
             setTimeout(solveNextStep, 500);
         }
 
-        // Initialize game on load
-        initializeGame();
+        // Global touch event handlers for iOS compatibility
+        let globalIsDragging = false;
+
+        document.addEventListener('touchmove', (e) => {
+            if (globalIsDragging) {
+                e.preventDefault();
+            }
+        }, { passive: false });
+
+        document.addEventListener('touchstart', (e) => {
+            // Reset global dragging flag
+            globalIsDragging = false;
+        });
     </script>
 {% endblock %}
