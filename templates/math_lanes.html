@@ -21,6 +21,29 @@
         .lane-chip {
             min-width: 88px;
         }
+
+        .arena-wrap {
+            position: relative;
+        }
+
+        .tap-lanes {
+            position: absolute;
+            inset: 0;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            z-index: 5;
+        }
+
+        .tap-lane {
+            border: 0;
+            background: transparent;
+            color: transparent;
+            touch-action: manipulation;
+        }
+
+        .tap-lane:active {
+            background: rgba(59, 130, 246, 0.12);
+        }
     </style>
 {% endblock %}
 
@@ -70,8 +93,12 @@
                     </div>
                 </div>
 
-                <div class="rounded-xl ring-2 ring-fuchsia-200 overflow-hidden">
+                <div class="arena-wrap rounded-xl ring-2 ring-fuchsia-200 overflow-hidden">
                     <canvas id="math-canvas" class="math-arena w-full block" aria-label="Math lanes game"></canvas>
+                    <div class="tap-lanes" aria-hidden="false">
+                        <button id="tap-left" class="tap-lane" title="Choose left lane" aria-label="Choose left lane">Left lane</button>
+                        <button id="tap-right" class="tap-lane" title="Choose right lane" aria-label="Choose right lane">Right lane</button>
+                    </div>
                 </div>
 
                 <div class="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm text-slate-700">
@@ -107,6 +134,8 @@
         const restartBtn = document.getElementById('restart-btn');
         const leftBtn = document.getElementById('left-btn');
         const rightBtn = document.getElementById('right-btn');
+        const tapLeftEl = document.getElementById('tap-left');
+        const tapRightEl = document.getElementById('tap-right');
 
         const BEST_KEY = 'math-lanes:best-score:v1';
         const DIFFICULTY_CONFIG = {
@@ -538,6 +567,14 @@
             state.lane = Math.max(0, Math.min(1, lane));
         }
 
+        function chooseLaneAndStart(lane, event) {
+            if (event) {
+                event.preventDefault();
+            }
+            setLane(lane);
+            if (!state.running) startGame();
+        }
+
         document.addEventListener('keydown', (event) => {
             const key = event.key.toLowerCase();
             if (key === 'arrowleft' || key === 'a') {
@@ -555,22 +592,47 @@
         canvas.addEventListener('pointerdown', (event) => {
             const rect = canvas.getBoundingClientRect();
             const x = event.clientX - rect.left;
-            setLane(x < rect.width / 2 ? 0 : 1);
-            if (!state.running) startGame();
+            chooseLaneAndStart(x < rect.width / 2 ? 0 : 1, event);
         });
+
+        canvas.addEventListener('touchstart', (event) => {
+            const rect = canvas.getBoundingClientRect();
+            const touch = event.touches[0];
+            if (!touch) return;
+            const x = touch.clientX - rect.left;
+            chooseLaneAndStart(x < rect.width / 2 ? 0 : 1, event);
+        }, { passive: false });
+
+        canvas.addEventListener('click', (event) => {
+            const rect = canvas.getBoundingClientRect();
+            const x = event.clientX - rect.left;
+            chooseLaneAndStart(x < rect.width / 2 ? 0 : 1, event);
+        });
+
+        function wireTapTarget(target, lane) {
+            if (!target) return;
+            target.addEventListener('pointerdown', (event) => chooseLaneAndStart(lane, event));
+            target.addEventListener('touchstart', (event) => chooseLaneAndStart(lane, event), { passive: false });
+            target.addEventListener('click', (event) => chooseLaneAndStart(lane, event));
+        }
+
+        wireTapTarget(tapLeftEl, 0);
+        wireTapTarget(tapRightEl, 1);
 
         if (leftBtn) {
             leftBtn.addEventListener('pointerdown', () => {
-                setLane(0);
-                if (!state.running) startGame();
+                chooseLaneAndStart(0);
             });
+            leftBtn.addEventListener('touchstart', (event) => chooseLaneAndStart(0, event), { passive: false });
+            leftBtn.addEventListener('click', (event) => chooseLaneAndStart(0, event));
         }
 
         if (rightBtn) {
             rightBtn.addEventListener('pointerdown', () => {
-                setLane(1);
-                if (!state.running) startGame();
+                chooseLaneAndStart(1);
             });
+            rightBtn.addEventListener('touchstart', (event) => chooseLaneAndStart(1, event), { passive: false });
+            rightBtn.addEventListener('click', (event) => chooseLaneAndStart(1, event));
         }
 
         startBtn.addEventListener('click', startGame);
