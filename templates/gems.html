@@ -1,33 +1,6 @@
 {% extends "base.html" %}
 
-{% set gems_title = translate(lang, 'games.gems.title') %}
-{% set gems_subtitle = translate(lang, 'games.gems.subtitle') %}
-{% set gems_rules_title = translate(lang, 'games.gems.rules') %}
-{% set gems_special_title = translate(lang, 'games.gems.special_title') %}
-{% set gems_special_fan = translate(lang, 'games.gems.special_fan') %}
-{% set gems_rule_1 = translate(lang, 'games.gems.rule_1') %}
-{% set gems_rule_2 = translate(lang, 'games.gems.rule_2') %}
-{% set gems_rule_3 = translate(lang, 'games.gems.rule_3') %}
-{% set gems_rule_4 = translate(lang, 'games.gems.rule_4') %}
-{% set gems_rule_5 = translate(lang, 'games.gems.rule_5') %}
-{% set gems_rule_6 = translate(lang, 'games.gems.rule_6') %}
-{% set gems_rule_7 = translate(lang, 'games.gems.rule_7') %}
-{% if gems_title == 'games.gems.title' %}{% set gems_title = 'Gems' %}{% endif %}
-{% if gems_subtitle == 'games.gems.subtitle' %}{% set gems_subtitle = 'Match gems and trigger special powers.' %}{% endif %}
-{% if gems_rules_title == 'games.gems.rules' %}{% set gems_rules_title = 'Rules' %}{% endif %}
-{% if gems_special_title == 'games.gems.special_title' %}{% set gems_special_title = 'Special Items' %}{% endif %}
-{% if gems_special_fan == 'games.gems.special_fan' %}{% set gems_special_fan = 'Fan (🪭): create a 2x2 square match to spawn a fan. Click it or move it to destroy random gems.' %}{% endif %}
-{% if gems_rule_1 == 'games.gems.rule_1' %}{% set gems_rule_1 = 'Swap two adjacent gems by clicking or dragging.' %}{% endif %}
-{% if gems_rule_2 == 'games.gems.rule_2' %}{% set gems_rule_2 = 'Match 3 or more gems in a row or column to clear them.' %}{% endif %}
-{% if gems_rule_3 == 'games.gems.rule_3' %}{% set gems_rule_3 = 'Bomb gems explode nearby cells for bonus points.' %}{% endif %}
-{% if gems_rule_4 == 'games.gems.rule_4' %}{% set gems_rule_4 = 'Create a 2x2 square of the same gem to generate a fan.' %}{% endif %}
-{% if gems_rule_5 == 'games.gems.rule_5' %}{% set gems_rule_5 = 'Fans activate when clicked or moved, destroying random gems.' %}{% endif %}
-{% if gems_rule_6 == 'games.gems.rule_6' %}{% set gems_rule_6 = 'Cascades can create chain reactions and boost your score.' %}{% endif %}
-{% if gems_rule_7 == 'games.gems.rule_7' %}{% set gems_rule_7 = 'Keep matching to level up and survive longer.' %}{% endif %}
-
-{% block title %}{{ gems_title }}{% endblock %}
-
-{% block body_class %}bg-gradient-to-br from-slate-50 to-emerald-100 min-h-screen{% endblock %}
+{% block title %}{{ translate(lang, 'games.gems.title') }}{% endblock %}
 
 {% block extra_head %}
     <style>
@@ -44,6 +17,7 @@
             font-size: 24px;
             -webkit-user-select: none;
             user-select: none;
+            touch-action: none;
         }
 
         @media (min-width: 640px) {
@@ -71,11 +45,6 @@
         .gem-yellow { background: linear-gradient(135deg, #f59e0b, #d97706); }
         .gem-purple { background: linear-gradient(135deg, #8b5cf6, #7c3aed); }
         .gem-bomb { background: linear-gradient(135deg, #f97316, #ea580c); }
-        .gem-fan { background: linear-gradient(135deg, #22c55e, #15803d); }
-        .gem-rocket-h { background: linear-gradient(135deg, #06b6d4, #0e7490); }
-        .gem-rocket-v { background: linear-gradient(135deg, #14b8a6, #0f766e); }
-        .gem-star { background: linear-gradient(135deg, #facc15, #eab308); }
-        .gem-nova { background: linear-gradient(135deg, #ec4899, #be185d); }
 
         .gem-cell.exploding {
             animation: explode 0.5s ease-out forwards;
@@ -170,27 +139,11 @@
 {% endblock %}
 
 {% block content %}
-    <div class="container mx-auto px-4 py-6 sm:py-10">
-        <div class="max-w-6xl mx-auto mb-6 flex items-center justify-between">
-            <a href="/" class="inline-flex items-center text-emerald-800 hover:text-emerald-950 font-semibold">
-                <svg class="w-5 h-5 mr-2" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                    <path fill-rule="evenodd" d="M12.707 15.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 111.414 1.414L7.414 9H17a1 1 0 110 2H7.414l5.293 5.293a1 1 0 010 1.414z" clip-rule="evenodd" />
-                </svg>
-                {{ translate(lang, 'common.home') }}
-            </a>
-            <div class="flex items-center gap-4">
-                <a href="/sudoku" class="text-sm font-semibold text-indigo-700 hover:text-indigo-900">{{ translate(lang, 'games.sudoku.name') }}</a>
-                <a href="/connect-four" class="text-sm font-semibold text-cyan-700 hover:text-cyan-900">{{ translate(lang, 'games.connect_four.name') }}</a>
-                <a href="/minesweeper" class="text-sm font-semibold text-red-700 hover:text-red-900">{{ translate(lang, 'games.minesweeper.name') }}</a>
-                <a href="/chess" class="text-sm font-semibold text-purple-700 hover:text-purple-900">{{ translate(lang, 'games.chess.name') }}</a>
-            </div>
-        </div>
-
-        <div class="max-w-4xl mx-auto">
+    <div class="container mx-auto px-4 py-6 sm:py-10 max-w-4xl">
         <!-- Header -->
         <div class="text-center mb-8">
-            <h1 class="text-3xl sm:text-4xl font-bold text-slate-900 mb-2">{{ gems_title }}</h1>
-            <p class="text-slate-600">{{ gems_subtitle }}</p>
+            <h1 class="text-3xl sm:text-4xl font-bold text-slate-900 mb-2">{{ translate(lang, 'games.gems.title') }}</h1>
+            <p class="text-slate-600">{{ translate(lang, 'games.gems.subtitle') }}</p>
         </div>
 
         <!-- Game Stats -->
@@ -231,55 +184,18 @@
         <!-- Status Message -->
         <div id="status-message" class="text-center mb-6 text-lg font-medium text-slate-700"></div>
 
-        <!-- High Scores -->
-        <div class="rules-section mb-6">
-            <div class="flex items-center justify-between mb-3">
-                <h2 class="text-xl font-bold text-slate-900">High Scores</h2>
-                <button id="clear-high-scores-btn" class="text-sm text-red-600 hover:text-red-800 font-semibold">Clear</button>
-            </div>
-            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
-                <div class="rounded-xl bg-emerald-50 ring-1 ring-emerald-100 p-4">
-                    <div class="text-xs font-semibold uppercase tracking-wide text-emerald-700">Best Score</div>
-                    <div id="best-score" class="mt-1 text-3xl font-extrabold text-emerald-900">0</div>
-                </div>
-                <div class="rounded-xl bg-blue-50 ring-1 ring-blue-100 p-4">
-                    <div class="text-xs font-semibold uppercase tracking-wide text-blue-700">Best Level</div>
-                    <div id="best-level" class="mt-1 text-3xl font-extrabold text-blue-900">1</div>
-                </div>
-                <div class="rounded-xl bg-purple-50 ring-1 ring-purple-100 p-4">
-                    <div class="text-xs font-semibold uppercase tracking-wide text-purple-700">Best Efficiency</div>
-                    <div id="best-efficiency" class="mt-1 text-3xl font-extrabold text-purple-900">0</div>
-                </div>
-            </div>
-            <div id="high-scores-list" class="space-y-2">
-                <p class="text-sm text-slate-500">No scores yet. Play a round and reset/new game to save it.</p>
-            </div>
-        </div>
-
-        <!-- Special Items -->
-        <div class="rules-section mb-6">
-            <h2 class="text-xl font-bold text-slate-900 mb-2">{{ gems_special_title }}</h2>
-            <ul class="rules-list text-slate-700">
-                <li>{{ gems_special_fan }}</li>
-                <li>Rocket (↔/↕): create 4 in a row/column. Activating clears a full row or column.</li>
-                <li>Star (🌟): create 5 in a row. Activating clears all gems of a random color.</li>
-                <li>Nova (💥): create a T-shape match. Activating blasts a large cross area.</li>
-            </ul>
-        </div>
-
         <!-- Rules Section -->
         <div class="rules-section">
-            <h2 class="text-xl font-bold text-slate-900 mb-4">{{ gems_rules_title }}</h2>
+            <h2 class="text-xl font-bold text-slate-900 mb-4">{{ translate(lang, 'games.gems.rules') }}</h2>
             <ul class="rules-list text-slate-700">
-                <li>{{ gems_rule_1 }}</li>
-                <li>{{ gems_rule_2 }}</li>
-                <li>{{ gems_rule_3 }}</li>
-                <li>{{ gems_rule_4 }}</li>
-                <li>{{ gems_rule_5 }}</li>
-                <li>{{ gems_rule_6 }}</li>
-                <li>{{ gems_rule_7 }}</li>
+                <li>{{ translate(lang, 'games.gems.rule_1') }}</li>
+                <li>{{ translate(lang, 'games.gems.rule_2') }}</li>
+                <li>{{ translate(lang, 'games.gems.rule_3') }}</li>
+                <li>{{ translate(lang, 'games.gems.rule_4') }}</li>
+                <li>{{ translate(lang, 'games.gems.rule_5') }}</li>
+                <li>{{ translate(lang, 'games.gems.rule_6') }}</li>
+                <li>{{ translate(lang, 'games.gems.rule_7') }}</li>
             </ul>
-        </div>
         </div>
     </div>
 {% endblock %}
@@ -288,19 +204,12 @@
     <script>
         class GemsGame {
             constructor() {
-                this.messages = {
-                    selectSwap: "{{ translate(lang, 'games.gems.msg_select_swap') }}",
-                    adjacentOnly: "{{ translate(lang, 'games.gems.msg_adjacent_only') }}",
-                    noMatch: "{{ translate(lang, 'games.gems.msg_no_match') }}",
-                    fanActivated: "{{ translate(lang, 'games.gems.msg_fan_activated') }}",
-                    progress: "{{ translate(lang, 'games.gems.msg_progress') }}",
-                    newGameStarted: "{{ translate(lang, 'games.gems.msg_new_game_started') }}",
-                    resetConfirm: "{{ translate(lang, 'games.gems.msg_reset_confirm') }}",
-                    levelCleared: "{{ translate(lang, 'games.gems.msg_level_cleared') }}"
-                };
                 this.board = [];
                 this.selectedGem = null;
-                this.draggedGem = null;
+                this.dragStartGem = null;
+                this.dragStartPoint = null;
+                this.dragSwapTriggered = false;
+                this.skipNextClick = false;
                 this.score = 0;
                 this.level = 1;
                 this.moves = 0;
@@ -309,14 +218,11 @@
                 this.BOARD_SIZE = 8;
                 this.GEM_TYPES = ['red', 'blue', 'green', 'yellow', 'purple'];
                 this.BOMB_CHANCE = 0.1; // 10% chance for bombs
-                this.HIGH_SCORES_KEY = 'gems:highscores:v1';
-                this.skipRecordOnNextReset = false;
 
                 this.initBoard();
                 this.renderBoard();
                 this.updateStats();
                 this.bindEvents();
-                this.renderHighScores();
             }
 
             initBoard() {
@@ -397,7 +303,6 @@
                         cell.className = `gem-cell gem-${gem}`;
                         cell.dataset.row = row;
                         cell.dataset.col = col;
-                        cell.draggable = true;
                         cell.textContent = this.getGemEmoji(gem);
                         boardElement.appendChild(cell);
                     }
@@ -411,12 +316,7 @@
                     'green': '🟢',
                     'yellow': '🟡',
                     'purple': '🟣',
-                    'bomb': '💣',
-                    'fan': '🪭',
-                    'rocket-h': '↔',
-                    'rocket-v': '↕',
-                    'star': '🌟',
-                    'nova': '💥'
+                    'bomb': '💣'
                 };
                 return emojis[gem] || '❓';
             }
@@ -425,6 +325,11 @@
                 const boardElement = document.getElementById('game-board');
 
                 boardElement.addEventListener('click', (e) => {
+                    if (this.skipNextClick) {
+                        this.skipNextClick = false;
+                        return;
+                    }
+
                     if (this.animating) return;
 
                     const cell = e.target.closest('.gem-cell');
@@ -436,54 +341,20 @@
                     this.handleGemClick(row, col);
                 });
 
-                boardElement.addEventListener('dragstart', (e) => {
-                    if (this.animating) {
-                        e.preventDefault();
-                        return;
-                    }
-
-                    const cell = e.target.closest('.gem-cell');
-                    if (!cell) return;
-
-                    const row = parseInt(cell.dataset.row);
-                    const col = parseInt(cell.dataset.col);
-                    this.draggedGem = { row, col };
-                    this.highlightSelectedGem(row, col);
-
-                    if (e.dataTransfer) {
-                        e.dataTransfer.effectAllowed = 'move';
-                        e.dataTransfer.setData('text/plain', `${row},${col}`);
-                    }
+                boardElement.addEventListener('pointerdown', (e) => {
+                    this.handlePointerDown(e);
                 });
 
-                boardElement.addEventListener('dragover', (e) => {
-                    if (e.target.closest('.gem-cell')) {
-                        e.preventDefault();
-                    }
+                boardElement.addEventListener('pointermove', (e) => {
+                    this.handlePointerMove(e);
                 });
 
-                boardElement.addEventListener('drop', (e) => {
-                    e.preventDefault();
-                    if (this.animating || this.draggedGem === null) return;
-
-                    const cell = e.target.closest('.gem-cell');
-                    if (!cell) return;
-
-                    const row = parseInt(cell.dataset.row);
-                    const col = parseInt(cell.dataset.col);
-                    const source = this.draggedGem;
-
-                    if (source.row !== row || source.col !== col) {
-                        this.trySwap(source.row, source.col, row, col);
-                    }
-
-                    this.draggedGem = null;
-                    this.clearSelection();
+                boardElement.addEventListener('pointerup', () => {
+                    this.handlePointerEnd();
                 });
 
-                boardElement.addEventListener('dragend', () => {
-                    this.draggedGem = null;
-                    this.clearSelection();
+                boardElement.addEventListener('pointercancel', () => {
+                    this.handlePointerEnd();
                 });
 
                 document.getElementById('new-game-btn').addEventListener('click', () => {
@@ -493,24 +364,14 @@
                 document.getElementById('reset-scores-btn').addEventListener('click', () => {
                     this.resetScores();
                 });
-
-                document.getElementById('clear-high-scores-btn').addEventListener('click', () => {
-                    this.clearHighScores();
-                });
             }
 
             handleGemClick(row, col) {
-                if (this.isSpecialGem(this.board[row][col])) {
-                    this.clearSelection();
-                    this.activateSpecialGem(row, col);
-                    return;
-                }
-
                 if (this.selectedGem === null) {
                     // Select gem
                     this.selectedGem = { row, col };
                     this.highlightSelectedGem(row, col);
-                    this.setStatusMessage(this.messages.selectSwap);
+                    this.setStatusMessage('Select a gem to swap with');
                 } else {
                     // Try to swap
                     const selectedRow = this.selectedGem.row;
@@ -523,43 +384,74 @@
                         return;
                     }
 
-                    this.trySwap(selectedRow, selectedCol, row, col);
+                    if (this.isAdjacent(selectedRow, selectedCol, row, col)) {
+                        this.trySwap(selectedRow, selectedCol, row, col);
+                    } else {
+                        this.setStatusMessage('Gems must be adjacent to swap!');
+                    }
 
                     this.clearSelection();
                 }
             }
 
-            trySwap(row1, col1, row2, col2) {
-                if (!this.isAdjacent(row1, col1, row2, col2)) {
-                    this.setStatusMessage(this.messages.adjacentOnly);
+            handlePointerDown(e) {
+                if (this.animating) return;
+
+                const cell = e.target.closest('.gem-cell');
+                if (!cell) return;
+
+                this.dragStartGem = {
+                    row: parseInt(cell.dataset.row),
+                    col: parseInt(cell.dataset.col)
+                };
+                this.dragStartPoint = { x: e.clientX, y: e.clientY };
+                this.dragSwapTriggered = false;
+
+                this.selectedGem = { ...this.dragStartGem };
+                this.highlightSelectedGem(this.dragStartGem.row, this.dragStartGem.col);
+            }
+
+            handlePointerMove(e) {
+                if (this.animating || !this.dragStartGem || !this.dragStartPoint || this.dragSwapTriggered) {
                     return;
                 }
 
-                const firstGem = this.board[row1][col1];
-                const secondGem = this.board[row2][col2];
+                const dx = e.clientX - this.dragStartPoint.x;
+                const dy = e.clientY - this.dragStartPoint.y;
+                const threshold = 20;
+
+                if (Math.abs(dx) < threshold && Math.abs(dy) < threshold) {
+                    return;
+                }
+
+                let targetRow = this.dragStartGem.row;
+                let targetCol = this.dragStartGem.col;
+
+                if (Math.abs(dx) > Math.abs(dy)) {
+                    targetCol += dx > 0 ? 1 : -1;
+                } else {
+                    targetRow += dy > 0 ? 1 : -1;
+                }
+
+                if (targetRow < 0 || targetRow >= this.BOARD_SIZE || targetCol < 0 || targetCol >= this.BOARD_SIZE) {
+                    return;
+                }
+
+                this.dragSwapTriggered = true;
+                this.skipNextClick = true;
+                this.trySwap(this.dragStartGem.row, this.dragStartGem.col, targetRow, targetCol);
+                this.clearSelection();
+            }
+
+            handlePointerEnd() {
+                this.dragStartGem = null;
+                this.dragStartPoint = null;
+                this.dragSwapTriggered = false;
+            }
+
+            trySwap(row1, col1, row2, col2) {
                 this.swapGems(row1, col1, row2, col2);
                 this.moves++;
-
-                const specialActivations = [];
-                if (this.isSpecialGem(firstGem)) {
-                    specialActivations.push({ row: row2, col: col2 });
-                }
-                if (this.isSpecialGem(secondGem)) {
-                    specialActivations.push({ row: row1, col: col1 });
-                }
-
-                if (specialActivations.length > 0) {
-                    const seen = new Set();
-                    const uniqueActivations = specialActivations.filter(pos => {
-                        const key = `${pos.row},${pos.col}`;
-                        if (seen.has(key)) return false;
-                        seen.add(key);
-                        return true;
-                    });
-
-                    this.activateSpecialSequence(uniqueActivations);
-                    return;
-                }
 
                 if (this.findMatches().length > 0) {
                     this.processMatches();
@@ -568,7 +460,7 @@
 
                 setTimeout(() => {
                     this.swapGems(row2, col2, row1, col1);
-                    this.setStatusMessage(this.messages.noMatch);
+                    this.setStatusMessage('No matches found! Try a different swap.');
                 }, 300);
             }
 
@@ -600,68 +492,8 @@
                 cells.forEach(cell => cell.classList.remove('selected'));
             }
 
-            isNormalGem(gem) {
-                return this.GEM_TYPES.includes(gem);
-            }
-
-            isSpecialGem(gem) {
-                return ['fan', 'rocket-h', 'rocket-v', 'star', 'nova'].includes(gem);
-            }
-
-            getRunLengthAt(row, col, rowStep, colStep) {
-                const gem = this.board[row][col];
-                if (!this.isNormalGem(gem)) return 0;
-
-                let count = 1;
-
-                let r = row + rowStep;
-                let c = col + colStep;
-                while (
-                    r >= 0 && r < this.BOARD_SIZE &&
-                    c >= 0 && c < this.BOARD_SIZE &&
-                    this.board[r][c] === gem
-                ) {
-                    count++;
-                    r += rowStep;
-                    c += colStep;
-                }
-
-                r = row - rowStep;
-                c = col - colStep;
-                while (
-                    r >= 0 && r < this.BOARD_SIZE &&
-                    c >= 0 && c < this.BOARD_SIZE &&
-                    this.board[r][c] === gem
-                ) {
-                    count++;
-                    r -= rowStep;
-                    c -= colStep;
-                }
-
-                return count;
-            }
-
-            findMatchData() {
-                const matchMap = new Map();
-                const squareAnchors = [];
-                const horizontalRuns = [];
-                const verticalRuns = [];
-                const specialCreates = new Map();
-
-                const addMatch = (row, col) => {
-                    const gem = this.board[row][col];
-                    if (gem === null) return;
-                    const key = `${row},${col}`;
-                    matchMap.set(key, { row, col, gem });
-                };
-
-                const setSpecial = (row, col, type, priority) => {
-                    const key = `${row},${col}`;
-                    const existing = specialCreates.get(key);
-                    if (!existing || priority > existing.priority) {
-                        specialCreates.set(key, { row, col, type, priority });
-                    }
-                };
+            findMatches() {
+                const matches = [];
 
                 // Find horizontal matches
                 for (let row = 0; row < this.BOARD_SIZE; row++) {
@@ -669,20 +501,13 @@
                     let startCol = 0;
 
                     for (let col = 1; col <= this.BOARD_SIZE; col++) {
-                        if (
-                            col < this.BOARD_SIZE &&
-                            this.board[row][col] === this.board[row][col - 1] &&
-                            this.isNormalGem(this.board[row][col])
-                        ) {
+                        if (col < this.BOARD_SIZE && this.board[row][col] === this.board[row][col - 1]) {
                             count++;
                         } else {
                             if (count >= 3) {
-                                const cells = [];
                                 for (let c = startCol; c < col; c++) {
-                                    addMatch(row, c);
-                                    cells.push({ row, col: c });
+                                    matches.push({ row, col: c, gem: this.board[row][c] });
                                 }
-                                horizontalRuns.push({ row, start: startCol, end: col - 1, length: count, cells });
                             }
                             count = 1;
                             startCol = col;
@@ -696,20 +521,13 @@
                     let startRow = 0;
 
                     for (let row = 1; row <= this.BOARD_SIZE; row++) {
-                        if (
-                            row < this.BOARD_SIZE &&
-                            this.board[row][col] === this.board[row - 1][col] &&
-                            this.isNormalGem(this.board[row][col])
-                        ) {
+                        if (row < this.BOARD_SIZE && this.board[row][col] === this.board[row - 1][col]) {
                             count++;
                         } else {
                             if (count >= 3) {
-                                const cells = [];
                                 for (let r = startRow; r < row; r++) {
-                                    addMatch(r, col);
-                                    cells.push({ row: r, col });
+                                    matches.push({ row: r, col, gem: this.board[r][col] });
                                 }
-                                verticalRuns.push({ col, start: startRow, end: row - 1, length: count, cells });
                             }
                             count = 1;
                             startRow = row;
@@ -717,236 +535,18 @@
                     }
                 }
 
-                // 5-line specials (star)
-                horizontalRuns.forEach(run => {
-                    if (run.length >= 5) {
-                        const mid = run.cells[Math.floor(run.cells.length / 2)];
-                        setSpecial(mid.row, mid.col, 'star', 4);
-                    }
-                });
-                verticalRuns.forEach(run => {
-                    if (run.length >= 5) {
-                        const mid = run.cells[Math.floor(run.cells.length / 2)];
-                        setSpecial(mid.row, mid.col, 'star', 4);
-                    }
-                });
-
-                // 4-line specials (rockets)
-                horizontalRuns.forEach(run => {
-                    if (run.length === 4) {
-                        const mid = run.cells[Math.floor(run.cells.length / 2)];
-                        setSpecial(mid.row, mid.col, 'rocket-h', 2);
-                    }
-                });
-                verticalRuns.forEach(run => {
-                    if (run.length === 4) {
-                        const mid = run.cells[Math.floor(run.cells.length / 2)];
-                        setSpecial(mid.row, mid.col, 'rocket-v', 2);
-                    }
-                });
-
-                // T/plus intersections create nova
-                for (let row = 0; row < this.BOARD_SIZE; row++) {
-                    for (let col = 0; col < this.BOARD_SIZE; col++) {
-                        const gem = this.board[row][col];
-                        if (!this.isNormalGem(gem)) continue;
-
-                        const horizontalLen = this.getRunLengthAt(row, col, 0, 1);
-                        const verticalLen = this.getRunLengthAt(row, col, 1, 0);
-                        if (horizontalLen >= 3 && verticalLen >= 3) {
-                            setSpecial(row, col, 'nova', 3);
-                        }
-                    }
-                }
-
-                // Find 2x2 square matches and mark one anchor for fan creation
-                for (let row = 0; row < this.BOARD_SIZE - 1; row++) {
-                    for (let col = 0; col < this.BOARD_SIZE - 1; col++) {
-                        const gem = this.board[row][col];
-                        if (!this.isNormalGem(gem)) continue;
-
-                        if (
-                            this.board[row][col + 1] === gem &&
-                            this.board[row + 1][col] === gem &&
-                            this.board[row + 1][col + 1] === gem
-                        ) {
-                            addMatch(row, col);
-                            addMatch(row, col + 1);
-                            addMatch(row + 1, col);
-                            addMatch(row + 1, col + 1);
-                            squareAnchors.push({ row, col });
-                            setSpecial(row, col, 'fan', 1);
-                        }
-                    }
-                }
-
-                const matches = Array.from(matchMap.values());
-                const createdSpecials = Array.from(specialCreates.values());
-
-                return { matches, squareAnchors, createdSpecials };
-            }
-
-            findMatches() {
-                return this.findMatchData().matches;
-            }
-
-            activateFan(row, col) {
-                if (this.animating) return;
-
-                this.animating = true;
-                this.board[row][col] = null;
-
-                const candidates = [];
-                for (let r = 0; r < this.BOARD_SIZE; r++) {
-                    for (let c = 0; c < this.BOARD_SIZE; c++) {
-                        if (this.board[r][c] !== null && this.board[r][c] !== 'fan') {
-                            candidates.push({ row: r, col: c });
-                        }
-                    }
-                }
-
-                const maxDestroy = Math.min(candidates.length, Math.floor(Math.random() * 5) + 3);
-                const destroyed = [{ row, col }];
-
-                for (let i = 0; i < maxDestroy; i++) {
-                    const randomIndex = Math.floor(Math.random() * candidates.length);
-                    const target = candidates.splice(randomIndex, 1)[0];
-                    if (!target) continue;
-
-                    if (this.board[target.row][target.col] !== null) {
-                        this.board[target.row][target.col] = null;
-                        this.score += 15 * this.level;
-                        destroyed.push(target);
-                    }
-                }
-
-                this.animateRemoval(destroyed);
-                this.setStatusMessage(this.messages.fanActivated);
-
-                setTimeout(() => {
-                    this.dropGems();
-                    this.fillEmptySpaces();
-                    this.updateStats();
-                    this.renderBoard();
-
-                    setTimeout(() => {
-                        this.processMatches();
-                    }, 100);
-                }, 400);
-            }
-
-            activateSpecialGem(row, col) {
-                const gem = this.board[row][col];
-                if (!this.isSpecialGem(gem)) return;
-
-                if (gem === 'fan') {
-                    this.activateFan(row, col);
-                    return;
-                }
-
-                this.animating = true;
-                const targets = [{ row, col }];
-
-                if (gem === 'rocket-h') {
-                    for (let c = 0; c < this.BOARD_SIZE; c++) {
-                        targets.push({ row, col: c });
-                    }
-                    this.setStatusMessage('Rocket activated! Row cleared.');
-                } else if (gem === 'rocket-v') {
-                    for (let r = 0; r < this.BOARD_SIZE; r++) {
-                        targets.push({ row: r, col });
-                    }
-                    this.setStatusMessage('Rocket activated! Column cleared.');
-                } else if (gem === 'star') {
-                    const colorsOnBoard = [];
-                    for (let r = 0; r < this.BOARD_SIZE; r++) {
-                        for (let c = 0; c < this.BOARD_SIZE; c++) {
-                            if (this.isNormalGem(this.board[r][c])) {
-                                colorsOnBoard.push(this.board[r][c]);
-                            }
-                        }
-                    }
-
-                    const targetColor = colorsOnBoard[Math.floor(Math.random() * colorsOnBoard.length)];
-                    for (let r = 0; r < this.BOARD_SIZE; r++) {
-                        for (let c = 0; c < this.BOARD_SIZE; c++) {
-                            if (this.board[r][c] === targetColor) {
-                                targets.push({ row: r, col: c });
-                            }
-                        }
-                    }
-                    this.setStatusMessage('Star activated! Color blast triggered.');
-                } else if (gem === 'nova') {
-                    for (let i = -2; i <= 2; i++) {
-                        if (row + i >= 0 && row + i < this.BOARD_SIZE) {
-                            targets.push({ row: row + i, col });
-                        }
-                        if (col + i >= 0 && col + i < this.BOARD_SIZE) {
-                            targets.push({ row, col: col + i });
-                        }
-                    }
-                    this.setStatusMessage('Nova activated! Cross blast triggered.');
-                }
-
-                const uniqueTargets = [];
-                const seen = new Set();
-                targets.forEach(target => {
-                    const key = `${target.row},${target.col}`;
-                    if (!seen.has(key)) {
-                        seen.add(key);
-                        uniqueTargets.push(target);
-                    }
-                });
-
-                const destroyed = [];
-                uniqueTargets.forEach(target => {
-                    if (this.board[target.row][target.col] !== null) {
-                        this.board[target.row][target.col] = null;
-                        this.score += 20 * this.level;
-                        destroyed.push(target);
-                    }
-                });
-
-                this.animateRemoval(destroyed);
-
-                setTimeout(() => {
-                    this.dropGems();
-                    this.fillEmptySpaces();
-                    this.updateStats();
-                    this.renderBoard();
-
-                    setTimeout(() => {
-                        this.processMatches();
-                    }, 100);
-                }, 400);
-            }
-
-            activateSpecialSequence(positions) {
-                if (!positions || positions.length === 0) return;
-
-                this.activateSpecialGem(positions[0].row, positions[0].col);
+                return matches;
             }
 
             processMatches() {
                 this.animating = true;
-                const matchData = this.findMatchData();
-                const matches = matchData.matches;
+                let matches = this.findMatches();
 
                 if (matches.length === 0) {
                     this.animating = false;
                     this.checkLevelUp();
                     return;
                 }
-
-                const uniqueSpecials = [];
-                const specialSet = new Set();
-                matchData.createdSpecials.forEach(item => {
-                    const key = `${item.row},${item.col}`;
-                    if (!specialSet.has(key)) {
-                        specialSet.add(key);
-                        uniqueSpecials.push(item);
-                    }
-                });
 
                 // Process bomb explosions
                 const bombMatches = matches.filter(match => match.gem === 'bomb');
@@ -962,11 +562,6 @@
                         this.board[match.row][match.col] = null;
                         this.score += 10 * this.level;
                     }
-                });
-
-                // Create specials from detected patterns after removals.
-                uniqueSpecials.forEach(item => {
-                    this.board[item.row][item.col] = item.type;
                 });
 
                 // Animate removal
@@ -1049,9 +644,9 @@
                 if (gemsCount === 0) {
                     this.level++;
                     this.initBoard();
-                    this.setStatusMessage(this.messages.levelCleared.replace('{level}', this.level));
+                    this.setStatusMessage(`Level ${this.level}! Board cleared!`);
                 } else {
-                    this.setStatusMessage(this.messages.progress);
+                    this.setStatusMessage('Make more matches to progress!');
                 }
             }
 
@@ -1062,94 +657,11 @@
                 document.getElementById('bombs').textContent = this.bombs;
             }
 
-            loadHighScores() {
-                try {
-                    const raw = localStorage.getItem(this.HIGH_SCORES_KEY);
-                    if (!raw) return [];
-                    const parsed = JSON.parse(raw);
-                    return Array.isArray(parsed) ? parsed : [];
-                } catch {
-                    return [];
-                }
-            }
-
-            saveHighScores(scores) {
-                localStorage.setItem(this.HIGH_SCORES_KEY, JSON.stringify(scores));
-            }
-
-            recordCurrentRun() {
-                if (this.score <= 0) return;
-
-                const efficiency = this.moves > 0 ? Math.round((this.score / this.moves) * 10) / 10 : this.score;
-                const entry = {
-                    score: this.score,
-                    level: this.level,
-                    moves: this.moves,
-                    efficiency,
-                    savedAt: Date.now()
-                };
-
-                const scores = this.loadHighScores();
-                scores.push(entry);
-                scores.sort((a, b) => {
-                    if (b.score !== a.score) return b.score - a.score;
-                    if (b.level !== a.level) return b.level - a.level;
-                    return a.moves - b.moves;
-                });
-
-                this.saveHighScores(scores.slice(0, 10));
-                this.renderHighScores();
-            }
-
-            renderHighScores() {
-                const scores = this.loadHighScores();
-                const bestScoreEl = document.getElementById('best-score');
-                const bestLevelEl = document.getElementById('best-level');
-                const bestEfficiencyEl = document.getElementById('best-efficiency');
-                const listEl = document.getElementById('high-scores-list');
-
-                if (scores.length === 0) {
-                    bestScoreEl.textContent = '0';
-                    bestLevelEl.textContent = '1';
-                    bestEfficiencyEl.textContent = '0';
-                    listEl.innerHTML = '<p class="text-sm text-slate-500">No scores yet. Play a round and reset/new game to save it.</p>';
-                    return;
-                }
-
-                const best = scores[0];
-                bestScoreEl.textContent = Number(best.score).toLocaleString();
-                bestLevelEl.textContent = String(best.level);
-                bestEfficiencyEl.textContent = String(best.efficiency);
-
-                listEl.innerHTML = scores.slice(0, 5).map((entry, index) => {
-                    return `
-                        <div class="rounded-lg bg-slate-50 ring-1 ring-slate-200 p-3 flex items-center justify-between">
-                            <div>
-                                <div class="text-sm font-semibold text-slate-900">#${index + 1} - ${Number(entry.score).toLocaleString()} pts</div>
-                                <div class="text-xs text-slate-600">Level ${entry.level} • ${entry.moves} moves • Eff ${entry.efficiency}</div>
-                            </div>
-                            <div class="text-xs text-slate-500">${new Date(entry.savedAt).toLocaleDateString()}</div>
-                        </div>
-                    `;
-                }).join('');
-            }
-
-            clearHighScores() {
-                if (!confirm('Clear all Gems high scores?')) return;
-                localStorage.removeItem(this.HIGH_SCORES_KEY);
-                this.renderHighScores();
-                this.setStatusMessage('High scores cleared.');
-            }
-
             setStatusMessage(message) {
                 document.getElementById('status-message').textContent = message;
             }
 
             resetGame() {
-                if (!this.skipRecordOnNextReset) {
-                    this.recordCurrentRun();
-                }
-                this.skipRecordOnNextReset = false;
                 this.score = 0;
                 this.level = 1;
                 this.moves = 0;
@@ -1159,13 +671,11 @@
                 this.initBoard();
                 this.renderBoard();
                 this.updateStats();
-                this.setStatusMessage(this.messages.newGameStarted);
+                this.setStatusMessage('New game started!');
             }
 
             resetScores() {
-                if (confirm(this.messages.resetConfirm)) {
-                    this.recordCurrentRun();
-                    this.skipRecordOnNextReset = true;
+                if (confirm('Reset all scores and start a new game?')) {
                     this.resetGame();
                 }
             }

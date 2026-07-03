@@ -203,6 +203,13 @@ async def chess(request: Request):
     return templates.TemplateResponse("chess.html", {"request": request, "lang": lang})
 
 
+@app.get("/checkers", response_class=HTMLResponse)
+async def checkers(request: Request):
+    """Checkers page endpoint."""
+    lang = get_current_lang(request)
+    return templates.TemplateResponse("checkers.html", {"request": request, "lang": lang})
+
+
 @app.get("/connect-four", response_class=HTMLResponse)
 async def connect_four(request: Request):
     """Connect Four page endpoint."""

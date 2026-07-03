@@ -1,0 +1,397 @@
+{% extends "base.html" %}
+
+{% block title %}{{ translate(lang, 'games.checkers.title') }}{% endblock %}
+
+{% block extra_head %}
+<style>
+  .checker-square {
+    width: 56px;
+    height: 56px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    -webkit-user-select: none;
+    user-select: none;
+    transition: all 0.15s ease;
+  }
+  .checker-light { background: #fff7ed; }
+  .checker-dark { background: #b45309; }
+  .checker-square.selected { outline: 3px solid #0ea5e9; outline-offset: -3px; }
+  .checker-square.possible { box-shadow: inset 0 0 0 4px #22c55e; }
+
+  .piece {
+    width: 42px;
+    height: 42px;
+    border-radius: 9999px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    font-size: 18px;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+  }
+  .piece.red { background: radial-gradient(circle at 30% 30%, #fb7185, #e11d48); color: #fff; }
+  .piece.black { background: radial-gradient(circle at 30% 30%, #64748b, #1e293b); color: #fff; }
+  .piece.king { box-shadow: 0 0 0 3px rgba(250, 204, 21, 0.7); }
+
+  @media (min-width: 640px) {
+    .checker-square { width: 64px; height: 64px; }
+    .piece { width: 48px; height: 48px; }
+  }
+</style>
+{% endblock %}
+
+{% block body_class %}bg-gradient-to-br from-orange-50 via-amber-50 to-rose-100 min-h-screen{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+  <div class="max-w-6xl mx-auto mb-6 flex items-center justify-between">
+    <a href="/" class="inline-flex items-center text-rose-800 hover:text-rose-950 font-semibold">
+      <svg class="w-5 h-5 mr-2" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+        <path fill-rule="evenodd" d="M12.707 15.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 111.414 1.414L7.414 9H17a1 1 0 110 2H7.414l5.293 5.293a1 1 0 010 1.414z" clip-rule="evenodd" />
+      </svg>
+      {{ translate(lang, 'common.home') }}
+    </a>
+    <div class="flex items-center gap-4">
+      <a href="/chess" class="text-sm font-semibold text-purple-700 hover:text-purple-900">{{ translate(lang, 'games.chess.name') }}</a>
+      <a href="/connect-four" class="text-sm font-semibold text-cyan-700 hover:text-cyan-900">{{ translate(lang, 'games.connect_four.name') }}</a>
+      <a href="/tictactoe" class="text-sm font-semibold text-emerald-700 hover:text-emerald-900">{{ translate(lang, 'games.tictactoe.name') }}</a>
+    </div>
+  </div>
+
+  <div class="max-w-6xl mx-auto">
+    <header class="text-center mb-8">
+      <h1 class="text-4xl sm:text-5xl font-extrabold tracking-tight text-slate-900">{{ translate(lang, 'games.checkers.title') }}</h1>
+      <p class="mt-2 text-slate-600">{{ translate(lang, 'games.checkers.subtitle') }}</p>
+    </header>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div class="lg:col-span-2">
+        <div class="bg-white rounded-2xl shadow-xl ring-1 ring-slate-200 p-6 sm:p-8">
+          <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
+            <div>
+              <div class="text-sm font-semibold text-slate-500 uppercase tracking-wide">{{ translate(lang, 'games.checkers.status') }}</div>
+              <div id="status" class="mt-1 text-2xl font-bold text-slate-900">{{ translate(lang, 'games.checkers.red_to_move') }}</div>
+              <div id="substatus" class="mt-1 text-slate-600">{{ translate(lang, 'games.checkers.select_piece') }}</div>
+            </div>
+            <div class="flex gap-2">
+              <button id="new-game" class="rounded-lg bg-rose-600 hover:bg-rose-700 text-white font-semibold px-4 py-2">{{ translate(lang, 'games.checkers.new_game') }}</button>
+            </div>
+          </div>
+
+          <div class="flex justify-center">
+            <div id="board" class="grid grid-cols-8 border-2 border-amber-900"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="lg:col-span-1">
+        <div class="bg-white rounded-2xl shadow-xl ring-1 ring-slate-200 p-6 sticky top-8">
+          <h2 class="text-xl font-bold text-slate-900 mb-4">{{ translate(lang, 'games.checkers.scoreboard') }}</h2>
+          <div class="grid grid-cols-2 gap-3">
+            <div class="rounded-xl bg-rose-50 ring-1 ring-rose-100 p-4">
+              <div class="text-xs font-semibold uppercase tracking-wide text-rose-700">{{ translate(lang, 'games.checkers.red_pieces') }}</div>
+              <div id="red-count" class="mt-1 text-3xl font-extrabold text-rose-900">12</div>
+            </div>
+            <div class="rounded-xl bg-slate-50 ring-1 ring-slate-200 p-4">
+              <div class="text-xs font-semibold uppercase tracking-wide text-slate-700">{{ translate(lang, 'games.checkers.black_pieces') }}</div>
+              <div id="black-count" class="mt-1 text-3xl font-extrabold text-slate-900">12</div>
+            </div>
+            <div class="rounded-xl bg-amber-50 ring-1 ring-amber-100 p-4 col-span-2">
+              <div class="text-xs font-semibold uppercase tracking-wide text-amber-700">{{ translate(lang, 'games.checkers.kings') }}</div>
+              <div id="kings-count" class="mt-1 text-2xl font-extrabold text-amber-900">0 - 0</div>
+            </div>
+          </div>
+
+          <div class="mt-6">
+            <h3 class="text-sm font-bold text-slate-700 mb-2">{{ translate(lang, 'games.checkers.rules') }}</h3>
+            <ul class="text-sm text-slate-600 space-y-1">
+              <li>• {{ translate(lang, 'games.checkers.rule_1') }}</li>
+              <li>• {{ translate(lang, 'games.checkers.rule_2') }}</li>
+              <li>• {{ translate(lang, 'games.checkers.rule_3') }}</li>
+              <li>• {{ translate(lang, 'games.checkers.rule_4') }}</li>
+              <li>• {{ translate(lang, 'games.checkers.rule_5') }}</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  const checkersTranslations = {
+    red_to_move: "{{ translate(lang, 'games.checkers.red_to_move') }}",
+    black_to_move: "{{ translate(lang, 'games.checkers.black_to_move') }}",
+    red_wins: "{{ translate(lang, 'games.checkers.red_wins') }}",
+    black_wins: "{{ translate(lang, 'games.checkers.black_wins') }}",
+    select_piece: "{{ translate(lang, 'games.checkers.select_piece') }}",
+    forced_capture: "{{ translate(lang, 'games.checkers.forced_capture') }}",
+    keep_jumping: "{{ translate(lang, 'games.checkers.keep_jumping') }}",
+    crowned: "{{ translate(lang, 'games.checkers.crowned') }}"
+  };
+
+  const SIZE = 8;
+  let board = [];
+  let currentPlayer = 'red';
+  let selectedPiece = null;
+  let possibleMoves = [];
+
+  const boardEl = document.getElementById('board');
+  const statusEl = document.getElementById('status');
+  const substatusEl = document.getElementById('substatus');
+
+  function createInitialBoard() {
+    board = Array.from({ length: SIZE }, () => Array(SIZE).fill(null));
+
+    for (let row = 0; row < 3; row++) {
+      for (let col = 0; col < SIZE; col++) {
+        if ((row + col) % 2 === 1) {
+          board[row][col] = { color: 'black', king: false };
+        }
+      }
+    }
+
+    for (let row = 5; row < SIZE; row++) {
+      for (let col = 0; col < SIZE; col++) {
+        if ((row + col) % 2 === 1) {
+          board[row][col] = { color: 'red', king: false };
+        }
+      }
+    }
+  }
+
+  function renderBoard() {
+    boardEl.innerHTML = '';
+
+    for (let row = 0; row < SIZE; row++) {
+      for (let col = 0; col < SIZE; col++) {
+        const square = document.createElement('div');
+        square.className = `checker-square ${(row + col) % 2 === 0 ? 'checker-light' : 'checker-dark'}`;
+
+        if (selectedPiece && selectedPiece.row === row && selectedPiece.col === col) {
+          square.classList.add('selected');
+        }
+
+        if (possibleMoves.some(move => move.toRow === row && move.toCol === col)) {
+          square.classList.add('possible');
+        }
+
+        square.addEventListener('click', () => onSquareClick(row, col));
+
+        const piece = board[row][col];
+        if (piece) {
+          const pieceEl = document.createElement('div');
+          pieceEl.className = `piece ${piece.color}${piece.king ? ' king' : ''}`;
+          pieceEl.textContent = piece.king ? 'K' : '';
+          square.appendChild(pieceEl);
+        }
+
+        boardEl.appendChild(square);
+      }
+    }
+
+    updateStats();
+  }
+
+  function updateStats() {
+    let redCount = 0;
+    let blackCount = 0;
+    let redKings = 0;
+    let blackKings = 0;
+
+    for (let row = 0; row < SIZE; row++) {
+      for (let col = 0; col < SIZE; col++) {
+        const piece = board[row][col];
+        if (!piece) continue;
+        if (piece.color === 'red') {
+          redCount++;
+          if (piece.king) redKings++;
+        } else {
+          blackCount++;
+          if (piece.king) blackKings++;
+        }
+      }
+    }
+
+    document.getElementById('red-count').textContent = String(redCount);
+    document.getElementById('black-count').textContent = String(blackCount);
+    document.getElementById('kings-count').textContent = `${redKings} - ${blackKings}`;
+  }
+
+  function directionsForPiece(piece) {
+    if (piece.king) return [[1, 1], [1, -1], [-1, 1], [-1, -1]];
+    return piece.color === 'red' ? [[-1, 1], [-1, -1]] : [[1, 1], [1, -1]];
+  }
+
+  function pieceMoves(row, col, captureOnly = false) {
+    const piece = board[row][col];
+    if (!piece) return [];
+
+    const dirs = directionsForPiece(piece);
+    const moves = [];
+
+    for (const [dr, dc] of dirs) {
+      const nr = row + dr;
+      const nc = col + dc;
+      const jr = row + dr * 2;
+      const jc = col + dc * 2;
+
+      if (nr < 0 || nr >= SIZE || nc < 0 || nc >= SIZE) continue;
+
+      const nextPiece = board[nr][nc];
+      if (!captureOnly && !nextPiece) {
+        moves.push({ toRow: nr, toCol: nc, capture: null });
+      }
+
+      if (
+        jr >= 0 && jr < SIZE &&
+        jc >= 0 && jc < SIZE &&
+        nextPiece && nextPiece.color !== piece.color &&
+        !board[jr][jc]
+      ) {
+        moves.push({ toRow: jr, toCol: jc, capture: { row: nr, col: nc } });
+      }
+    }
+
+    if (captureOnly) return moves.filter(m => m.capture);
+    return moves;
+  }
+
+  function allMovesForPlayer(playerColor) {
+    const allMoves = [];
+    for (let row = 0; row < SIZE; row++) {
+      for (let col = 0; col < SIZE; col++) {
+        const piece = board[row][col];
+        if (!piece || piece.color !== playerColor) continue;
+        const moves = pieceMoves(row, col);
+        moves.forEach(move => allMoves.push({ row, col, ...move }));
+      }
+    }
+    return allMoves;
+  }
+
+  function hasForcedCapture(playerColor) {
+    return allMovesForPlayer(playerColor).some(m => !!m.capture);
+  }
+
+  function legalMovesForSelected(row, col) {
+    const forced = hasForcedCapture(currentPlayer);
+    const moves = pieceMoves(row, col, forced);
+    return forced ? moves.filter(m => m.capture) : moves;
+  }
+
+  function onSquareClick(row, col) {
+    const clicked = board[row][col];
+
+    if (selectedPiece) {
+      const selectedMove = possibleMoves.find(m => m.toRow === row && m.toCol === col);
+      if (selectedMove) {
+        executeMove(selectedPiece.row, selectedPiece.col, selectedMove);
+        return;
+      }
+    }
+
+    if (!clicked || clicked.color !== currentPlayer) {
+      return;
+    }
+
+    const forced = hasForcedCapture(currentPlayer);
+    const moves = legalMovesForSelected(row, col);
+    if (moves.length === 0) {
+      if (forced) substatusEl.textContent = checkersTranslations.forced_capture;
+      return;
+    }
+
+    selectedPiece = { row, col };
+    possibleMoves = moves;
+    renderBoard();
+  }
+
+  function executeMove(fromRow, fromCol, move) {
+    const piece = board[fromRow][fromCol];
+    board[fromRow][fromCol] = null;
+    board[move.toRow][move.toCol] = piece;
+
+    if (move.capture) {
+      board[move.capture.row][move.capture.col] = null;
+    }
+
+    if (!piece.king) {
+      if ((piece.color === 'red' && move.toRow === 0) || (piece.color === 'black' && move.toRow === SIZE - 1)) {
+        piece.king = true;
+        substatusEl.textContent = checkersTranslations.crowned;
+      }
+    }
+
+    if (move.capture) {
+      const followUps = pieceMoves(move.toRow, move.toCol, true).filter(m => m.capture);
+      if (followUps.length > 0) {
+        selectedPiece = { row: move.toRow, col: move.toCol };
+        possibleMoves = followUps;
+        substatusEl.textContent = checkersTranslations.keep_jumping;
+        renderBoard();
+        return;
+      }
+    }
+
+    selectedPiece = null;
+    possibleMoves = [];
+    currentPlayer = currentPlayer === 'red' ? 'black' : 'red';
+
+    statusEl.textContent = currentPlayer === 'red'
+      ? checkersTranslations.red_to_move
+      : checkersTranslations.black_to_move;
+    substatusEl.textContent = checkersTranslations.select_piece;
+
+    renderBoard();
+    checkGameOver();
+  }
+
+  function checkGameOver() {
+    const redMoves = allMovesForPlayer('red');
+    const blackMoves = allMovesForPlayer('black');
+
+    let redPieces = 0;
+    let blackPieces = 0;
+    for (let row = 0; row < SIZE; row++) {
+      for (let col = 0; col < SIZE; col++) {
+        const p = board[row][col];
+        if (!p) continue;
+        if (p.color === 'red') redPieces++;
+        if (p.color === 'black') blackPieces++;
+      }
+    }
+
+    if (redPieces === 0 || redMoves.length === 0) {
+      statusEl.textContent = checkersTranslations.black_wins;
+      substatusEl.textContent = '';
+      currentPlayer = 'none';
+      return;
+    }
+
+    if (blackPieces === 0 || blackMoves.length === 0) {
+      statusEl.textContent = checkersTranslations.red_wins;
+      substatusEl.textContent = '';
+      currentPlayer = 'none';
+    }
+  }
+
+  function newGame() {
+    createInitialBoard();
+    currentPlayer = 'red';
+    selectedPiece = null;
+    possibleMoves = [];
+    statusEl.textContent = checkersTranslations.red_to_move;
+    substatusEl.textContent = checkersTranslations.select_piece;
+    renderBoard();
+  }
+
+  document.getElementById('new-game').addEventListener('click', newGame);
+
+  newGame();
+</script>
+{% endblock %}
