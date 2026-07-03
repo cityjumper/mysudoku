@@ -15,9 +15,12 @@
             border-radius: 16px;
             border: 2px solid #0f172a;
             background: linear-gradient(180deg, #dbeafe 0%, #e0f2fe 65%, #fde68a 100%);
-            touch-action: manipulation;
+            touch-action: none;
             cursor: pointer;
             overflow: hidden;
+            -webkit-user-select: none;
+            user-select: none;
+            -webkit-touch-callout: none;
         }
 
         @media (max-width: 640px) {
@@ -235,6 +238,11 @@
                 charging: false,
                 holdTime: 0,
                 startedOnGround: false,
+            },
+            input: {
+                lastStartAt: 0,
+                lastReleaseAt: 0,
+                activePointerId: null,
             },
         };
 
@@ -616,8 +624,22 @@
         }
 
         function handlePressStart(event) {
+            const now = performance.now();
+            if (now - state.input.lastStartAt < 45) {
+                return;
+            }
+            state.input.lastStartAt = now;
+
             if (event) {
                 event.preventDefault();
+                if (typeof event.pointerId === 'number' && event.currentTarget && event.currentTarget.setPointerCapture) {
+                    try {
+                        event.currentTarget.setPointerCapture(event.pointerId);
+                        state.input.activePointerId = event.pointerId;
+                    } catch {
+                        state.input.activePointerId = null;
+                    }
+                }
             }
             if (state.gameOver) {
                 resetGame();
@@ -627,8 +649,28 @@
         }
 
         function handlePressEnd(event) {
+            const now = performance.now();
+            if (now - state.input.lastReleaseAt < 25) {
+                return;
+            }
+            state.input.lastReleaseAt = now;
+
             if (event) {
                 event.preventDefault();
+                if (
+                    typeof event.pointerId === 'number' &&
+                    event.currentTarget &&
+                    event.currentTarget.releasePointerCapture
+                ) {
+                    try {
+                        event.currentTarget.releasePointerCapture(event.pointerId);
+                    } catch {
+                        // ignore release errors from unsupported pointer capture paths
+                    }
+                    if (state.input.activePointerId === event.pointerId) {
+                        state.input.activePointerId = null;
+                    }
+                }
             }
             releaseJumpCharge();
         }
@@ -636,22 +678,31 @@
         function wirePressControls(target) {
             if (!target) return;
 
-            const hasPointerEvents = typeof window.PointerEvent !== 'undefined';
-            if (hasPointerEvents) {
+            if (typeof window.PointerEvent !== 'undefined') {
                 target.addEventListener('pointerdown', handlePressStart);
                 target.addEventListener('pointerup', handlePressEnd);
                 target.addEventListener('pointercancel', handlePressEnd);
                 target.addEventListener('pointerleave', handlePressEnd);
-                return;
             }
 
-            // Fallback for browsers/devices where pointer events are unavailable.
+            // Fallback listeners for browsers/devices where pointer events are flaky.
             target.addEventListener('touchstart', handlePressStart, { passive: false });
             target.addEventListener('touchend', handlePressEnd, { passive: false });
             target.addEventListener('touchcancel', handlePressEnd, { passive: false });
             target.addEventListener('mousedown', handlePressStart);
             target.addEventListener('mouseup', handlePressEnd);
             target.addEventListener('mouseleave', handlePressEnd);
+
+            // Click fallback for Safari edge cases where release events are dropped.
+            target.addEventListener('click', (event) => {
+                const now = performance.now();
+                if (state.jump.charging || now - state.input.lastStartAt < 120) {
+                    return;
+                }
+                handlePressStart(event);
+                state.jump.holdTime = Math.min(MAX_JUMP_CHARGE, 0.04);
+                handlePressEnd(event);
+            });
         }
 
         startBtn.addEventListener('click', startGame);
@@ -666,11 +717,23 @@
         if (typeof window.PointerEvent !== 'undefined') {
             window.addEventListener('pointerup', handlePressEnd);
             window.addEventListener('pointercancel', handlePressEnd);
+            window.addEventListener('pointerout', (event) => {
+                if (event.relatedTarget === null) {
+                    handlePressEnd(event);
+                }
+            });
         } else {
             window.addEventListener('touchend', handlePressEnd, { passive: false });
             window.addEventListener('touchcancel', handlePressEnd, { passive: false });
             window.addEventListener('mouseup', handlePressEnd);
         }
+
+        window.addEventListener('blur', handlePressEnd);
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) {
+                handlePressEnd();
+            }
+        });
 
         document.addEventListener('keydown', (event) => {
             if (event.code !== 'Space' || event.repeat) return;
