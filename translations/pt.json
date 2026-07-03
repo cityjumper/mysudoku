@@ -95,6 +95,10 @@
       "name": "Robot Runner",
       "description": "Runner infinito para um jogador. Prima Espaço ou toque no ecrã para saltar obstáculos."
     },
+    "math_lanes": {
+      "name": "Pistas de Matematica",
+      "description": "Escolha esquerda ou direita para resolver contas simples e aumentar o poder antes dos obstáculos atingirem você."
+    },
     "towers_of_hanoi": {
       "name": "Torres de Hanoi",
       "description": "Quebra-cabeça clássico com três torres e discos.",

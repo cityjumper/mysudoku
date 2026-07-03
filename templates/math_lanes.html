@@ -1,0 +1,596 @@
+{% extends "base.html" %}
+
+{% block title %}{{ translate(lang, 'games.math_lanes.name') }}{% endblock %}
+
+{% block extra_head %}
+    <style>
+        .math-arena {
+            height: 420px;
+            touch-action: none;
+            -webkit-user-select: none;
+            user-select: none;
+            background: linear-gradient(180deg, #f0f9ff 0%, #fce7f3 48%, #fef9c3 100%);
+        }
+
+        @media (max-width: 640px) {
+            .math-arena {
+                height: 360px;
+            }
+        }
+
+        .lane-chip {
+            min-width: 88px;
+        }
+    </style>
+{% endblock %}
+
+{% block body_class %}bg-gradient-to-br from-fuchsia-50 via-pink-50 to-cyan-50 min-h-screen{% endblock %}
+
+{% block content %}
+    <div class="container mx-auto px-4 py-8">
+        <div class="max-w-5xl mx-auto mb-6">
+            <a href="/" class="inline-flex items-center text-fuchsia-700 hover:text-fuchsia-900 font-semibold">
+                <svg class="w-5 h-5 mr-2" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                    <path fill-rule="evenodd" d="M12.707 15.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 111.414 1.414L7.414 9H17a1 1 0 110 2H7.414l5.293 5.293a1 1 0 010 1.414z" clip-rule="evenodd" />
+                </svg>
+                {{ translate(lang, 'common.home') }}
+            </a>
+        </div>
+
+        <div class="max-w-5xl mx-auto">
+            <header class="text-center mb-6">
+                <h1 class="text-4xl sm:text-5xl font-black tracking-tight text-slate-900">{{ translate(lang, 'games.math_lanes.name') }}</h1>
+                <p class="mt-2 text-slate-700">{{ translate(lang, 'games.math_lanes.description') }}</p>
+            </header>
+
+            <div class="bg-white/80 rounded-2xl shadow-xl ring-1 ring-slate-200 p-4 sm:p-6">
+                <div class="flex flex-wrap gap-3 items-center justify-between mb-4">
+                    <div class="flex flex-wrap items-center gap-2 sm:gap-3">
+                        <div class="lane-chip rounded-lg bg-white ring-1 ring-slate-200 px-3 py-2">
+                            <div class="text-xs font-semibold uppercase text-slate-500">Power</div>
+                            <div id="power-value" class="text-2xl font-black text-emerald-700">10</div>
+                        </div>
+                        <div class="lane-chip rounded-lg bg-white ring-1 ring-slate-200 px-3 py-2">
+                            <div class="text-xs font-semibold uppercase text-slate-500">Score</div>
+                            <div id="score-value" class="text-2xl font-black text-fuchsia-700">0</div>
+                        </div>
+                        <div class="lane-chip rounded-lg bg-white ring-1 ring-slate-200 px-3 py-2">
+                            <div class="text-xs font-semibold uppercase text-slate-500">Best</div>
+                            <div id="best-value" class="text-2xl font-black text-cyan-700">0</div>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <select id="difficulty-select" title="Difficulty" class="rounded-lg bg-white ring-1 ring-slate-300 text-slate-800 font-semibold px-3 py-2">
+                            <option value="easy">Easy</option>
+                            <option value="medium">Medium</option>
+                            <option value="hard">Hard</option>
+                        </select>
+                        <button id="start-btn" class="rounded-lg bg-fuchsia-600 hover:bg-fuchsia-700 text-white font-semibold px-4 py-2">Start</button>
+                        <button id="restart-btn" class="rounded-lg bg-slate-900 hover:bg-slate-800 text-white font-semibold px-4 py-2">Restart</button>
+                    </div>
+                </div>
+
+                <div class="rounded-xl ring-2 ring-fuchsia-200 overflow-hidden">
+                    <canvas id="math-canvas" class="math-arena w-full block" aria-label="Math lanes game"></canvas>
+                </div>
+
+                <div class="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm text-slate-700">
+                    <div class="bg-white rounded-lg ring-1 ring-slate-200 p-3">
+                        <p class="font-semibold text-slate-900">How to Play</p>
+                        <p class="mt-1">Move left or right to answer the math gate. Correct answers boost firepower.</p>
+                    </div>
+                    <div class="bg-white rounded-lg ring-1 ring-slate-200 p-3">
+                        <p class="font-semibold text-slate-900">Controls</p>
+                        <p class="mt-1">Left/Right arrows, A/D, or tap left/right side of the game area.</p>
+                    </div>
+                </div>
+
+                <div class="mt-3 sm:hidden grid grid-cols-2 gap-2">
+                    <button id="left-btn" class="rounded-lg bg-indigo-600 active:bg-indigo-700 text-white font-black py-3">LEFT</button>
+                    <button id="right-btn" class="rounded-lg bg-rose-600 active:bg-rose-700 text-white font-black py-3">RIGHT</button>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block extra_scripts %}
+    <script>
+        const canvas = document.getElementById('math-canvas');
+        const ctx = canvas.getContext('2d');
+
+        const powerEl = document.getElementById('power-value');
+        const scoreEl = document.getElementById('score-value');
+        const bestEl = document.getElementById('best-value');
+        const difficultySelectEl = document.getElementById('difficulty-select');
+        const startBtn = document.getElementById('start-btn');
+        const restartBtn = document.getElementById('restart-btn');
+        const leftBtn = document.getElementById('left-btn');
+        const rightBtn = document.getElementById('right-btn');
+
+        const BEST_KEY = 'math-lanes:best-score:v1';
+        const DIFFICULTY_CONFIG = {
+            easy: {
+                label: 'Easy',
+                baseSpeed: 92,
+                speedGain: 0.95,
+                maxSpeed: 250,
+                obstacleUnlockScore: 22,
+                obstacleBaseDelay: 1.95,
+                obstacleDelayGain: 0.007,
+                obstacleMinDelay: 0.55,
+                gateBaseDelay: 1.8,
+                gateDelayGain: 0.008,
+                gateMinDelay: 1.10,
+            },
+            medium: {
+                label: 'Medium',
+                baseSpeed: 102,
+                speedGain: 1.08,
+                maxSpeed: 290,
+                obstacleUnlockScore: 16,
+                obstacleBaseDelay: 1.75,
+                obstacleDelayGain: 0.008,
+                obstacleMinDelay: 0.48,
+                gateBaseDelay: 1.65,
+                gateDelayGain: 0.008,
+                gateMinDelay: 0.95,
+            },
+            hard: {
+                label: 'Hard',
+                baseSpeed: 112,
+                speedGain: 1.2,
+                maxSpeed: 335,
+                obstacleUnlockScore: 10,
+                obstacleBaseDelay: 1.55,
+                obstacleDelayGain: 0.009,
+                obstacleMinDelay: 0.40,
+                gateBaseDelay: 1.50,
+                gateDelayGain: 0.009,
+                gateMinDelay: 0.85,
+            },
+        };
+
+        const state = {
+            running: false,
+            gameOver: false,
+            difficulty: 'easy',
+            lane: 0,
+            width: 0,
+            height: 0,
+            playerY: 0,
+            power: 10,
+            score: 0,
+            lastTs: null,
+            spawnObstacleTimer: 0,
+            spawnGateTimer: 1.2,
+            speed: 140,
+            obstacles: [],
+            gates: [],
+            feedback: { text: 'Pick a lane and solve!', ttl: 1.2, color: '#334155' },
+        };
+
+        function readBest() {
+            const value = Number(localStorage.getItem(BEST_KEY));
+            return Number.isFinite(value) ? Math.max(0, Math.floor(value)) : 0;
+        }
+
+        function writeBest(value) {
+            localStorage.setItem(BEST_KEY, String(Math.max(0, Math.floor(value))));
+        }
+
+        function getDifficultyConfig() {
+            return DIFFICULTY_CONFIG[state.difficulty] || DIFFICULTY_CONFIG.easy;
+        }
+
+        function laneX(lane) {
+            const centerLeft = state.width * 0.3;
+            const centerRight = state.width * 0.7;
+            return lane === 0 ? centerLeft : centerRight;
+        }
+
+        function resizeCanvas() {
+            const dpr = Math.max(1, window.devicePixelRatio || 1);
+            const cssWidth = canvas.clientWidth;
+            const cssHeight = canvas.clientHeight;
+            canvas.width = Math.floor(cssWidth * dpr);
+            canvas.height = Math.floor(cssHeight * dpr);
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+            state.width = cssWidth;
+            state.height = cssHeight;
+            state.playerY = cssHeight - 58;
+        }
+
+        function setFeedback(text, color = '#334155') {
+            state.feedback.text = text;
+            state.feedback.ttl = 1.1;
+            state.feedback.color = color;
+        }
+
+        function resetGame() {
+            state.running = false;
+            state.gameOver = false;
+            state.lane = 0;
+            state.power = 10;
+            state.score = 0;
+            state.lastTs = null;
+            state.spawnObstacleTimer = 1.6;
+            state.spawnGateTimer = 1.2;
+            state.speed = getDifficultyConfig().baseSpeed;
+            state.obstacles = [];
+            state.gates = [];
+            setFeedback('Pick a lane and solve!', '#334155');
+            syncHud();
+        }
+
+        function syncHud() {
+            powerEl.textContent = String(Math.max(0, Math.floor(state.power)));
+            scoreEl.textContent = String(Math.floor(state.score));
+            bestEl.textContent = String(readBest());
+            powerEl.className = 'text-2xl font-black ' + (state.power > 8 ? 'text-emerald-700' : state.power > 4 ? 'text-amber-600' : 'text-red-700');
+        }
+
+        function startGame() {
+            if (state.running && !state.gameOver) return;
+            if (state.gameOver) resetGame();
+            state.running = true;
+            state.gameOver = false;
+            state.lastTs = null;
+            const cfg = getDifficultyConfig();
+            setFeedback(`Answer math gates to power up! (${cfg.label})`, '#6d28d9');
+        }
+
+        function createObstacle() {
+            const lane = Math.random() > 0.5 ? 1 : 0;
+            const damage = 1 + Math.floor(Math.random() * 2 + Math.min(2, state.score / 40));
+            state.obstacles.push({
+                lane,
+                y: -30,
+                size: 28 + Math.random() * 16,
+                damage,
+                hit: false,
+            });
+        }
+
+        function buildQuestion() {
+            const difficulty = state.difficulty;
+            const score = state.score;
+
+            let maxN = 10;
+            let ops = ['+'];
+
+            if (difficulty === 'easy') {
+                maxN = score > 90 ? 15 : 10;
+                ops = score > 35 ? ['+', '-'] : ['+'];
+            } else if (difficulty === 'medium') {
+                maxN = score > 120 ? 24 : 16;
+                ops = ['+', '-'];
+                if (score > 45) ops.push('*');
+            } else {
+                maxN = score > 140 ? 30 : 20;
+                ops = ['+', '-', '*'];
+                if (score > 70) ops.push('/');
+            }
+
+            const op = ops[Math.floor(Math.random() * ops.length)];
+            let a = 1 + Math.floor(Math.random() * maxN);
+            let b = 1 + Math.floor(Math.random() * maxN);
+            let correct = 0;
+
+            if (op === '+') {
+                correct = a + b;
+            } else if (op === '-') {
+                if (b > a) {
+                    const temp = a;
+                    a = b;
+                    b = temp;
+                }
+                correct = a - b;
+            } else if (op === '*') {
+                const cap = difficulty === 'hard' ? 12 : 10;
+                a = 1 + Math.floor(Math.random() * cap);
+                b = 1 + Math.floor(Math.random() * cap);
+                correct = a * b;
+            } else {
+                // Keep division exact to stay kid-friendly.
+                b = 1 + Math.floor(Math.random() * 9);
+                const quotient = 1 + Math.floor(Math.random() * 9);
+                a = b * quotient;
+                correct = quotient;
+            }
+
+            let wrong = correct + (Math.random() > 0.5 ? 1 : -1) * (1 + Math.floor(Math.random() * 3));
+            if (wrong === correct || wrong < 0) wrong = correct + 2;
+
+            const correctLane = Math.random() > 0.5 ? 1 : 0;
+            const leftValue = correctLane === 0 ? correct : wrong;
+            const rightValue = correctLane === 1 ? correct : wrong;
+
+            return {
+                prompt: `${a} ${op} ${b} = ?`,
+                leftValue,
+                rightValue,
+                correctLane,
+            };
+        }
+
+        function createGate() {
+            const q = buildQuestion();
+            state.gates.push({
+                y: -42,
+                prompt: q.prompt,
+                leftValue: q.leftValue,
+                rightValue: q.rightValue,
+                correctLane: q.correctLane,
+                answered: false,
+            });
+        }
+
+        function applyGate(gate) {
+            gate.answered = true;
+            const correct = state.lane === gate.correctLane;
+            if (correct) {
+                state.power += 2;
+                state.score += 6;
+                setFeedback('Correct! +2 power', '#16a34a');
+            } else {
+                state.power -= 2;
+                setFeedback('Oops! Wrong lane -2 power', '#dc2626');
+            }
+        }
+
+        function update(dt) {
+            if (!state.running || state.gameOver) return;
+
+            state.score += dt * 3;
+            const cfg = getDifficultyConfig();
+            state.speed = Math.min(cfg.maxSpeed, cfg.baseSpeed + state.score * cfg.speedGain);
+
+            state.spawnObstacleTimer -= dt;
+            state.spawnGateTimer -= dt;
+
+            const obstacleDelay = Math.max(
+                cfg.obstacleMinDelay,
+                cfg.obstacleBaseDelay - state.score * cfg.obstacleDelayGain
+            );
+            const gateDelay = Math.max(
+                cfg.gateMinDelay,
+                cfg.gateBaseDelay - state.score * cfg.gateDelayGain
+            );
+
+            if (state.spawnObstacleTimer <= 0) {
+                if (state.score >= cfg.obstacleUnlockScore) {
+                    createObstacle();
+                    state.spawnObstacleTimer = obstacleDelay;
+                } else {
+                    // Keep penalties sparse early; they unlock later in the run.
+                    state.spawnObstacleTimer = 0.45;
+                }
+            }
+            if (state.spawnGateTimer <= 0) {
+                createGate();
+                state.spawnGateTimer = gateDelay;
+            }
+
+            for (const obstacle of state.obstacles) {
+                obstacle.y += state.speed * dt;
+                const py = state.playerY;
+                if (!obstacle.hit && obstacle.lane === state.lane && Math.abs(obstacle.y - py) < 26) {
+                    obstacle.hit = true;
+                    state.power -= obstacle.damage;
+                    setFeedback(`Obstacle hit! -${obstacle.damage} power`, '#dc2626');
+                }
+            }
+
+            for (const gate of state.gates) {
+                gate.y += state.speed * dt;
+                if (!gate.answered && gate.y >= state.playerY - 8) {
+                    applyGate(gate);
+                }
+            }
+
+            state.obstacles = state.obstacles.filter(ob => ob.y < state.height + 40 && !ob.hit);
+            state.gates = state.gates.filter(g => g.y < state.height + 60 && !g.answered);
+
+            state.feedback.ttl = Math.max(0, state.feedback.ttl - dt);
+
+            if (state.power <= 0) {
+                state.power = 0;
+                state.gameOver = true;
+                state.running = false;
+                setFeedback('Game over! Press Restart.', '#991b1b');
+                const best = readBest();
+                if (state.score > best) {
+                    writeBest(state.score);
+                    setFeedback('New best score!', '#0f766e');
+                }
+            }
+
+            syncHud();
+        }
+
+        function drawLanes() {
+            const laneW = state.width * 0.38;
+            const leftX = state.width * 0.11;
+            const rightX = state.width * 0.51;
+
+            ctx.fillStyle = 'rgba(255,255,255,0.65)';
+            ctx.fillRect(leftX, 0, laneW, state.height);
+            ctx.fillRect(rightX, 0, laneW, state.height);
+
+            ctx.strokeStyle = '#cbd5e1';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(state.width * 0.5, 0);
+            ctx.lineTo(state.width * 0.5, state.height);
+            ctx.stroke();
+        }
+
+        function drawPlayer() {
+            const x = laneX(state.lane);
+            const y = state.playerY;
+
+            ctx.fillStyle = '#0f172a';
+            ctx.fillRect(x - 16, y - 12, 32, 24);
+
+            ctx.fillStyle = '#22d3ee';
+            ctx.fillRect(x - 12, y - 8, 24, 16);
+
+            ctx.fillStyle = '#fef3c7';
+            ctx.fillRect(x - 7, y - 4, 14, 8);
+
+            ctx.fillStyle = '#9333ea';
+            ctx.fillRect(x - 3, y - 26, 6, 12);
+        }
+
+        function drawObstacles() {
+            for (const ob of state.obstacles) {
+                const x = laneX(ob.lane);
+                const y = ob.y;
+                const s = ob.size;
+
+                ctx.fillStyle = '#b91c1c';
+                ctx.beginPath();
+                ctx.arc(x, y, s * 0.42, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.fillStyle = '#fee2e2';
+                ctx.font = 'bold 12px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText(`-${ob.damage}`, x, y + 4);
+            }
+        }
+
+        function drawGates() {
+            for (const gate of state.gates) {
+                const y = gate.y;
+
+                ctx.fillStyle = '#312e81';
+                ctx.font = 'bold 18px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText(gate.prompt, state.width * 0.5, y - 14);
+
+                const leftX = laneX(0);
+                const rightX = laneX(1);
+
+                ctx.fillStyle = '#ecfeff';
+                ctx.strokeStyle = '#0e7490';
+                ctx.lineWidth = 2;
+                ctx.fillRect(leftX - 36, y, 72, 34);
+                ctx.strokeRect(leftX - 36, y, 72, 34);
+                ctx.fillRect(rightX - 36, y, 72, 34);
+                ctx.strokeRect(rightX - 36, y, 72, 34);
+
+                ctx.fillStyle = '#0f172a';
+                ctx.font = 'bold 22px sans-serif';
+                ctx.fillText(String(gate.leftValue), leftX, y + 24);
+                ctx.fillText(String(gate.rightValue), rightX, y + 24);
+            }
+        }
+
+        function drawFeedback() {
+            if (state.feedback.ttl <= 0) return;
+            const alpha = Math.min(1, state.feedback.ttl / 1.1);
+            ctx.globalAlpha = alpha;
+            ctx.fillStyle = state.feedback.color;
+            ctx.font = 'bold 18px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText(state.feedback.text, state.width * 0.5, 30);
+            ctx.globalAlpha = 1;
+        }
+
+        function drawGameOver() {
+            if (!state.gameOver) return;
+            ctx.fillStyle = 'rgba(15, 23, 42, 0.75)';
+            ctx.fillRect(0, 0, state.width, state.height);
+
+            ctx.fillStyle = '#ffffff';
+            ctx.font = 'bold 34px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText('Game Over', state.width * 0.5, state.height * 0.46);
+
+            ctx.font = 'bold 18px sans-serif';
+            ctx.fillText(`Score: ${Math.floor(state.score)}`, state.width * 0.5, state.height * 0.56);
+        }
+
+        function render() {
+            ctx.clearRect(0, 0, state.width, state.height);
+            drawLanes();
+            drawGates();
+            drawObstacles();
+            drawPlayer();
+            drawFeedback();
+            drawGameOver();
+        }
+
+        function tick(ts) {
+            if (!state.lastTs) state.lastTs = ts;
+            const dt = Math.min(0.05, (ts - state.lastTs) / 1000);
+            state.lastTs = ts;
+
+            update(dt);
+            render();
+            requestAnimationFrame(tick);
+        }
+
+        function setLane(lane) {
+            state.lane = Math.max(0, Math.min(1, lane));
+        }
+
+        document.addEventListener('keydown', (event) => {
+            const key = event.key.toLowerCase();
+            if (key === 'arrowleft' || key === 'a') {
+                setLane(0);
+            }
+            if (key === 'arrowright' || key === 'd') {
+                setLane(1);
+            }
+            if (key === ' ' || key === 'spacebar') {
+                event.preventDefault();
+                startGame();
+            }
+        });
+
+        canvas.addEventListener('pointerdown', (event) => {
+            const rect = canvas.getBoundingClientRect();
+            const x = event.clientX - rect.left;
+            setLane(x < rect.width / 2 ? 0 : 1);
+            if (!state.running) startGame();
+        });
+
+        if (leftBtn) {
+            leftBtn.addEventListener('pointerdown', () => {
+                setLane(0);
+                if (!state.running) startGame();
+            });
+        }
+
+        if (rightBtn) {
+            rightBtn.addEventListener('pointerdown', () => {
+                setLane(1);
+                if (!state.running) startGame();
+            });
+        }
+
+        startBtn.addEventListener('click', startGame);
+        restartBtn.addEventListener('click', () => {
+            resetGame();
+            startGame();
+        });
+
+        difficultySelectEl.addEventListener('change', () => {
+            state.difficulty = difficultySelectEl.value;
+            resetGame();
+            setFeedback(`Difficulty: ${getDifficultyConfig().label}`, '#7c3aed');
+        });
+
+        window.addEventListener('resize', resizeCanvas);
+
+        resizeCanvas();
+        resetGame();
+        difficultySelectEl.value = state.difficulty;
+        bestEl.textContent = String(readBest());
+        requestAnimationFrame(tick);
+    </script>
+{% endblock %}

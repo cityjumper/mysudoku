@@ -120,6 +120,10 @@
       "name": "Robot Runner",
       "description": "Eindeloze runner voor één speler. Druk op spatie of tik om over obstakels te springen."
     },
+    "math_lanes": {
+      "name": "Rekenbanen",
+      "description": "Kies links of rechts om simpele sommen op te lossen en je kracht te verhogen voordat obstakels je raken."
+    },
     "towers_of_hanoi": {
       "name": "Torens van Hanoi",
       "description": "Klassieke puzzel met drie torens en schijven.",

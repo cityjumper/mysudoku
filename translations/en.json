@@ -120,6 +120,10 @@
       "name": "Robot Runner",
       "description": "One-player endless runner. Press Space or tap to jump over obstacles."
     },
+    "math_lanes": {
+      "name": "Math Lanes",
+      "description": "Pick left or right to solve simple math and power up before obstacles hit you."
+    },
     "towers_of_hanoi": {
       "name": "Towers of Hanoi",
       "description": "Classic puzzle with three towers and disks.",

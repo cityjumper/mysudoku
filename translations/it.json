@@ -120,6 +120,10 @@
       "name": "Robot Runner",
       "description": "Runner infinito per un giocatore. Premi Spazio o tocca lo schermo per saltare gli ostacoli."
     },
+    "math_lanes": {
+      "name": "Corsie Matematiche",
+      "description": "Scegli sinistra o destra per risolvere semplici operazioni e aumentare la potenza prima che gli ostacoli ti colpiscano."
+    },
     "towers_of_hanoi": {
       "name": "Torri di Hanoi",
       "description": "Rompicapo classico con tre torri e dischi.",

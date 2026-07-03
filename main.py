@@ -191,6 +191,13 @@ async def robot_runner(request: Request):
     return templates.TemplateResponse("robot_runner.html", {"request": request, "lang": lang})
 
 
+@app.get("/math-lanes", response_class=HTMLResponse)
+async def math_lanes(request: Request):
+    """Math Lanes page endpoint."""
+    lang = get_current_lang(request)
+    return templates.TemplateResponse("math_lanes.html", {"request": request, "lang": lang})
+
+
 @app.get("/api")
 async def api_root():
     """API root endpoint with API information."""
