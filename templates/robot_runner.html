@@ -12,6 +12,7 @@
             width: 100%;
             height: 260px;
             display: block;
+            position: relative;
             border-radius: 16px;
             border: 2px solid #0f172a;
             background: linear-gradient(180deg, #dbeafe 0%, #e0f2fe 65%, #fde68a 100%);
@@ -22,6 +23,78 @@
             user-select: none;
             -webkit-touch-callout: none;
         }
+
+        .robot-dom {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 36px;
+            height: 44px;
+            pointer-events: none;
+            z-index: 4;
+            transform-origin: top left;
+        }
+
+        .robot-dom .head {
+            position: absolute;
+            left: 6px;
+            top: 0;
+            width: 24px;
+            height: 14px;
+            background: #0f172a;
+        }
+
+        .robot-dom .body {
+            position: absolute;
+            left: 0;
+            top: 14px;
+            width: 36px;
+            height: 20px;
+            background: #38bdf8;
+        }
+
+        .robot-dom .visor {
+            position: absolute;
+            left: 8px;
+            top: 19px;
+            width: 20px;
+            height: 9px;
+            background: #e2e8f0;
+        }
+
+        .robot-dom .eye {
+            position: absolute;
+            top: 21px;
+            width: 6px;
+            height: 5px;
+            background: #0ea5e9;
+        }
+
+        .robot-dom .eye.eye-1 { left: 11px; }
+        .robot-dom .eye.eye-2 { left: 20px; }
+
+        .robot-dom .arm {
+            position: absolute;
+            top: 18px;
+            width: 6px;
+            height: 4px;
+            background: #0f172a;
+        }
+
+        .robot-dom .arm.arm-left { left: -4px; }
+        .robot-dom .arm.arm-right { left: 34px; }
+
+        .robot-dom .leg {
+            position: absolute;
+            top: 34px;
+            width: 8px;
+            height: 10px;
+            background: #0f172a;
+            transform-origin: top center;
+        }
+
+        .robot-dom .leg.leg-left { left: 6px; }
+        .robot-dom .leg.leg-right { left: 22px; }
 
         @media (max-width: 640px) {
             .runner-stage {
@@ -111,7 +184,19 @@
                 </div>
 
                 <div class="relative">
-                    <div id="runner-stage" class="runner-stage" aria-label="Robot runner game area"></div>
+                    <div id="runner-stage" class="runner-stage" aria-label="Robot runner game area">
+                        <div id="robot-dom" class="robot-dom" aria-hidden="true">
+                            <div class="head"></div>
+                            <div class="body"></div>
+                            <div class="visor"></div>
+                            <div class="eye eye-1"></div>
+                            <div class="eye eye-2"></div>
+                            <div class="arm arm-left"></div>
+                            <div class="arm arm-right"></div>
+                            <div id="robot-leg-left-dom" class="leg leg-left"></div>
+                            <div id="robot-leg-right-dom" class="leg leg-right"></div>
+                        </div>
+                    </div>
                     <div id="overlay" class="runner-overlay">
                         <div class="runner-overlay-content">
                             <p class="text-lg font-bold">Press Space or Tap to Jump</p>
@@ -153,6 +238,9 @@
         const jumpBtn = document.getElementById('jump-btn');
         const chargeFillEl = document.getElementById('charge-fill');
         const chargeLabelEl = document.getElementById('charge-label');
+        const robotDomEl = document.getElementById('robot-dom');
+        const robotLegLeftDomEl = document.getElementById('robot-leg-left-dom');
+        const robotLegRightDomEl = document.getElementById('robot-leg-right-dom');
 
         const BEST_KEY = 'robot-runner:best-time:v1';
         const WORLD_HEIGHT = 260;
@@ -550,6 +638,13 @@
             robotLegRight.scale.y = 1 + Math.abs(Math.cos(state.elapsed * 15)) * 0.18;
             robot.x = state.robot.x;
             robot.y = state.robot.y;
+
+            // DOM robot overlay keeps the player visible on devices where WebGL shape rendering is inconsistent.
+            const scaleX = stageEl.clientWidth / Math.max(1, state.worldWidth);
+            const scaleY = stageEl.clientHeight / WORLD_HEIGHT;
+            robotDomEl.style.transform = `translate(${state.robot.x * scaleX}px, ${state.robot.y * scaleY}px) scale(${scaleX}, ${scaleY})`;
+            robotLegLeftDomEl.style.height = `${10 * legScale}px`;
+            robotLegRightDomEl.style.height = `${10 * (1 + Math.abs(Math.cos(state.elapsed * 15)) * 0.18)}px`;
 
             const holdRatio = state.jump.charging ? (state.jump.holdTime / MAX_JUMP_CHARGE) : 0;
             setChargeUI(holdRatio);
