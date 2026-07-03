@@ -9,6 +9,7 @@ from uuid import uuid4
 from sudoku_engine import SudokuBoard
 import os
 import json
+from urllib.parse import urlparse, parse_qsl, urlencode, urlunparse
 
 app = FastAPI(title="Sudoku Game API", version="1.0.0")
 
@@ -19,38 +20,91 @@ templates = Jinja2Templates(directory="templates")
 games: Dict[str, SudokuBoard] = {}
 
 # Load translations
+SUPPORTED_LANGS = ['en', 'nl', 'it', 'pt', 'fa']
 translations = {}
-for lang in ['en', 'nl', 'it', 'pt', 'fa']:
-    with open(f'translations/{lang}.json', 'r', encoding='utf-8') as f:
-        translations[lang] = json.load(f)
+
+
+def load_translations() -> None:
+    """Load translation files into memory."""
+    global translations
+    loaded = {}
+    for lang in SUPPORTED_LANGS:
+        with open(f'translations/{lang}.json', 'r', encoding='utf-8') as f:
+            loaded[lang] = json.load(f)
+    translations = loaded
+
+
+load_translations()
 
 def get_translation(lang: str, key_path: str) -> str:
     """Get translation for a given language and key path."""
     keys = key_path.split('.')
-    value = translations.get(lang, translations['en'])
-    for key in keys:
-        if isinstance(value, dict):
-            value = value.get(key, {})
-        else:
-            # If we encounter a non-dict value before traversing all keys,
-            # return the key_path as fallback
-            return key_path
-    return value if isinstance(value, str) else key_path
+
+    def resolve_key_path(root: dict, path_keys: List[str]):
+        value = root
+        for key in path_keys:
+            if not isinstance(value, dict) or key not in value:
+                return None
+            value = value[key]
+        return value if isinstance(value, str) else None
+
+    current_lang_value = resolve_key_path(translations.get(lang, {}), keys)
+    if current_lang_value is not None:
+        return current_lang_value
+
+    english_value = resolve_key_path(translations.get('en', {}), keys)
+    if english_value is not None:
+        return english_value
+
+    # If key is missing, refresh translation cache in case files changed while server is running.
+    try:
+        load_translations()
+    except Exception:
+        return key_path
+
+    current_lang_value = resolve_key_path(translations.get(lang, {}), keys)
+    if current_lang_value is not None:
+        return current_lang_value
+
+    english_value = resolve_key_path(translations.get('en', {}), keys)
+    if english_value is not None:
+        return english_value
+
+    return key_path
 
 # Add translation function to Jinja2 globals
 templates.env.globals['translate'] = get_translation
 
 def get_current_lang(request: Request) -> str:
-    """Get current language from cookie or default to English."""
-    return request.cookies.get('lang', 'en')
+    """Get current language from query parameter, cookie, or default to English."""
+    query_lang = request.query_params.get('lang')
+    if query_lang in SUPPORTED_LANGS:
+        return query_lang
+
+    cookie_lang = request.cookies.get('lang', 'en')
+    return cookie_lang if cookie_lang in SUPPORTED_LANGS else 'en'
 
 @app.get("/set-lang/{lang}")
 async def set_language(lang: str, request: Request):
     """Set language preference and redirect back."""
-    if lang not in ['en', 'nl', 'it', 'pt', 'fa']:
+    if lang not in SUPPORTED_LANGS:
         lang = 'en'
-    response = RedirectResponse(url=request.headers.get('referer', '/'), status_code=302)
-    response.set_cookie(key='lang', value=lang, max_age=365*24*60*60)  # 1 year
+
+    referer = request.headers.get('referer', '/')
+    parsed = urlparse(referer)
+    query_items = dict(parse_qsl(parsed.query, keep_blank_values=True))
+    query_items['lang'] = lang
+    redirect_url = urlunparse((
+        parsed.scheme,
+        parsed.netloc,
+        parsed.path or '/',
+        parsed.params,
+        urlencode(query_items),
+        parsed.fragment,
+    ))
+
+    response = RedirectResponse(url=redirect_url, status_code=302)
+    response.set_cookie(key='lang', value=lang, max_age=365*24*60*60, path='/')  # 1 year
     return response
 
 
@@ -168,6 +222,13 @@ async def solitaire(request: Request):
     """Solitaire (Peg Solitaire) page endpoint."""
     lang = get_current_lang(request)
     return templates.TemplateResponse("solitaire.html", {"request": request, "lang": lang})
+
+
+@app.get("/gems", response_class=HTMLResponse)
+async def gems(request: Request):
+    """Gems (Match-3) page endpoint."""
+    lang = get_current_lang(request)
+    return templates.TemplateResponse("gems.html", {"request": request, "lang": lang})
 
 
 @app.get("/api")
