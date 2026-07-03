@@ -615,40 +615,61 @@
             state.jump.startedOnGround = false;
         }
 
+        function handlePressStart(event) {
+            if (event) {
+                event.preventDefault();
+            }
+            if (state.gameOver) {
+                resetGame();
+                startGame();
+            }
+            beginJumpCharge();
+        }
+
+        function handlePressEnd(event) {
+            if (event) {
+                event.preventDefault();
+            }
+            releaseJumpCharge();
+        }
+
+        function wirePressControls(target) {
+            if (!target) return;
+
+            const hasPointerEvents = typeof window.PointerEvent !== 'undefined';
+            if (hasPointerEvents) {
+                target.addEventListener('pointerdown', handlePressStart);
+                target.addEventListener('pointerup', handlePressEnd);
+                target.addEventListener('pointercancel', handlePressEnd);
+                target.addEventListener('pointerleave', handlePressEnd);
+                return;
+            }
+
+            // Fallback for browsers/devices where pointer events are unavailable.
+            target.addEventListener('touchstart', handlePressStart, { passive: false });
+            target.addEventListener('touchend', handlePressEnd, { passive: false });
+            target.addEventListener('touchcancel', handlePressEnd, { passive: false });
+            target.addEventListener('mousedown', handlePressStart);
+            target.addEventListener('mouseup', handlePressEnd);
+            target.addEventListener('mouseleave', handlePressEnd);
+        }
+
         startBtn.addEventListener('click', startGame);
         restartBtn.addEventListener('click', () => {
             resetGame();
             startGame();
         });
 
-        stageEl.addEventListener('pointerdown', (event) => {
-            event.preventDefault();
-            if (state.gameOver) {
-                resetGame();
-                startGame();
-            }
-            beginJumpCharge();
-        });
+        wirePressControls(stageEl);
+        wirePressControls(jumpBtn);
 
-        window.addEventListener('pointerup', () => {
-            releaseJumpCharge();
-        });
-
-        if (jumpBtn) {
-            jumpBtn.addEventListener('pointerdown', (event) => {
-                event.preventDefault();
-                if (state.gameOver) {
-                    resetGame();
-                    startGame();
-                }
-                beginJumpCharge();
-            });
-            jumpBtn.addEventListener('pointerup', (event) => {
-                event.preventDefault();
-                releaseJumpCharge();
-            });
-            jumpBtn.addEventListener('pointercancel', releaseJumpCharge);
-            jumpBtn.addEventListener('pointerleave', releaseJumpCharge);
+        if (typeof window.PointerEvent !== 'undefined') {
+            window.addEventListener('pointerup', handlePressEnd);
+            window.addEventListener('pointercancel', handlePressEnd);
+        } else {
+            window.addEventListener('touchend', handlePressEnd, { passive: false });
+            window.addEventListener('touchcancel', handlePressEnd, { passive: false });
+            window.addEventListener('mouseup', handlePressEnd);
         }
 
         document.addEventListener('keydown', (event) => {
