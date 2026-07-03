@@ -142,7 +142,7 @@
             max-width: 360px;
         }
     </style>
-    <script src="https://cdn.jsdelivr.net/npm/pixi.js@7.4.2/dist/pixi.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/pixi.js-legacy@7.4.2/dist/pixi-legacy.min.js"></script>
 {% endblock %}
 
 {% block body_class %}bg-gradient-to-br from-cyan-50 via-sky-50 to-amber-50 min-h-screen{% endblock %}
@@ -262,13 +262,20 @@
             restartBtn.classList.add('opacity-50', 'cursor-not-allowed');
         } else {
 
+        if (PIXI.settings && PIXI.ENV) {
+            PIXI.settings.PREFER_ENV = PIXI.ENV.WEBGL_LEGACY;
+        }
+        if (PIXI.settings && typeof PIXI.settings.FAIL_IF_MAJOR_PERFORMANCE_CAVEAT !== 'undefined') {
+            PIXI.settings.FAIL_IF_MAJOR_PERFORMANCE_CAVEAT = false;
+        }
+
         const app = new PIXI.Application({
             width: Math.max(320, stageEl.clientWidth),
             height: WORLD_HEIGHT,
-            antialias: true,
+            antialias: false,
             autoDensity: true,
             backgroundAlpha: 0,
-            resolution: Math.min(window.devicePixelRatio || 1, 2),
+            resolution: 1,
         });
         stageEl.appendChild(app.view);
 
