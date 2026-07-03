@@ -177,6 +177,13 @@ async def gems(request: Request):
     return templates.TemplateResponse("gems.html", {"request": request, "lang": lang})
 
 
+@app.get("/checkers", response_class=HTMLResponse)
+async def checkers(request: Request):
+    """Checkers page endpoint."""
+    lang = get_current_lang(request)
+    return templates.TemplateResponse("checkers.html", {"request": request, "lang": lang})
+
+
 @app.get("/api")
 async def api_root():
     """API root endpoint with API information."""
