@@ -116,6 +116,10 @@
       "name": "Boter-Kaas-en-Eieren",
       "description": "Lokaal twee spelers op één apparaat."
     },
+    "robot_runner": {
+      "name": "Robot Runner",
+      "description": "Eindeloze runner voor één speler. Druk op spatie of tik om over obstakels te springen."
+    },
     "towers_of_hanoi": {
       "name": "Torens van Hanoi",
       "description": "Klassieke puzzel met drie torens en schijven.",

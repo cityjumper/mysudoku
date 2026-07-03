@@ -116,6 +116,10 @@
       "name": "Tic-Tac-Toe",
       "description": "Local two-player on one device."
     },
+    "robot_runner": {
+      "name": "Robot Runner",
+      "description": "One-player endless runner. Press Space or tap to jump over obstacles."
+    },
     "towers_of_hanoi": {
       "name": "Towers of Hanoi",
       "description": "Classic puzzle with three towers and disks.",

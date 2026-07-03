@@ -184,6 +184,13 @@ async def checkers(request: Request):
     return templates.TemplateResponse("checkers.html", {"request": request, "lang": lang})
 
 
+@app.get("/robot-runner", response_class=HTMLResponse)
+async def robot_runner(request: Request):
+    """Robot Runner page endpoint."""
+    lang = get_current_lang(request)
+    return templates.TemplateResponse("robot_runner.html", {"request": request, "lang": lang})
+
+
 @app.get("/api")
 async def api_root():
     """API root endpoint with API information."""

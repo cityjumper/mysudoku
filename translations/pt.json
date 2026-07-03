@@ -91,6 +91,10 @@
       "name": "Jogo do Galo",
       "description": "Dois jogadores locais num dispositivo."
     },
+    "robot_runner": {
+      "name": "Robot Runner",
+      "description": "Runner infinito para um jogador. Prima Espaço ou toque no ecrã para saltar obstáculos."
+    },
     "towers_of_hanoi": {
       "name": "Torres de Hanoi",
       "description": "Quebra-cabeça clássico com três torres e discos.",
