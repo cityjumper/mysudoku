@@ -214,6 +214,11 @@
   const SPACING = 1.35;
   const SCORE_KEY = 'c4-3d:scores:v1';
   const TAP_THRESHOLD_PX = 8;
+  const DEFAULT_VIEW = {
+    x: -0.78,
+    y: 0.42,
+    z: 0,
+  };
 
   const wrapEl = document.getElementById('scene-wrap');
   const turnPillEl = document.getElementById('turn-pill');
@@ -260,8 +265,9 @@
   scene.add(fillLight);
 
   const gameRoot = new THREE.Group();
-  gameRoot.rotation.x = -0.35;
-  gameRoot.rotation.y = 0.65;
+  gameRoot.rotation.x = DEFAULT_VIEW.x;
+  gameRoot.rotation.y = DEFAULT_VIEW.y;
+  gameRoot.rotation.z = DEFAULT_VIEW.z;
   scene.add(gameRoot);
 
   const boardGroup = new THREE.Group();
@@ -452,9 +458,9 @@
   }
 
   function resetView() {
-    gameRoot.rotation.x = -0.35;
-    gameRoot.rotation.y = 0.65;
-    gameRoot.rotation.z = 0;
+    gameRoot.rotation.x = DEFAULT_VIEW.x;
+    gameRoot.rotation.y = DEFAULT_VIEW.y;
+    gameRoot.rotation.z = DEFAULT_VIEW.z;
   }
 
   document.getElementById('roll-left').addEventListener('click', () => rotateRoll(-0.22));
