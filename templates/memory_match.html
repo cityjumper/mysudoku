@@ -1,0 +1,554 @@
+{% extends "base.html" %}
+
+{% block title %}{{ translate(lang, 'games.memory_match.title') }}{% endblock %}
+
+{% block extra_head %}
+<style>
+  .memory-grid {
+    display: grid;
+    gap: 0.75rem;
+  }
+
+  .memory-card {
+    aspect-ratio: 1 / 1;
+    perspective: 900px;
+  }
+
+  .memory-card-inner {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    transform-style: preserve-3d;
+    transition: transform 0.45s ease;
+  }
+
+  .memory-card.is-flipped .memory-card-inner,
+  .memory-card.is-matched .memory-card-inner {
+    transform: rotateY(180deg);
+  }
+
+  .memory-face {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 1rem;
+    -webkit-backface-visibility: hidden;
+    backface-visibility: hidden;
+  }
+
+  .memory-face-back {
+    transform: rotateY(180deg);
+  }
+
+  .memory-face-front {
+    overflow: hidden;
+  }
+
+  .memory-face-back-content {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.25rem;
+    padding: 0.5rem;
+    text-align: center;
+  }
+
+  .memory-theme-classic .memory-face-back-content {
+    font-size: 2rem;
+    line-height: 1;
+  }
+
+  .memory-theme-classic .memory-card-label {
+    display: none;
+  }
+
+  .memory-theme-minecraft .memory-face-front {
+    border: 3px solid #3f5224;
+    background:
+      linear-gradient(180deg, #7bb661 0 18%, #6e8a3d 18% 36%, #7c5a31 36% 100%);
+    box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.08);
+  }
+
+  .memory-theme-minecraft .memory-face-back {
+    border: 3px solid #2f3e1c;
+    background: linear-gradient(180deg, #c8d7a1 0%, #aab771 100%);
+  }
+
+  .memory-theme-minecraft .memory-face-back-content {
+    font-family: "Courier New", monospace;
+    font-size: 0.8rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #1f2937;
+  }
+
+  .memory-theme-minecraft .memory-card-symbol {
+    font-size: 1.35rem;
+    line-height: 1;
+  }
+
+  .memory-theme-minecraft .memory-card-label {
+    font-size: 0.62rem;
+    line-height: 1.1;
+    max-width: 100%;
+    word-break: break-word;
+  }
+
+  .memory-card.is-matched {
+    pointer-events: none;
+  }
+
+  .memory-card.is-matched .memory-face-back {
+    box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.25);
+  }
+  
+  @media (max-width: 640px) {
+    .memory-grid {
+      gap: 0.5rem;
+    }
+  }
+</style>
+{% endblock %}
+
+{% block body_class %}bg-gradient-to-br from-indigo-50 via-white to-violet-100 min-h-screen{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+  <div class="max-w-6xl mx-auto mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+    <a href="/" class="inline-flex items-center text-violet-800 hover:text-violet-950 font-semibold">
+      <svg class="w-5 h-5 mr-2" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+        <path fill-rule="evenodd" d="M12.707 15.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 111.414 1.414L7.414 9H17a1 1 0 110 2H7.414l5.293 5.293a1 1 0 010 1.414z" clip-rule="evenodd" />
+      </svg>
+      {{ translate(lang, 'common.home') }}
+    </a>
+    <div class="flex flex-wrap items-center gap-4 text-sm font-semibold">
+      <a href="/sudoku" class="text-indigo-700 hover:text-indigo-900">{{ translate(lang, 'games.sudoku.name') }}</a>
+      <a href="/minesweeper" class="text-red-700 hover:text-red-900">{{ translate(lang, 'games.minesweeper.name') }}</a>
+      <a href="/gems" class="text-emerald-700 hover:text-emerald-900">{{ translate(lang, 'games.gems.name') }}</a>
+    </div>
+  </div>
+
+  <div class="max-w-6xl mx-auto">
+    <header class="text-center mb-8">
+      <h1 class="text-4xl sm:text-5xl font-extrabold tracking-tight text-slate-900">{{ translate(lang, 'games.memory_match.title') }}</h1>
+      <p class="mt-2 text-slate-600 max-w-2xl mx-auto">{{ translate(lang, 'games.memory_match.subtitle') }}</p>
+    </header>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div class="lg:col-span-2">
+        <div class="bg-white rounded-3xl shadow-xl ring-1 ring-slate-200 p-5 sm:p-8">
+          <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between mb-6">
+            <div>
+              <div class="text-sm font-semibold uppercase tracking-wide text-violet-700">{{ translate(lang, 'games.memory_match.status') }}</div>
+              <div id="status" class="mt-1 text-2xl font-bold text-slate-900">{{ translate(lang, 'games.memory_match.ready') }}</div>
+              <div id="substatus" class="mt-1 text-slate-600">{{ translate(lang, 'games.memory_match.tap_to_flip') }}</div>
+            </div>
+            <div class="flex flex-wrap gap-2">
+              <label class="inline-flex items-center gap-2 text-sm font-semibold text-slate-700">
+                {{ translate(lang, 'games.memory_match.difficulty') }}
+                <select id="difficulty" class="rounded-lg border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-violet-500">
+                  <option value="easy">{{ translate(lang, 'games.memory_match.easy') }}</option>
+                  <option value="medium" selected>{{ translate(lang, 'games.memory_match.medium') }}</option>
+                  <option value="hard">{{ translate(lang, 'games.memory_match.hard') }}</option>
+                </select>
+              </label>
+              <label class="inline-flex items-center gap-2 text-sm font-semibold text-slate-700">
+                {{ translate(lang, 'games.memory_match.theme') }}
+                <select id="theme" class="rounded-lg border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-violet-500">
+                  <option value="classic">{{ translate(lang, 'games.memory_match.theme_classic') }}</option>
+                  <option value="minecraft">{{ translate(lang, 'games.memory_match.theme_minecraft') }}</option>
+                </select>
+              </label>
+              <button id="new-game" class="rounded-lg bg-violet-600 hover:bg-violet-700 text-white font-semibold px-4 py-2">{{ translate(lang, 'games.memory_match.new_game') }}</button>
+              <button id="reset-best" class="rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 font-semibold px-4 py-2">{{ translate(lang, 'games.memory_match.reset_best_times') }}</button>
+            </div>
+          </div>
+
+          <div id="board" class="memory-grid"></div>
+        </div>
+      </div>
+
+      <div class="space-y-6">
+        <div class="bg-white rounded-3xl shadow-xl ring-1 ring-slate-200 p-6">
+          <h2 class="text-xl font-bold text-slate-900 mb-4">{{ translate(lang, 'games.memory_match.current_run') }}</h2>
+          <div class="grid grid-cols-3 gap-3">
+            <div class="rounded-2xl bg-violet-50 ring-1 ring-violet-100 p-4 text-center">
+              <div class="text-xs font-semibold uppercase tracking-wide text-violet-700">{{ translate(lang, 'games.memory_match.moves') }}</div>
+              <div id="moves" class="mt-2 text-3xl font-extrabold text-violet-950">0</div>
+            </div>
+            <div class="rounded-2xl bg-sky-50 ring-1 ring-sky-100 p-4 text-center">
+              <div class="text-xs font-semibold uppercase tracking-wide text-sky-700">{{ translate(lang, 'games.memory_match.matches') }}</div>
+              <div id="matches" class="mt-2 text-3xl font-extrabold text-sky-950">0</div>
+            </div>
+            <div class="rounded-2xl bg-emerald-50 ring-1 ring-emerald-100 p-4 text-center">
+              <div class="text-xs font-semibold uppercase tracking-wide text-emerald-700">{{ translate(lang, 'games.memory_match.time') }}</div>
+              <div id="time" class="mt-2 text-3xl font-extrabold text-emerald-950">00:00</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="bg-white rounded-3xl shadow-xl ring-1 ring-slate-200 p-6">
+          <h2 class="text-xl font-bold text-slate-900 mb-4">{{ translate(lang, 'games.memory_match.scoreboard') }}</h2>
+          <div class="grid grid-cols-2 gap-3">
+            <div class="rounded-2xl bg-amber-50 ring-1 ring-amber-100 p-4">
+              <div class="text-xs font-semibold uppercase tracking-wide text-amber-700">{{ translate(lang, 'games.memory_match.best_time') }}</div>
+              <div id="best-time" class="mt-2 text-2xl font-extrabold text-amber-950">{{ translate(lang, 'games.memory_match.no_best_time') }}</div>
+            </div>
+            <div class="rounded-2xl bg-fuchsia-50 ring-1 ring-fuchsia-100 p-4">
+              <div class="text-xs font-semibold uppercase tracking-wide text-fuchsia-700">{{ translate(lang, 'games.memory_match.best_moves') }}</div>
+              <div id="best-moves" class="mt-2 text-2xl font-extrabold text-fuchsia-950">{{ translate(lang, 'games.memory_match.no_best_time') }}</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="bg-white rounded-3xl shadow-xl ring-1 ring-slate-200 p-6">
+          <h2 class="text-xl font-bold text-slate-900 mb-4">{{ translate(lang, 'games.memory_match.rules') }}</h2>
+          <ul class="space-y-2 text-sm text-slate-600">
+            <li>• {{ translate(lang, 'games.memory_match.rule_1') }}</li>
+            <li>• {{ translate(lang, 'games.memory_match.rule_2') }}</li>
+            <li>• {{ translate(lang, 'games.memory_match.rule_3') }}</li>
+            <li>• {{ translate(lang, 'games.memory_match.rule_4') }}</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  const MM_TRANSLATIONS = {
+    ready: "{{ translate(lang, 'games.memory_match.ready') }}",
+    tapToFlip: "{{ translate(lang, 'games.memory_match.tap_to_flip') }}",
+    pickTwo: "{{ translate(lang, 'games.memory_match.pick_two') }}",
+    matchFound: "{{ translate(lang, 'games.memory_match.match_found') }}",
+    noMatch: "{{ translate(lang, 'games.memory_match.no_match') }}",
+    wonTitle: "{{ translate(lang, 'games.memory_match.won_title') }}",
+    wonMessage: "{{ translate(lang, 'games.memory_match.won_message') }}",
+    playAgain: "{{ translate(lang, 'games.memory_match.play_again') }}",
+    noBest: "{{ translate(lang, 'games.memory_match.no_best_time') }}"
+  };
+
+  const SCORE_KEY = 'memory-match:best:v1';
+  const DIFFICULTIES = {
+    easy: { rows: 4, cols: 4, pairs: 8 },
+    medium: { rows: 4, cols: 5, pairs: 10 },
+    hard: { rows: 6, cols: 6, pairs: 18 }
+  };
+  const THEMES = {
+    classic: {
+      cardClass: 'memory-theme-classic',
+      items: [
+        { key: 'apple', symbol: '🍎', label: 'Apple' },
+        { key: 'rainbow', symbol: '🌈', label: 'Rainbow' },
+        { key: 'rocket', symbol: '🚀', label: 'Rocket' },
+        { key: 'headphones', symbol: '🎧', label: 'Headphones' },
+        { key: 'fox', symbol: '🦊', label: 'Fox' },
+        { key: 'star', symbol: '🌟', label: 'Star' },
+        { key: 'dice', symbol: '🎲', label: 'Dice' },
+        { key: 'puzzle', symbol: '🧩', label: 'Puzzle' },
+        { key: 'music', symbol: '🎵', label: 'Music' },
+        { key: 'watermelon', symbol: '🍉', label: 'Watermelon' },
+        { key: 'soccer', symbol: '⚽', label: 'Soccer' },
+        { key: 'planet', symbol: '🪐', label: 'Planet' },
+        { key: 'octopus', symbol: '🐙', label: 'Octopus' },
+        { key: 'mushroom', symbol: '🍄', label: 'Mushroom' },
+        { key: 'unicorn', symbol: '🦄', label: 'Unicorn' },
+        { key: 'bike', symbol: '🚲', label: 'Bike' },
+        { key: 'kite', symbol: '🪁', label: 'Kite' },
+        { key: 'cherries', symbol: '🍒', label: 'Cherries' }
+      ]
+    },
+    minecraft: {
+      cardClass: 'memory-theme-minecraft',
+      items: [
+        { key: 'grass', symbol: 'GR', label: 'Grass Block' },
+        { key: 'tnt', symbol: 'TN', label: 'TNT' },
+        { key: 'diamond', symbol: 'DI', label: 'Diamond' },
+        { key: 'pickaxe', symbol: 'PK', label: 'Pickaxe' },
+        { key: 'creeper', symbol: 'CR', label: 'Creeper' },
+        { key: 'torch', symbol: 'TO', label: 'Torch' },
+        { key: 'redstone', symbol: 'RS', label: 'Redstone' },
+        { key: 'obsidian', symbol: 'OB', label: 'Obsidian' },
+        { key: 'crafting', symbol: 'CT', label: 'Crafting Table' },
+        { key: 'furnace', symbol: 'FU', label: 'Furnace' },
+        { key: 'emerald', symbol: 'EM', label: 'Emerald' },
+        { key: 'wolf', symbol: 'WO', label: 'Wolf' },
+        { key: 'nether', symbol: 'NE', label: 'Nether Star' },
+        { key: 'water', symbol: 'WA', label: 'Water Bucket' },
+        { key: 'beacon', symbol: 'BE', label: 'Beacon' },
+        { key: 'golden', symbol: 'GA', label: 'Golden Apple' },
+        { key: 'enderman', symbol: 'EN', label: 'Enderman' },
+        { key: 'slime', symbol: 'SL', label: 'Slime Block' }
+      ]
+    }
+  };
+
+  const boardEl = document.getElementById('board');
+  const statusEl = document.getElementById('status');
+  const substatusEl = document.getElementById('substatus');
+  const difficultyEl = document.getElementById('difficulty');
+  const themeEl = document.getElementById('theme');
+  const movesEl = document.getElementById('moves');
+  const matchesEl = document.getElementById('matches');
+  const timeEl = document.getElementById('time');
+  const bestTimeEl = document.getElementById('best-time');
+  const bestMovesEl = document.getElementById('best-moves');
+
+  let cards = [];
+  let firstIndex = null;
+  let secondIndex = null;
+  let lockBoard = false;
+  let moves = 0;
+  let matches = 0;
+  let timerId = null;
+  let startTime = null;
+
+  function shuffle(items) {
+    const copy = [...items];
+    for (let index = copy.length - 1; index > 0; index -= 1) {
+      const swapIndex = Math.floor(Math.random() * (index + 1));
+      [copy[index], copy[swapIndex]] = [copy[swapIndex], copy[index]];
+    }
+    return copy;
+  }
+
+  function formatTime(totalSeconds) {
+    const minutes = String(Math.floor(totalSeconds / 60)).padStart(2, '0');
+    const seconds = String(totalSeconds % 60).padStart(2, '0');
+    return `${minutes}:${seconds}`;
+  }
+
+  function currentDifficulty() {
+    return difficultyEl.value;
+  }
+
+  function currentTheme() {
+    return themeEl.value;
+  }
+
+  function loadBestScores() {
+    try {
+      const raw = localStorage.getItem(SCORE_KEY);
+      return raw ? JSON.parse(raw) : {};
+    } catch {
+      return {};
+    }
+  }
+
+  function saveBestScores(scores) {
+    localStorage.setItem(SCORE_KEY, JSON.stringify(scores));
+  }
+
+  function renderBestScores() {
+    const scores = loadBestScores()[currentDifficulty()] || {};
+    bestTimeEl.textContent = Number.isInteger(scores.bestTime) ? formatTime(scores.bestTime) : MM_TRANSLATIONS.noBest;
+    bestMovesEl.textContent = Number.isInteger(scores.bestMoves) ? String(scores.bestMoves) : MM_TRANSLATIONS.noBest;
+  }
+
+  function setStatus(title, subtitle) {
+    statusEl.textContent = title;
+    substatusEl.textContent = subtitle;
+  }
+
+  function stopTimer() {
+    if (timerId) {
+      clearInterval(timerId);
+      timerId = null;
+    }
+  }
+
+  function elapsedSeconds() {
+    if (!startTime) {
+      return 0;
+    }
+    return Math.floor((Date.now() - startTime) / 1000);
+  }
+
+  function startTimer() {
+    if (timerId) {
+      return;
+    }
+    startTime = Date.now();
+    timerId = window.setInterval(() => {
+      timeEl.textContent = formatTime(elapsedSeconds());
+    }, 1000);
+  }
+
+  function updateStats() {
+    movesEl.textContent = String(moves);
+    matchesEl.textContent = String(matches);
+  }
+
+  function saveIfBest() {
+    const difficulty = currentDifficulty();
+    const scores = loadBestScores();
+    const existing = scores[difficulty] || {};
+    const nextTime = elapsedSeconds();
+
+    scores[difficulty] = {
+      bestTime: Number.isInteger(existing.bestTime) ? Math.min(existing.bestTime, nextTime) : nextTime,
+      bestMoves: Number.isInteger(existing.bestMoves) ? Math.min(existing.bestMoves, moves) : moves,
+    };
+
+    saveBestScores(scores);
+    renderBestScores();
+  }
+
+  function renderBoard() {
+    const { cols } = DIFFICULTIES[currentDifficulty()];
+    boardEl.style.gridTemplateColumns = `repeat(${cols}, minmax(0, 1fr))`;
+    boardEl.className = `memory-grid ${THEMES[currentTheme()].cardClass}`;
+    boardEl.innerHTML = '';
+
+    cards.forEach((card, index) => {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'memory-card rounded-2xl focus:outline-none focus:ring-4 focus:ring-violet-300';
+      button.setAttribute('aria-label', 'Memory card');
+
+      if (card.flipped) {
+        button.classList.add('is-flipped');
+      }
+      if (card.matched) {
+        button.classList.add('is-matched');
+      }
+
+      button.innerHTML = `
+        <div class="memory-card-inner">
+          <div class="memory-face memory-face-front bg-gradient-to-br from-violet-500 via-indigo-500 to-sky-500 text-white shadow-lg">
+            <span class="text-3xl sm:text-4xl">?</span>
+          </div>
+          <div class="memory-face memory-face-back bg-white ring-1 ring-slate-200 shadow-lg">
+            <div class="memory-face-back-content">
+              <span class="memory-card-symbol">${card.symbol}</span>
+              <span class="memory-card-label">${card.label}</span>
+            </div>
+          </div>
+        </div>
+      `;
+      button.addEventListener('click', () => flipCard(index));
+      boardEl.appendChild(button);
+    });
+  }
+
+  function finishGame() {
+    stopTimer();
+    timeEl.textContent = formatTime(elapsedSeconds());
+    saveIfBest();
+    setStatus(MM_TRANSLATIONS.wonTitle, `${MM_TRANSLATIONS.wonMessage} ${MM_TRANSLATIONS.playAgain}`);
+  }
+
+  function resetTurn() {
+    firstIndex = null;
+    secondIndex = null;
+    lockBoard = false;
+  }
+
+  function resolveTurn() {
+    const firstCard = cards[firstIndex];
+    const secondCard = cards[secondIndex];
+    moves += 1;
+    updateStats();
+
+    if (firstCard.symbol === secondCard.symbol) {
+      firstCard.matched = true;
+      secondCard.matched = true;
+      matches += 1;
+      updateStats();
+      setStatus(MM_TRANSLATIONS.matchFound, MM_TRANSLATIONS.pickTwo);
+      renderBoard();
+      resetTurn();
+
+      if (matches === DIFFICULTIES[currentDifficulty()].pairs) {
+        finishGame();
+      }
+      return;
+    }
+
+    setStatus(MM_TRANSLATIONS.noMatch, MM_TRANSLATIONS.pickTwo);
+    window.setTimeout(() => {
+      firstCard.flipped = false;
+      secondCard.flipped = false;
+      renderBoard();
+      resetTurn();
+    }, 850);
+  }
+
+  function flipCard(index) {
+    const card = cards[index];
+    if (lockBoard || card.flipped || card.matched) {
+      return;
+    }
+
+    if (!startTime) {
+      startTimer();
+    }
+
+    card.flipped = true;
+    renderBoard();
+
+    if (firstIndex === null) {
+      firstIndex = index;
+      setStatus(MM_TRANSLATIONS.ready, MM_TRANSLATIONS.pickTwo);
+      return;
+    }
+
+    secondIndex = index;
+    lockBoard = true;
+    resolveTurn();
+  }
+
+  function buildDeck() {
+    const difficulty = currentDifficulty();
+    const { pairs } = DIFFICULTIES[difficulty];
+    const theme = THEMES[currentTheme()];
+    const chosenItems = shuffle(theme.items).slice(0, pairs);
+    const deck = shuffle([...chosenItems, ...chosenItems]);
+
+    cards = deck.map((item, index) => ({
+      id: `${difficulty}-${currentTheme()}-${index}-${item.key}`,
+      key: item.key,
+      symbol: item.symbol,
+      label: item.label,
+      flipped: false,
+      matched: false,
+    }));
+  }
+
+  function newGame() {
+    stopTimer();
+    firstIndex = null;
+    secondIndex = null;
+    lockBoard = false;
+    moves = 0;
+    matches = 0;
+    startTime = null;
+    timeEl.textContent = '00:00';
+    updateStats();
+    buildDeck();
+    renderBoard();
+    renderBestScores();
+    setStatus(MM_TRANSLATIONS.ready, MM_TRANSLATIONS.tapToFlip);
+  }
+
+  document.getElementById('new-game').addEventListener('click', newGame);
+  difficultyEl.addEventListener('change', newGame);
+  themeEl.addEventListener('change', newGame);
+  document.getElementById('reset-best').addEventListener('click', () => {
+    const scores = loadBestScores();
+    delete scores[currentDifficulty()];
+    saveBestScores(scores);
+    renderBestScores();
+  });
+
+  newGame();
+</script>
+{% endblock %}

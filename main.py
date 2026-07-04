@@ -205,6 +205,13 @@ async def math_lanes(request: Request):
     return templates.TemplateResponse("math_lanes.html", {"request": request, "lang": lang})
 
 
+@app.get("/memory-match", response_class=HTMLResponse)
+async def memory_match(request: Request):
+    """Memory Match page endpoint."""
+    lang = get_current_lang(request)
+    return templates.TemplateResponse("memory_match.html", {"request": request, "lang": lang})
+
+
 @app.get("/api")
 async def api_root():
     """API root endpoint with API information."""
