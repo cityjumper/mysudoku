@@ -45,6 +45,11 @@
         .gem-yellow { background: linear-gradient(135deg, #f59e0b, #d97706); }
         .gem-purple { background: linear-gradient(135deg, #8b5cf6, #7c3aed); }
         .gem-bomb { background: linear-gradient(135deg, #f97316, #ea580c); }
+        .gem-special-fan { box-shadow: inset 0 0 0 2px #0f766e; }
+        .gem-special-rocket-h { box-shadow: inset 0 0 0 2px #7c2d12; }
+        .gem-special-rocket-v { box-shadow: inset 0 0 0 2px #1d4ed8; }
+        .gem-special-color-bomb { box-shadow: inset 0 0 0 2px #6d28d9; }
+        .gem-special-nova { box-shadow: inset 0 0 0 2px #be123c; }
 
         .gem-cell.exploding {
             animation: explode 0.5s ease-out forwards;
@@ -135,11 +140,55 @@
             left: 0;
             top: 0;
         }
+
+        .menu-panel {
+            background: #eef2ff;
+            border: 1px solid #c7d2fe;
+            border-radius: 12px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .combo-layer {
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            z-index: 60;
+        }
+
+        .combo-pop {
+            position: absolute;
+            font-weight: 900;
+            letter-spacing: 0.02em;
+            text-shadow: 0 2px 10px rgba(15, 23, 42, 0.25);
+            animation: combo-pop 900ms ease-out forwards;
+            white-space: nowrap;
+        }
+
+        @keyframes combo-pop {
+            0% { transform: translate(-50%, 0) scale(0.75); opacity: 0; }
+            15% { transform: translate(-50%, -6px) scale(1.05); opacity: 1; }
+            100% { transform: translate(-50%, -44px) scale(1.12); opacity: 0; }
+        }
     </style>
 {% endblock %}
 
 {% block content %}
     <div class="container mx-auto px-4 py-6 sm:py-10 max-w-4xl">
+        <!-- Top Nav -->
+        <div class="mb-6">
+            <a href="/" class="inline-flex items-center text-emerald-700 hover:text-emerald-900 font-semibold">
+                <svg class="w-5 h-5 mr-2" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                    <path fill-rule="evenodd" d="M12.707 15.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 111.414 1.414L7.414 9H17a1 1 0 110 2H7.414l5.293 5.293a1 1 0 010 1.414z" clip-rule="evenodd" />
+                </svg>
+                {{ translate(lang, 'common.home') }}
+            </a>
+        </div>
+
         <!-- Header -->
         <div class="text-center mb-8">
             <h1 class="text-3xl sm:text-4xl font-bold text-slate-900 mb-2">{{ translate(lang, 'games.gems.title') }}</h1>
@@ -179,6 +228,18 @@
         <div class="game-controls justify-center mb-6">
             <button id="new-game-btn" class="btn-primary">{{ translate(lang, 'games.gems.new_game') }}</button>
             <button id="reset-scores-btn" class="btn-secondary">{{ translate(lang, 'games.gems.reset_scores') }}</button>
+            <button id="menu-toggle-btn" class="btn-secondary">Menu</button>
+        </div>
+
+        <div id="menu-panel" class="menu-panel hidden">
+            <h3 class="text-lg font-bold text-slate-900 mb-2">Special Gems Menu</h3>
+            <ul class="text-sm text-slate-700 space-y-1">
+                <li>🪭 2x2 square creates a Fan: triggers a random bomb blast.</li>
+                <li>🚀 4 in a row creates a Rocket: clears full row/column.</li>
+                <li>🌈 5 in a row creates a Color Bomb: clears a whole color.</li>
+                <li>✨ T/L shape creates a Nova: clears a 9x9 area (clipped to board).</li>
+                <li>Tap any special gem or move it in a swap to trigger it instantly.</li>
+            </ul>
         </div>
 
         <!-- Status Message -->
@@ -197,6 +258,8 @@
                 <li>{{ translate(lang, 'games.gems.rule_7') }}</li>
             </ul>
         </div>
+
+        <div id="combo-layer" class="combo-layer" aria-hidden="true"></div>
     </div>
 {% endblock %}
 
@@ -217,12 +280,41 @@
                 this.animating = false;
                 this.BOARD_SIZE = 8;
                 this.GEM_TYPES = ['red', 'blue', 'green', 'yellow', 'purple'];
-                this.BOMB_CHANCE = 0.1; // 10% chance for bombs
+                this.BOMB_CHANCE = 0.08;
+                this.SPECIAL_PRIORITY = {
+                    'fan': 1,
+                    'rocket-h': 2,
+                    'rocket-v': 2,
+                    'nova': 3,
+                    'color-bomb': 4,
+                };
+                this.comboLayer = document.getElementById('combo-layer');
+                this.audioContext = null;
 
                 this.initBoard();
                 this.renderBoard();
                 this.updateStats();
                 this.bindEvents();
+            }
+
+            makeSpecial(type, color) {
+                return `sp:${type}:${color}`;
+            }
+
+            isSpecial(gem) {
+                return typeof gem === 'string' && gem.startsWith('sp:');
+            }
+
+            getSpecialType(gem) {
+                if (!this.isSpecial(gem)) return null;
+                return gem.split(':')[1];
+            }
+
+            getGemColor(gem) {
+                if (!gem) return null;
+                if (gem === 'bomb') return 'bomb';
+                if (this.isSpecial(gem)) return gem.split(':')[2] || null;
+                return gem;
             }
 
             initBoard() {
@@ -262,17 +354,17 @@
             }
 
             hasMatchAt(row, col) {
-                const gem = this.board[row][col];
-                if (!gem) return false;
+                const color = this.getGemColor(this.board[row][col]);
+                if (!color) return false;
 
                 // Check horizontal matches (left and right)
                 let horizontalCount = 1;
                 // Count left
-                for (let c = col - 1; c >= 0 && this.board[row][c] === gem; c--) {
+                for (let c = col - 1; c >= 0 && this.getGemColor(this.board[row][c]) === color; c--) {
                     horizontalCount++;
                 }
                 // Count right
-                for (let c = col + 1; c < this.BOARD_SIZE && this.board[row][c] === gem; c++) {
+                for (let c = col + 1; c < this.BOARD_SIZE && this.getGemColor(this.board[row][c]) === color; c++) {
                     horizontalCount++;
                 }
                 if (horizontalCount >= 3) return true;
@@ -280,11 +372,11 @@
                 // Check vertical matches (up and down)
                 let verticalCount = 1;
                 // Count up
-                for (let r = row - 1; r >= 0 && this.board[r][col] === gem; r--) {
+                for (let r = row - 1; r >= 0 && this.getGemColor(this.board[r][col]) === color; r--) {
                     verticalCount++;
                 }
                 // Count down
-                for (let r = row + 1; r < this.BOARD_SIZE && this.board[r][col] === gem; r++) {
+                for (let r = row + 1; r < this.BOARD_SIZE && this.getGemColor(this.board[r][col]) === color; r++) {
                     verticalCount++;
                 }
                 if (verticalCount >= 3) return true;
@@ -299,8 +391,13 @@
                 for (let row = 0; row < this.BOARD_SIZE; row++) {
                     for (let col = 0; col < this.BOARD_SIZE; col++) {
                         const gem = this.board[row][col];
+                        const color = this.getGemColor(gem);
+                        const specialType = this.getSpecialType(gem);
                         const cell = document.createElement('div');
-                        cell.className = `gem-cell gem-${gem}`;
+                        cell.className = `gem-cell gem-${color}`;
+                        if (specialType) {
+                            cell.classList.add(`gem-special-${specialType}`);
+                        }
                         cell.dataset.row = row;
                         cell.dataset.col = col;
                         cell.textContent = this.getGemEmoji(gem);
@@ -310,6 +407,15 @@
             }
 
             getGemEmoji(gem) {
+                const special = this.getSpecialType(gem);
+                if (special) {
+                    if (special === 'fan') return '🪭';
+                    if (special === 'rocket-h') return '🚀';
+                    if (special === 'rocket-v') return '🧨';
+                    if (special === 'color-bomb') return '🌈';
+                    if (special === 'nova') return '✨';
+                }
+
                 const emojis = {
                     'red': '🔴',
                     'blue': '🔵',
@@ -364,10 +470,104 @@
                 document.getElementById('reset-scores-btn').addEventListener('click', () => {
                     this.resetScores();
                 });
+
+                document.getElementById('menu-toggle-btn').addEventListener('click', () => {
+                    const panel = document.getElementById('menu-panel');
+                    panel.classList.toggle('hidden');
+                });
+            }
+
+            playComboSound(kind) {
+                const tones = {
+                    'fan': [392, 523],
+                    'rocket-h': [659, 784],
+                    'rocket-v': [622, 740],
+                    'color-bomb': [523, 659, 784],
+                    'nova': [440, 554, 880],
+                    'bomb': [330, 247],
+                    'combo': [523, 587, 659],
+                };
+
+                try {
+                    if (!this.audioContext) {
+                        const Ctx = window.AudioContext || window.webkitAudioContext;
+                        if (!Ctx) return;
+                        this.audioContext = new Ctx();
+                    }
+
+                    const now = this.audioContext.currentTime;
+                    const seq = tones[kind] || tones.combo;
+                    seq.forEach((freq, index) => {
+                        const osc = this.audioContext.createOscillator();
+                        const gain = this.audioContext.createGain();
+                        osc.type = 'triangle';
+                        osc.frequency.value = freq;
+                        osc.connect(gain);
+                        gain.connect(this.audioContext.destination);
+
+                        const start = now + index * 0.07;
+                        gain.gain.setValueAtTime(0.0001, start);
+                        gain.gain.exponentialRampToValueAtTime(0.08, start + 0.015);
+                        gain.gain.exponentialRampToValueAtTime(0.0001, start + 0.11);
+
+                        osc.start(start);
+                        osc.stop(start + 0.12);
+                    });
+                } catch {
+                    // Ignore audio errors on restricted browsers.
+                }
+            }
+
+            showComboText(text, color = '#334155') {
+                if (!this.comboLayer) return;
+                const boardRect = document.getElementById('game-board').getBoundingClientRect();
+                const pop = document.createElement('div');
+                pop.className = 'combo-pop';
+                pop.textContent = text;
+                pop.style.left = `${boardRect.left + boardRect.width / 2}px`;
+                pop.style.top = `${boardRect.top + boardRect.height / 2}px`;
+                pop.style.color = color;
+                pop.style.fontSize = `${Math.max(16, Math.min(34, boardRect.width / 9))}px`;
+                this.comboLayer.appendChild(pop);
+                setTimeout(() => pop.remove(), 920);
+            }
+
+            announceSpecials(activatedSet) {
+                if (!activatedSet || activatedSet.size === 0) return;
+                const order = ['nova', 'color-bomb', 'rocket-h', 'rocket-v', 'fan', 'bomb'];
+                const primary = order.find((k) => activatedSet.has(k)) || 'combo';
+                const labelByType = {
+                    'fan': 'RANDOM BOMB!',
+                    'rocket-h': 'LINE BLAST!',
+                    'rocket-v': 'LINE BLAST!',
+                    'color-bomb': 'COLOR CLEAR!',
+                    'nova': 'NOVA 9x9!',
+                    'bomb': 'BOMB BLAST!',
+                    'combo': 'COMBO!',
+                };
+                const colorByType = {
+                    'fan': '#0f766e',
+                    'rocket-h': '#b45309',
+                    'rocket-v': '#1d4ed8',
+                    'color-bomb': '#6d28d9',
+                    'nova': '#be123c',
+                    'bomb': '#c2410c',
+                    'combo': '#334155',
+                };
+                this.showComboText(labelByType[primary], colorByType[primary]);
+                this.playComboSound(primary);
             }
 
             handleGemClick(row, col) {
+                const gem = this.board[row][col];
+
                 if (this.selectedGem === null) {
+                    // Touch-trigger specials directly
+                    if (gem === 'bomb' || this.isSpecial(gem)) {
+                        this.triggerSpecialAt(row, col);
+                        return;
+                    }
+
                     // Select gem
                     this.selectedGem = { row, col };
                     this.highlightSelectedGem(row, col);
@@ -392,6 +592,53 @@
 
                     this.clearSelection();
                 }
+            }
+
+            triggerSpecialAt(row, col) {
+                if (this.animating) return;
+
+                const gem = this.board[row][col];
+                if (!gem) return;
+
+                const clearSet = new Set([`${row}:${col}`]);
+                const activatedSet = new Set();
+                if (gem === 'bomb') {
+                    activatedSet.add('bomb');
+                    this.explodeBomb(row, col, clearSet);
+                } else if (this.isSpecial(gem)) {
+                    this.activateSpecial(row, col, gem, clearSet, activatedSet);
+                } else {
+                    return;
+                }
+
+                this.animating = true;
+                const toRemove = Array.from(clearSet).map((key) => {
+                    const [r, c] = key.split(':').map(Number);
+                    return { row: r, col: c };
+                });
+
+                toRemove.forEach((cell) => {
+                    if (this.board[cell.row][cell.col] !== null) {
+                        this.board[cell.row][cell.col] = null;
+                        this.score += 10 * this.level;
+                    }
+                });
+
+                this.animateRemoval(toRemove);
+                this.moves++;
+                this.updateStats();
+                this.setStatusMessage('Special activated!');
+                this.announceSpecials(activatedSet);
+
+                setTimeout(() => {
+                    this.dropGems();
+                    this.fillEmptySpaces();
+                    this.renderBoard();
+
+                    setTimeout(() => {
+                        this.processMatches();
+                    }, 120);
+                }, 500);
             }
 
             handlePointerDown(e) {
@@ -450,10 +697,18 @@
             }
 
             trySwap(row1, col1, row2, col2) {
+                const gem1 = this.board[row1][col1];
+                const gem2 = this.board[row2][col2];
                 this.swapGems(row1, col1, row2, col2);
                 this.moves++;
 
-                if (this.findMatches().length > 0) {
+                const movedSpecial = this.isSpecial(gem1) || this.isSpecial(gem2) || gem1 === 'bomb' || gem2 === 'bomb';
+                if (movedSpecial) {
+                    this.resolveSpecialMove(row1, col1, row2, col2, gem1, gem2);
+                    return;
+                }
+
+                if (this.findMatchData().matched.size > 0 || this.isSpecial(this.board[row1][col1]) || this.isSpecial(this.board[row2][col2])) {
                     this.processMatches();
                     return;
                 }
@@ -462,6 +717,60 @@
                     this.swapGems(row2, col2, row1, col1);
                     this.setStatusMessage('No matches found! Try a different swap.');
                 }, 300);
+            }
+
+            resolveSpecialMove(row1, col1, row2, col2, gem1, gem2) {
+                if (this.animating) return;
+
+                this.animating = true;
+                const clearSet = new Set();
+                const activatedSet = new Set();
+
+                const activateIfSpecial = (row, col, gem) => {
+                    if (!gem) return;
+                    clearSet.add(`${row}:${col}`);
+                    if (gem === 'bomb') {
+                        activatedSet.add('bomb');
+                        this.explodeBomb(row, col, clearSet);
+                    } else if (this.isSpecial(gem)) {
+                        this.activateSpecial(row, col, gem, clearSet, activatedSet);
+                    }
+                };
+
+                // After swap, gem1 moved to row2/col2 and gem2 moved to row1/col1.
+                activateIfSpecial(row2, col2, gem1);
+                activateIfSpecial(row1, col1, gem2);
+
+                if (clearSet.size === 0) {
+                    this.animating = false;
+                    return;
+                }
+
+                const toRemove = Array.from(clearSet).map((key) => {
+                    const [r, c] = key.split(':').map(Number);
+                    return { row: r, col: c };
+                });
+
+                toRemove.forEach((cell) => {
+                    if (this.board[cell.row][cell.col] !== null) {
+                        this.board[cell.row][cell.col] = null;
+                        this.score += 12 * this.level;
+                    }
+                });
+
+                this.animateRemoval(toRemove);
+                this.updateStats();
+                this.announceSpecials(activatedSet);
+
+                setTimeout(() => {
+                    this.dropGems();
+                    this.fillEmptySpaces();
+                    this.renderBoard();
+
+                    setTimeout(() => {
+                        this.processMatches();
+                    }, 120);
+                }, 500);
             }
 
             isAdjacent(row1, col1, row2, col2) {
@@ -493,79 +802,251 @@
             }
 
             findMatches() {
-                const matches = [];
+                return Array.from(this.findMatchData().matched).map((key) => {
+                    const [row, col] = key.split(':').map(Number);
+                    return { row, col, gem: this.board[row][col] };
+                });
+            }
 
-                // Find horizontal matches
+            addSpawn(spawnMap, row, col, type, color) {
+                const key = `${row}:${col}`;
+                const candidate = { row, col, type, color, priority: this.SPECIAL_PRIORITY[type] || 0 };
+                if (!spawnMap.has(key) || spawnMap.get(key).priority < candidate.priority) {
+                    spawnMap.set(key, candidate);
+                }
+            }
+
+            collectRuns() {
+                const horizontal = [];
+                const vertical = [];
+
                 for (let row = 0; row < this.BOARD_SIZE; row++) {
-                    let count = 1;
-                    let startCol = 0;
-
-                    for (let col = 1; col <= this.BOARD_SIZE; col++) {
-                        if (col < this.BOARD_SIZE && this.board[row][col] === this.board[row][col - 1]) {
-                            count++;
-                        } else {
-                            if (count >= 3) {
-                                for (let c = startCol; c < col; c++) {
-                                    matches.push({ row, col: c, gem: this.board[row][c] });
-                                }
-                            }
-                            count = 1;
-                            startCol = col;
+                    let col = 0;
+                    while (col < this.BOARD_SIZE) {
+                        const color = this.getGemColor(this.board[row][col]);
+                        if (!color) {
+                            col++;
+                            continue;
                         }
+                        let end = col + 1;
+                        while (end < this.BOARD_SIZE && this.getGemColor(this.board[row][end]) === color) end++;
+                        const len = end - col;
+                        if (len >= 3) {
+                            const cells = [];
+                            for (let c = col; c < end; c++) cells.push({ row, col: c });
+                            horizontal.push({ color, len, cells });
+                        }
+                        col = end;
                     }
                 }
 
-                // Find vertical matches
                 for (let col = 0; col < this.BOARD_SIZE; col++) {
-                    let count = 1;
-                    let startRow = 0;
-
-                    for (let row = 1; row <= this.BOARD_SIZE; row++) {
-                        if (row < this.BOARD_SIZE && this.board[row][col] === this.board[row - 1][col]) {
-                            count++;
-                        } else {
-                            if (count >= 3) {
-                                for (let r = startRow; r < row; r++) {
-                                    matches.push({ row: r, col, gem: this.board[r][col] });
-                                }
-                            }
-                            count = 1;
-                            startRow = row;
+                    let row = 0;
+                    while (row < this.BOARD_SIZE) {
+                        const color = this.getGemColor(this.board[row][col]);
+                        if (!color) {
+                            row++;
+                            continue;
                         }
+                        let end = row + 1;
+                        while (end < this.BOARD_SIZE && this.getGemColor(this.board[end][col]) === color) end++;
+                        const len = end - row;
+                        if (len >= 3) {
+                            const cells = [];
+                            for (let r = row; r < end; r++) cells.push({ row: r, col });
+                            vertical.push({ color, len, cells });
+                        }
+                        row = end;
                     }
                 }
 
-                return matches;
+                return { horizontal, vertical };
+            }
+
+            findSquares() {
+                const squares = [];
+                for (let row = 0; row < this.BOARD_SIZE - 1; row++) {
+                    for (let col = 0; col < this.BOARD_SIZE - 1; col++) {
+                        const c1 = this.getGemColor(this.board[row][col]);
+                        const c2 = this.getGemColor(this.board[row][col + 1]);
+                        const c3 = this.getGemColor(this.board[row + 1][col]);
+                        const c4 = this.getGemColor(this.board[row + 1][col + 1]);
+                        if (c1 && c1 !== 'bomb' && c1 === c2 && c1 === c3 && c1 === c4) {
+                            squares.push({
+                                color: c1,
+                                cells: [
+                                    { row, col },
+                                    { row, col: col + 1 },
+                                    { row: row + 1, col },
+                                    { row: row + 1, col: col + 1 },
+                                ],
+                                spawn: { row: row + 1, col: col + 1 },
+                            });
+                        }
+                    }
+                }
+                return squares;
+            }
+
+            findMatchData() {
+                const matched = new Set();
+                const spawnMap = new Map();
+                const { horizontal, vertical } = this.collectRuns();
+                const squares = this.findSquares();
+
+                const addMatchCell = (row, col) => matched.add(`${row}:${col}`);
+
+                horizontal.forEach((run) => {
+                    run.cells.forEach((cell) => addMatchCell(cell.row, cell.col));
+                    if (run.len >= 5) {
+                        const mid = run.cells[Math.floor(run.len / 2)];
+                        this.addSpawn(spawnMap, mid.row, mid.col, 'color-bomb', run.color);
+                    } else if (run.len === 4) {
+                        const pivot = run.cells[1];
+                        this.addSpawn(spawnMap, pivot.row, pivot.col, 'rocket-h', run.color);
+                    }
+                });
+
+                vertical.forEach((run) => {
+                    run.cells.forEach((cell) => addMatchCell(cell.row, cell.col));
+                    if (run.len >= 5) {
+                        const mid = run.cells[Math.floor(run.len / 2)];
+                        this.addSpawn(spawnMap, mid.row, mid.col, 'color-bomb', run.color);
+                    } else if (run.len === 4) {
+                        const pivot = run.cells[1];
+                        this.addSpawn(spawnMap, pivot.row, pivot.col, 'rocket-v', run.color);
+                    }
+                });
+
+                squares.forEach((sq) => {
+                    sq.cells.forEach((cell) => addMatchCell(cell.row, cell.col));
+                    this.addSpawn(spawnMap, sq.spawn.row, sq.spawn.col, 'fan', sq.color);
+                });
+
+                // T/L-shape (intersection between a horizontal and vertical run)
+                horizontal.forEach((hrun) => {
+                    vertical.forEach((vrun) => {
+                        if (hrun.color !== vrun.color) return;
+                        const hCells = new Set(hrun.cells.map((c) => `${c.row}:${c.col}`));
+                        for (const vcell of vrun.cells) {
+                            const key = `${vcell.row}:${vcell.col}`;
+                            if (hCells.has(key)) {
+                                this.addSpawn(spawnMap, vcell.row, vcell.col, 'nova', hrun.color);
+                            }
+                        }
+                    });
+                });
+
+                return { matched, spawns: Array.from(spawnMap.values()) };
+            }
+
+            activateSpecial(row, col, gem, clearSet, activatedSet = null) {
+                const type = this.getSpecialType(gem);
+                if (!type) return;
+                if (activatedSet) activatedSet.add(type);
+
+                const add = (r, c) => {
+                    if (r >= 0 && r < this.BOARD_SIZE && c >= 0 && c < this.BOARD_SIZE) {
+                        clearSet.add(`${r}:${c}`);
+                    }
+                };
+
+                if (type === 'fan') {
+                    // Fan creates a random bomb-style blast (3x3).
+                    const rr = Math.floor(Math.random() * this.BOARD_SIZE);
+                    const rc = Math.floor(Math.random() * this.BOARD_SIZE);
+                    this.explodeBomb(rr, rc, clearSet);
+                } else if (type === 'rocket-h') {
+                    for (let c = 0; c < this.BOARD_SIZE; c++) add(row, c);
+                } else if (type === 'rocket-v') {
+                    for (let r = 0; r < this.BOARD_SIZE; r++) add(r, col);
+                } else if (type === 'color-bomb') {
+                    const counts = {};
+                    for (let r = 0; r < this.BOARD_SIZE; r++) {
+                        for (let c = 0; c < this.BOARD_SIZE; c++) {
+                            const color = this.getGemColor(this.board[r][c]);
+                            if (!color || color === 'bomb') continue;
+                            counts[color] = (counts[color] || 0) + 1;
+                        }
+                    }
+                    const target = Object.entries(counts).sort((a, b) => b[1] - a[1])[0]?.[0];
+                    if (target) {
+                        for (let r = 0; r < this.BOARD_SIZE; r++) {
+                            for (let c = 0; c < this.BOARD_SIZE; c++) {
+                                if (this.getGemColor(this.board[r][c]) === target) add(r, c);
+                            }
+                        }
+                    }
+                } else if (type === 'nova') {
+                    // 9x9 area (clipped to board bounds).
+                    for (let dr = -4; dr <= 4; dr++) {
+                        for (let dc = -4; dc <= 4; dc++) {
+                            add(row + dr, col + dc);
+                        }
+                    }
+                }
+            }
+
+            explodeBomb(centerRow, centerCol, clearSet) {
+                for (let r = centerRow - 1; r <= centerRow + 1; r++) {
+                    for (let c = centerCol - 1; c <= centerCol + 1; c++) {
+                        if (r >= 0 && r < this.BOARD_SIZE && c >= 0 && c < this.BOARD_SIZE) {
+                            clearSet.add(`${r}:${c}`);
+                        }
+                    }
+                }
             }
 
             processMatches() {
                 this.animating = true;
-                let matches = this.findMatches();
+                const matchData = this.findMatchData();
+                const clearSet = new Set(matchData.matched);
+                const activatedSet = new Set();
 
-                if (matches.length === 0) {
+                if (clearSet.size === 0) {
                     this.animating = false;
                     this.checkLevelUp();
                     return;
                 }
 
-                // Process bomb explosions
-                const bombMatches = matches.filter(match => match.gem === 'bomb');
-                if (bombMatches.length > 0) {
-                    bombMatches.forEach(bomb => {
-                        this.explodeBomb(bomb.row, bomb.col);
-                    });
-                }
-
-                // Remove matched gems
-                matches.forEach(match => {
-                    if (this.board[match.row][match.col] !== null) {
-                        this.board[match.row][match.col] = null;
-                        this.score += 10 * this.level;
+                // Activate specials and bombs included in matches.
+                Array.from(clearSet).forEach((key) => {
+                    const [row, col] = key.split(':').map(Number);
+                    const gem = this.board[row][col];
+                    if (!gem) return;
+                    if (gem === 'bomb') {
+                        activatedSet.add('bomb');
+                        this.explodeBomb(row, col, clearSet);
+                    } else if (this.isSpecial(gem)) {
+                        this.activateSpecial(row, col, gem, clearSet, activatedSet);
                     }
                 });
 
+                const spawnKeys = new Set(matchData.spawns.map((s) => `${s.row}:${s.col}`));
+
+                const toRemove = [];
+                Array.from(clearSet).forEach((key) => {
+                    if (spawnKeys.has(key)) return;
+                    const [row, col] = key.split(':').map(Number);
+                    if (this.board[row][col] !== null) {
+                        toRemove.push({ row, col });
+                    }
+                });
+
+                toRemove.forEach((cell) => {
+                    this.board[cell.row][cell.col] = null;
+                    this.score += 10 * this.level;
+                });
+
+                // Create specials at reserved spawn cells.
+                matchData.spawns.forEach((spawn) => {
+                    this.board[spawn.row][spawn.col] = this.makeSpecial(spawn.type, spawn.color);
+                    this.score += 20 * this.level;
+                });
+
                 // Animate removal
-                this.animateRemoval(matches);
+                this.animateRemoval(toRemove);
+                this.announceSpecials(activatedSet);
 
                 // Drop gems after animation
                 setTimeout(() => {
@@ -579,19 +1060,6 @@
                         this.processMatches();
                     }, 100);
                 }, 500);
-            }
-
-            explodeBomb(centerRow, centerCol) {
-                for (let r = centerRow - 1; r <= centerRow + 1; r++) {
-                    for (let c = centerCol - 1; c <= centerCol + 1; c++) {
-                        if (r >= 0 && r < this.BOARD_SIZE && c >= 0 && c < this.BOARD_SIZE) {
-                            if (this.board[r][c] !== null) {
-                                this.board[r][c] = null;
-                                this.score += 20 * this.level; // Extra points for bomb explosions
-                            }
-                        }
-                    }
-                }
             }
 
             animateRemoval(matches) {
