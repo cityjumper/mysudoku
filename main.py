@@ -156,6 +156,13 @@ async def connect_four(request: Request):
     return templates.TemplateResponse("connect_four.html", {"request": request, "lang": lang})
 
 
+@app.get("/connect-four-3d", response_class=HTMLResponse)
+async def connect_four_3d(request: Request):
+    """3D Connect Four page endpoint."""
+    lang = get_current_lang(request)
+    return templates.TemplateResponse("connect_four_3d.html", {"request": request, "lang": lang})
+
+
 @app.get("/kenken", response_class=HTMLResponse)
 async def kenken(request: Request):
     """KenKen page endpoint."""

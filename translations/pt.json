@@ -223,6 +223,12 @@
       "rule_3": "Linhas, colunas e diagonais contam.",
       "rule_4": "O primeiro a ligar quatro ganha!"
     },
+    "connect_four_3d": {
+      "name": "Quatro em Linha 3D",
+      "description": "Rode um tabuleiro 4×4×4 e ligue quatro em qualquer direção 3D.",
+      "title": "Quatro em Linha 3D",
+      "subtitle": "Toque numa célula superior para largar a peça, arraste para rodar e ligue quatro em qualquer direção."
+    },
     "kenken": {
       "name": "KenKen",
       "description": "Quebra-cabeças matemáticos com operações aritméticas.",

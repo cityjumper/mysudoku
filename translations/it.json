@@ -76,6 +76,12 @@
       "rule_3": "Contano righe, colonne e diagonali.",
       "rule_4": "Il primo che collega quattro vince!"
     },
+    "connect_four_3d": {
+      "name": "Forza Quattro 3D",
+      "description": "Ruota una griglia 4×4×4 e collega quattro pezzi in qualsiasi direzione 3D.",
+      "title": "Forza Quattro 3D",
+      "subtitle": "Tocca una cella superiore per far cadere un pezzo, trascina per ruotare e collega quattro in qualsiasi direzione."
+    },
     "minesweeper": {
       "name": "Campo Minato",
       "description": "Gioco puzzle classico di sminamento.",

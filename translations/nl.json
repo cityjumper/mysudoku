@@ -76,6 +76,12 @@
       "rule_3": "Rijen, kolommen en diagonalen tellen mee.",
       "rule_4": "Degene die als eerste vier verbindt wint!"
     },
+    "connect_four_3d": {
+      "name": "Vier op een Rij 3D",
+      "description": "Draai een 4×4×4 bord en maak vier op een rij in elke 3D-richting.",
+      "title": "Vier op een Rij 3D",
+      "subtitle": "Tik op een bovenste cel om te laten vallen, sleep om te draaien, en verbind vier in elke richting."
+    },
     "minesweeper": {
       "name": "Mijnenveger",
       "description": "Klassiek mijnenveger puzzelspel.",

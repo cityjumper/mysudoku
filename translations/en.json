@@ -76,6 +76,12 @@
       "rule_3": "Rows, columns, and diagonals count.",
       "rule_4": "First to connect four wins!"
     },
+    "connect_four_3d": {
+      "name": "Connect Four 3D",
+      "description": "Rotate a 4×4×4 board and connect four in any 3D direction.",
+      "title": "Connect Four 3D",
+      "subtitle": "Tap a top cell to drop, drag to rotate, and connect four in any direction."
+    },
     "minesweeper": {
       "name": "Minesweeper",
       "description": "Classic mine-sweeping puzzle game.",
