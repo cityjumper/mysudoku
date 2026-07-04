@@ -33,6 +33,11 @@
             pointer-events: none;
             z-index: 4;
             transform-origin: top left;
+            --robot-dark: #0f172a;
+            --robot-body: #38bdf8;
+            --robot-visor: #e2e8f0;
+            --robot-eye: #0ea5e9;
+            --robot-accent: #f59e0b;
         }
 
         .robot-dom .head {
@@ -41,7 +46,8 @@
             top: 0;
             width: 24px;
             height: 14px;
-            background: #0f172a;
+            background: var(--robot-dark);
+            border-radius: 4px 4px 2px 2px;
         }
 
         .robot-dom .body {
@@ -50,7 +56,8 @@
             top: 14px;
             width: 36px;
             height: 20px;
-            background: #38bdf8;
+            background: var(--robot-body);
+            border-radius: 6px;
         }
 
         .robot-dom .visor {
@@ -59,7 +66,8 @@
             top: 19px;
             width: 20px;
             height: 9px;
-            background: #e2e8f0;
+            background: var(--robot-visor);
+            border-radius: 5px;
         }
 
         .robot-dom .eye {
@@ -67,7 +75,7 @@
             top: 21px;
             width: 6px;
             height: 5px;
-            background: #0ea5e9;
+            background: var(--robot-eye);
         }
 
         .robot-dom .eye.eye-1 { left: 11px; }
@@ -78,7 +86,7 @@
             top: 18px;
             width: 6px;
             height: 4px;
-            background: #0f172a;
+            background: var(--robot-dark);
         }
 
         .robot-dom .arm.arm-left { left: -4px; }
@@ -89,12 +97,76 @@
             top: 34px;
             width: 8px;
             height: 10px;
-            background: #0f172a;
+            background: var(--robot-dark);
             transform-origin: top center;
         }
 
         .robot-dom .leg.leg-left { left: 6px; }
         .robot-dom .leg.leg-right { left: 22px; }
+
+        .robot-dom .badge {
+            position: absolute;
+            left: 12px;
+            top: 17px;
+            width: 12px;
+            height: 12px;
+            border-radius: 999px;
+            background: var(--robot-accent);
+            box-shadow: 0 0 0 2px rgba(15, 23, 42, 0.18);
+        }
+
+        .robot-dom .antenna {
+            position: absolute;
+            left: 17px;
+            top: -7px;
+            width: 3px;
+            height: 8px;
+            background: var(--robot-dark);
+        }
+
+        .robot-dom .antenna::after {
+            content: '';
+            position: absolute;
+            left: -2px;
+            top: -4px;
+            width: 7px;
+            height: 7px;
+            border-radius: 999px;
+            background: var(--robot-accent);
+        }
+
+        .robot-dom[data-robot="tank"] .head {
+            left: 4px;
+            width: 28px;
+            border-radius: 2px;
+        }
+
+        .robot-dom[data-robot="tank"] .body {
+            border-radius: 3px;
+        }
+
+        .robot-dom[data-robot="tank"] .badge {
+            width: 16px;
+            left: 10px;
+            border-radius: 4px;
+        }
+
+        .robot-dom[data-robot="tank"] .antenna {
+            display: none;
+        }
+
+        .robot-dom[data-robot="spark"] .head {
+            border-radius: 999px 999px 3px 3px;
+        }
+
+        .robot-dom[data-robot="spark"] .body {
+            border-radius: 10px 10px 6px 6px;
+        }
+
+        .robot-dom[data-robot="spark"] .badge {
+            border-radius: 3px;
+            transform: rotate(45deg);
+        }
 
         @media (max-width: 640px) {
             .runner-stage {
@@ -141,6 +213,60 @@
             padding: 14px 18px;
             max-width: 360px;
         }
+
+        .robot-option.active {
+            background: #0f172a;
+            color: #fff;
+            border-color: #0f172a;
+        }
+
+        .robot-option-swatch {
+            width: 12px;
+            height: 12px;
+            border-radius: 999px;
+            box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.35);
+        }
+
+        .robot-option-scout .robot-option-swatch {
+            background: #38bdf8;
+        }
+
+        .robot-option-tank .robot-option-swatch {
+            background: #f97316;
+        }
+
+        .robot-option-spark .robot-option-swatch {
+            background: #a855f7;
+        }
+
+        .lives-hud {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            z-index: 6;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 12px;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.92);
+            box-shadow: 0 10px 25px rgba(15, 23, 42, 0.16);
+            border: 1px solid rgba(148, 163, 184, 0.45);
+        }
+
+        .lives-hearts {
+            letter-spacing: 0.08em;
+            font-size: 1rem;
+        }
+
+        .hit-flash {
+            animation: hitFlash 0.32s ease-in-out 2;
+        }
+
+        @keyframes hitFlash {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.28; }
+        }
     </style>
     <script src="https://cdn.jsdelivr.net/npm/pixi.js-legacy@7.4.2/dist/pixi-legacy.min.js"></script>
 {% endblock %}
@@ -183,11 +309,33 @@
                     </div>
                 </div>
 
+                <div class="flex flex-wrap items-center gap-2 mb-4">
+                    <span class="text-sm font-semibold text-slate-700">Robot:</span>
+                    <button type="button" class="robot-option robot-option-scout active inline-flex items-center gap-2 rounded-full border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 transition" data-robot-option="scout">
+                        <span class="robot-option-swatch"></span>
+                        Scout
+                    </button>
+                    <button type="button" class="robot-option robot-option-tank inline-flex items-center gap-2 rounded-full border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 transition" data-robot-option="tank">
+                        <span class="robot-option-swatch"></span>
+                        Tank
+                    </button>
+                    <button type="button" class="robot-option robot-option-spark inline-flex items-center gap-2 rounded-full border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 transition" data-robot-option="spark">
+                        <span class="robot-option-swatch"></span>
+                        Spark
+                    </button>
+                </div>
+
                 <div class="relative">
                     <div id="runner-stage" class="runner-stage" aria-label="Robot runner game area">
+                        <div class="lives-hud" aria-label="Lives remaining">
+                            <span class="text-xs uppercase tracking-wide font-bold text-slate-500">Lives</span>
+                            <span id="lives-display" class="lives-hearts" aria-live="polite">❤️❤️❤️</span>
+                        </div>
                         <div id="robot-dom" class="robot-dom" aria-hidden="true">
+                            <div class="antenna"></div>
                             <div class="head"></div>
                             <div class="body"></div>
+                            <div class="badge"></div>
                             <div class="visor"></div>
                             <div class="eye eye-1"></div>
                             <div class="eye eye-2"></div>
@@ -241,6 +389,8 @@
         const robotDomEl = document.getElementById('robot-dom');
         const robotLegLeftDomEl = document.getElementById('robot-leg-left-dom');
         const robotLegRightDomEl = document.getElementById('robot-leg-right-dom');
+        const livesDisplayEl = document.getElementById('lives-display');
+        const robotOptionEls = Array.from(document.querySelectorAll('[data-robot-option]'));
 
         const BEST_KEY = 'robot-runner:best-time:v1';
         const WORLD_HEIGHT = 260;
@@ -249,6 +399,54 @@
         const MIN_JUMP_VELOCITY = 430;
         const MAX_JUMP_VELOCITY = 760;
         const MAX_JUMP_CHARGE = 0.24;
+        const MAX_LIVES = 3;
+        const HIT_INVULNERABLE_TIME = 1.1;
+        const HIT_RECOVERY_PUSH = 22;
+
+        const ROBOTS = {
+            scout: {
+                name: 'Scout',
+                dark: 0x0f172a,
+                body: 0x38bdf8,
+                visor: 0xe2e8f0,
+                eye: 0x0ea5e9,
+                accent: 0xf59e0b,
+                domDark: '#0f172a',
+                domBody: '#38bdf8',
+                domVisor: '#e2e8f0',
+                domEye: '#0ea5e9',
+                domAccent: '#f59e0b',
+                shape: 'scout',
+            },
+            tank: {
+                name: 'Tank',
+                dark: 0x1f2937,
+                body: 0xf97316,
+                visor: 0xffedd5,
+                eye: 0xfb923c,
+                accent: 0x7c2d12,
+                domDark: '#1f2937',
+                domBody: '#f97316',
+                domVisor: '#ffedd5',
+                domEye: '#fb923c',
+                domAccent: '#7c2d12',
+                shape: 'tank',
+            },
+            spark: {
+                name: 'Spark',
+                dark: 0x312e81,
+                body: 0xa855f7,
+                visor: 0xf5d0fe,
+                eye: 0xe879f9,
+                accent: 0x22c55e,
+                domDark: '#312e81',
+                domBody: '#a855f7',
+                domVisor: '#f5d0fe',
+                domEye: '#e879f9',
+                domAccent: '#22c55e',
+                shape: 'spark',
+            },
+        };
 
         if (typeof window.PIXI === 'undefined') {
             overlayEl.style.display = 'flex';
@@ -334,6 +532,9 @@
                 holdTime: 0,
                 startedOnGround: false,
             },
+            selectedRobot: 'scout',
+            lives: MAX_LIVES,
+            hitInvulnerable: 0,
             input: {
                 lastStartAt: 0,
                 lastReleaseAt: 0,
@@ -360,6 +561,32 @@
             const percent = Math.round(clamped * 100);
             chargeFillEl.style.width = `${percent}%`;
             chargeLabelEl.textContent = `${percent}%`;
+        }
+
+        function updateLivesUI() {
+            const fullHearts = '❤️'.repeat(Math.max(0, state.lives));
+            const emptyHearts = '🤍'.repeat(Math.max(0, MAX_LIVES - state.lives));
+            livesDisplayEl.textContent = `${fullHearts}${emptyHearts}`;
+        }
+
+        function currentRobotConfig() {
+            return ROBOTS[state.selectedRobot] || ROBOTS.scout;
+        }
+
+        function applyRobotTheme() {
+            const config = currentRobotConfig();
+            robotDomEl.dataset.robot = config.shape;
+            robotDomEl.style.setProperty('--robot-dark', config.domDark);
+            robotDomEl.style.setProperty('--robot-body', config.domBody);
+            robotDomEl.style.setProperty('--robot-visor', config.domVisor);
+            robotDomEl.style.setProperty('--robot-eye', config.domEye);
+            robotDomEl.style.setProperty('--robot-accent', config.domAccent);
+
+            robotOptionEls.forEach((button) => {
+                const isActive = button.dataset.robotOption === state.selectedRobot;
+                button.classList.toggle('active', isActive);
+                button.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+            });
         }
 
         function groundY() {
@@ -417,50 +644,81 @@
         }
 
         function initRobotGraphics() {
+            const config = currentRobotConfig();
+
             robotHead.clear();
-            robotHead.beginFill(0x0f172a);
-            robotHead.drawRect(6, 0, 24, 14);
+            robotHead.beginFill(config.dark);
+            if (config.shape === 'tank') {
+                robotHead.drawRect(4, 0, 28, 14);
+            } else if (config.shape === 'spark') {
+                robotHead.drawRoundedRect(6, 0, 24, 14, 7);
+            } else {
+                robotHead.drawRoundedRect(6, 0, 24, 14, 4);
+            }
             robotHead.endFill();
 
             robotBody.clear();
-            robotBody.beginFill(0x38bdf8);
-            robotBody.drawRect(0, 14, 36, 20);
+            robotBody.beginFill(config.body);
+            if (config.shape === 'spark') {
+                robotBody.drawRoundedRect(0, 14, 36, 20, 8);
+            } else if (config.shape === 'tank') {
+                robotBody.drawRoundedRect(0, 14, 36, 20, 3);
+            } else {
+                robotBody.drawRoundedRect(0, 14, 36, 20, 6);
+            }
+            robotBody.endFill();
+
+            robotBody.beginFill(config.accent, 0.25);
+            if (config.shape === 'tank') {
+                robotBody.drawRect(10, 18, 16, 10);
+            } else if (config.shape === 'spark') {
+                robotBody.drawRoundedRect(12, 17, 12, 12, 3);
+            } else {
+                robotBody.drawCircle(18, 23, 6);
+            }
             robotBody.endFill();
 
             robotVisor.clear();
-            robotVisor.beginFill(0xe2e8f0);
-            robotVisor.drawRect(8, 19, 20, 9);
+            robotVisor.beginFill(config.visor);
+            robotVisor.drawRoundedRect(8, 19, 20, 9, 4);
             robotVisor.endFill();
 
             robotEye1.clear();
-            robotEye1.beginFill(0x0ea5e9);
+            robotEye1.beginFill(config.eye);
             robotEye1.drawRect(11, 21, 6, 5);
             robotEye1.endFill();
 
             robotEye2.clear();
-            robotEye2.beginFill(0x0ea5e9);
+            robotEye2.beginFill(config.eye);
             robotEye2.drawRect(20, 21, 6, 5);
             robotEye2.endFill();
 
             robotArmLeft.clear();
-            robotArmLeft.beginFill(0x0f172a);
+            robotArmLeft.beginFill(config.dark);
             robotArmLeft.drawRect(-4, 18, 6, 4);
             robotArmLeft.endFill();
 
             robotArmRight.clear();
-            robotArmRight.beginFill(0x0f172a);
+            robotArmRight.beginFill(config.dark);
             robotArmRight.drawRect(34, 18, 6, 4);
             robotArmRight.endFill();
 
             robotLegLeft.clear();
-            robotLegLeft.beginFill(0x0f172a);
+            robotLegLeft.beginFill(config.dark);
             robotLegLeft.drawRect(6, 34, 8, 10);
             robotLegLeft.endFill();
 
             robotLegRight.clear();
-            robotLegRight.beginFill(0x0f172a);
+            robotLegRight.beginFill(config.dark);
             robotLegRight.drawRect(22, 34, 8, 10);
             robotLegRight.endFill();
+
+            if (config.shape === 'scout' || config.shape === 'spark') {
+                robotHead.beginFill(config.accent);
+                robotHead.drawCircle(18, -3, 3);
+                robotHead.drawRect(17, -1, 2, 5);
+                robotHead.endFill();
+            }
         }
 
         function buildObstacleSprite(obstacle) {
@@ -586,13 +844,50 @@
             state.gameOver = true;
             overlayEl.style.display = 'flex';
             overlayEl.querySelector('p').textContent = `Crash! You survived ${formatSeconds(state.elapsed)}`;
-            overlayEl.querySelectorAll('p')[1].textContent = 'Press Restart or Space to play again.';
+            overlayEl.querySelectorAll('p')[1].textContent = `Your ${currentRobotConfig().name} robot ran out of lives. Press Restart or Space to play again.`;
 
             const best = readBest();
             if (state.elapsed > best) {
                 writeBest(state.elapsed);
                 bestEl.textContent = formatSeconds(state.elapsed);
             }
+        }
+
+        function clearNearbyObstacles() {
+            for (const obstacle of state.obstacles) {
+                obstacle.x -= HIT_RECOVERY_PUSH;
+            }
+            state.obstacles = state.obstacles.filter((obstacle) => obstacle.x + obstacle.w > state.robot.x + state.robot.w + 10);
+            syncObstacleSprites();
+        }
+
+        function takeHit() {
+            if (state.hitInvulnerable > 0 || state.gameOver) {
+                return;
+            }
+
+            state.lives -= 1;
+            updateLivesUI();
+
+            if (state.lives <= 0) {
+                finishGame();
+                return;
+            }
+
+            state.hitInvulnerable = HIT_INVULNERABLE_TIME;
+            state.jump.charging = false;
+            state.jump.holdTime = 0;
+            state.jump.startedOnGround = false;
+            resetRobotToGround();
+            clearNearbyObstacles();
+            overlayEl.style.display = 'flex';
+            overlayEl.querySelector('p').textContent = `${currentRobotConfig().name} was hit! ${state.lives} ${state.lives === 1 ? 'life' : 'lives'} left.`;
+            overlayEl.querySelectorAll('p')[1].textContent = 'Keep going. Press, hold, and release to jump over the next obstacle.';
+            window.setTimeout(() => {
+                if (state.started && !state.gameOver) {
+                    overlayEl.style.display = 'none';
+                }
+            }, 650);
         }
 
         function update(dt) {
@@ -612,6 +907,10 @@
                 state.jump.holdTime = Math.min(MAX_JUMP_CHARGE, state.jump.holdTime + dt);
             }
 
+            if (state.hitInvulnerable > 0) {
+                state.hitInvulnerable = Math.max(0, state.hitInvulnerable - dt);
+            }
+
             state.spawnTimer -= dt;
             if (state.spawnTimer <= 0) {
                 spawnObstacle();
@@ -628,8 +927,9 @@
 
             for (const obstacle of state.obstacles) {
                 obstacle.x -= state.speed * dt;
-                if (collides(state.robot, obstacle)) {
-                    finishGame();
+                if (state.hitInvulnerable <= 0 && collides(state.robot, obstacle)) {
+                    takeHit();
+                    break;
                 }
             }
 
@@ -645,11 +945,13 @@
             robotLegRight.scale.y = 1 + Math.abs(Math.cos(state.elapsed * 15)) * 0.18;
             robot.x = state.robot.x;
             robot.y = state.robot.y;
+            robot.alpha = state.hitInvulnerable > 0 && Math.floor(state.hitInvulnerable * 14) % 2 === 0 ? 0.45 : 1;
 
             // DOM robot overlay keeps the player visible on devices where WebGL shape rendering is inconsistent.
             const scaleX = stageEl.clientWidth / Math.max(1, state.worldWidth);
             const scaleY = stageEl.clientHeight / WORLD_HEIGHT;
             robotDomEl.style.transform = `translate(${state.robot.x * scaleX}px, ${state.robot.y * scaleY}px) scale(${scaleX}, ${scaleY})`;
+            robotDomEl.classList.toggle('hit-flash', state.hitInvulnerable > 0 && Math.floor(state.hitInvulnerable * 14) % 2 === 0);
             robotLegLeftDomEl.style.height = `${10 * legScale}px`;
             robotLegRightDomEl.style.height = `${10 * (1 + Math.abs(Math.cos(state.elapsed * 15)) * 0.18)}px`;
 
@@ -677,6 +979,8 @@
             state.speed = 260;
             state.distance = 0;
             state.obstacles = [];
+            state.lives = MAX_LIVES;
+            state.hitInvulnerable = 0;
             state.jump.charging = false;
             state.jump.holdTime = 0;
             state.jump.startedOnGround = false;
@@ -685,10 +989,11 @@
 
             resetRobotToGround();
             overlayEl.style.display = 'flex';
-            overlayEl.querySelector('p').textContent = 'Tap/Press and Hold, then Release to Jump';
-            overlayEl.querySelectorAll('p')[1].textContent = 'Quick release = low jump. Longer hold = higher jump.';
+            overlayEl.querySelector('p').textContent = `Tap/Press and Hold, then Release to Jump`;
+            overlayEl.querySelectorAll('p')[1].textContent = `${currentRobotConfig().name} has ${MAX_LIVES} lives. Quick release = low jump. Longer hold = higher jump.`;
             timeEl.textContent = formatSeconds(0);
             setChargeUI(0);
+            updateLivesUI();
         }
 
         function startGame() {
@@ -698,6 +1003,16 @@
             state.gameOver = false;
             state.accumulator = 0;
             overlayEl.style.display = 'none';
+        }
+
+        function selectRobot(robotId) {
+            if (!ROBOTS[robotId]) return;
+            state.selectedRobot = robotId;
+            applyRobotTheme();
+            initRobotGraphics();
+            if (!state.started || state.gameOver) {
+                resetGame();
+            }
         }
 
         function beginJumpCharge() {
@@ -812,6 +1127,9 @@
             resetGame();
             startGame();
         });
+        robotOptionEls.forEach((button) => {
+            button.addEventListener('click', () => selectRobot(button.dataset.robotOption));
+        });
 
         wirePressControls(stageEl);
         wirePressControls(jumpBtn);
@@ -854,6 +1172,7 @@
         });
         window.addEventListener('resize', resizeStage);
 
+        applyRobotTheme();
         initRobotGraphics();
         bestEl.textContent = formatSeconds(readBest());
         resetGame();
