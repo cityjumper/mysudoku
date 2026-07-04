@@ -104,6 +104,21 @@
         .robot-dom .leg.leg-left { left: 6px; }
         .robot-dom .leg.leg-right { left: 22px; }
 
+        .robot-dom .held-item {
+            position: absolute;
+            left: 31px;
+            top: 15px;
+            min-width: 12px;
+            height: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 11px;
+            line-height: 1;
+            color: var(--robot-accent);
+            text-shadow: 0 1px 0 rgba(255, 255, 255, 0.7);
+        }
+
         .robot-dom .badge {
             position: absolute;
             left: 12px;
@@ -168,6 +183,16 @@
             transform: rotate(45deg);
         }
 
+        .robot-dom[data-robot="tank"] .held-item {
+            left: 30px;
+            top: 14px;
+        }
+
+        .robot-dom[data-robot="spark"] .held-item {
+            left: 30px;
+            top: 16px;
+        }
+
         @media (max-width: 640px) {
             .runner-stage {
                 height: 220px;
@@ -214,10 +239,24 @@
             max-width: 360px;
         }
 
+        .coin-pop {
+            animation: coinPop 0.28s ease-out;
+        }
+
+        @keyframes coinPop {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.18); }
+            100% { transform: scale(1); }
+        }
+
         .robot-option.active {
             background: #0f172a;
             color: #fff;
             border-color: #0f172a;
+        }
+
+        .robot-option.locked {
+            opacity: 0.45;
         }
 
         .robot-option-swatch {
@@ -237,6 +276,43 @@
 
         .robot-option-spark .robot-option-swatch {
             background: #a855f7;
+        }
+
+        .shop-card {
+            border: 1px solid rgba(148, 163, 184, 0.35);
+            border-radius: 18px;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 14px;
+            box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
+        }
+
+        .shop-card.owned {
+            border-color: rgba(34, 197, 94, 0.45);
+            background: linear-gradient(180deg, rgba(240, 253, 244, 0.95), rgba(255, 255, 255, 0.92));
+        }
+
+        .shop-preview {
+            width: 52px;
+            height: 52px;
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.75rem;
+            font-weight: 800;
+            color: #0f172a;
+            box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.55);
+        }
+
+        .wallet-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            border-radius: 999px;
+            background: #fff;
+            border: 1px solid rgba(148, 163, 184, 0.35);
+            padding: 0.45rem 0.85rem;
+            box-shadow: 0 10px 20px rgba(15, 23, 42, 0.06);
         }
 
         .lives-hud {
@@ -301,6 +377,10 @@
                             <div class="text-xs uppercase tracking-wide font-semibold text-slate-500">Best</div>
                             <div id="best-time" class="text-2xl font-black text-emerald-700">0.0s</div>
                         </div>
+                        <div class="rounded-xl bg-white/80 ring-1 ring-slate-200 px-4 py-2">
+                            <div class="text-xs uppercase tracking-wide font-semibold text-slate-500">Coins</div>
+                            <div id="coin-count" class="text-2xl font-black text-amber-500">0</div>
+                        </div>
                     </div>
 
                     <div class="flex items-center gap-2">
@@ -311,18 +391,21 @@
 
                 <div class="flex flex-wrap items-center gap-2 mb-4">
                     <span class="text-sm font-semibold text-slate-700">Robot:</span>
-                    <button type="button" class="robot-option robot-option-scout active inline-flex items-center gap-2 rounded-full border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 transition" data-robot-option="scout">
-                        <span class="robot-option-swatch"></span>
-                        Scout
-                    </button>
-                    <button type="button" class="robot-option robot-option-tank inline-flex items-center gap-2 rounded-full border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 transition" data-robot-option="tank">
-                        <span class="robot-option-swatch"></span>
-                        Tank
-                    </button>
-                    <button type="button" class="robot-option robot-option-spark inline-flex items-center gap-2 rounded-full border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 transition" data-robot-option="spark">
-                        <span class="robot-option-swatch"></span>
-                        Spark
-                    </button>
+                    <div id="robot-options" class="flex flex-wrap items-center gap-2"></div>
+                </div>
+
+                <div class="mb-4 rounded-2xl bg-white/60 ring-1 ring-slate-200 p-4 sm:p-5">
+                    <div class="flex flex-wrap items-center justify-between gap-3 mb-3">
+                        <div>
+                            <h2 class="text-lg font-black text-slate-900">Robot Shop</h2>
+                            <p class="text-sm text-slate-600">Spend collected coins on new robot designs with different colors, frames, and gear.</p>
+                        </div>
+                        <div class="wallet-chip">
+                            <span class="text-sm font-bold uppercase tracking-wide text-slate-500">Wallet</span>
+                            <span id="wallet-coins" class="text-xl font-black text-amber-500">0</span>
+                        </div>
+                    </div>
+                    <div id="shop-items" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3"></div>
                 </div>
 
                 <div class="relative">
@@ -339,6 +422,7 @@
                             <div class="visor"></div>
                             <div class="eye eye-1"></div>
                             <div class="eye eye-2"></div>
+                            <div id="robot-held-item-dom" class="held-item"></div>
                             <div class="arm arm-left"></div>
                             <div class="arm arm-right"></div>
                             <div id="robot-leg-left-dom" class="leg leg-left"></div>
@@ -386,13 +470,19 @@
         const jumpBtn = document.getElementById('jump-btn');
         const chargeFillEl = document.getElementById('charge-fill');
         const chargeLabelEl = document.getElementById('charge-label');
+        const coinCountEl = document.getElementById('coin-count');
         const robotDomEl = document.getElementById('robot-dom');
+        const robotHeldItemDomEl = document.getElementById('robot-held-item-dom');
         const robotLegLeftDomEl = document.getElementById('robot-leg-left-dom');
         const robotLegRightDomEl = document.getElementById('robot-leg-right-dom');
         const livesDisplayEl = document.getElementById('lives-display');
-        const robotOptionEls = Array.from(document.querySelectorAll('[data-robot-option]'));
+        const robotOptionsEl = document.getElementById('robot-options');
+        const shopItemsEl = document.getElementById('shop-items');
+        const walletCoinsEl = document.getElementById('wallet-coins');
 
         const BEST_KEY = 'robot-runner:best-time:v1';
+        const COIN_BANK_KEY = 'robot-runner:coin-bank:v1';
+        const ROBOT_GARAGE_KEY = 'robot-runner:garage:v1';
         const WORLD_HEIGHT = 260;
         const FIXED_STEP = 1 / 120;
         const MAX_FRAME_DT = 0.1;
@@ -402,10 +492,15 @@
         const MAX_LIVES = 3;
         const HIT_INVULNERABLE_TIME = 1.1;
         const HIT_RECOVERY_PUSH = 22;
+        const COIN_RADIUS = 10;
 
         const ROBOTS = {
             scout: {
+                id: 'scout',
                 name: 'Scout',
+                price: 0,
+                defaultOwned: true,
+                summary: 'Balanced starter runner with a bright utility core.',
                 dark: 0x0f172a,
                 body: 0x38bdf8,
                 visor: 0xe2e8f0,
@@ -417,9 +512,14 @@
                 domEye: '#0ea5e9',
                 domAccent: '#f59e0b',
                 shape: 'scout',
+                heldItem: { kind: 'scanner', glyph: '◉' },
             },
             tank: {
+                id: 'tank',
                 name: 'Tank',
+                price: 0,
+                defaultOwned: true,
+                summary: 'Heavy frame with a reinforced chest plate.',
                 dark: 0x1f2937,
                 body: 0xf97316,
                 visor: 0xffedd5,
@@ -431,9 +531,14 @@
                 domEye: '#fb923c',
                 domAccent: '#7c2d12',
                 shape: 'tank',
+                heldItem: { kind: 'wrench', glyph: '🔧' },
             },
             spark: {
+                id: 'spark',
                 name: 'Spark',
+                price: 0,
+                defaultOwned: true,
+                summary: 'Agile arc-bot with a glowing reactor badge.',
                 dark: 0x312e81,
                 body: 0xa855f7,
                 visor: 0xf5d0fe,
@@ -445,6 +550,64 @@
                 domEye: '#e879f9',
                 domAccent: '#22c55e',
                 shape: 'spark',
+                heldItem: { kind: 'crystal', glyph: '✦' },
+            },
+            ember: {
+                id: 'ember',
+                name: 'Ember',
+                price: 12,
+                defaultOwned: false,
+                summary: 'Flame-colored striker carrying a torch beacon.',
+                dark: 0x431407,
+                body: 0xfb923c,
+                visor: 0xffedd5,
+                eye: 0xf97316,
+                accent: 0xfacc15,
+                domDark: '#431407',
+                domBody: '#fb923c',
+                domVisor: '#ffedd5',
+                domEye: '#f97316',
+                domAccent: '#facc15',
+                shape: 'tank',
+                heldItem: { kind: 'torch', glyph: '🔥' },
+            },
+            mint: {
+                id: 'mint',
+                name: 'Mint',
+                price: 16,
+                defaultOwned: false,
+                summary: 'Fresh green scout with a racing signal flag.',
+                dark: 0x14532d,
+                body: 0x4ade80,
+                visor: 0xecfccb,
+                eye: 0x16a34a,
+                accent: 0x166534,
+                domDark: '#14532d',
+                domBody: '#4ade80',
+                domVisor: '#ecfccb',
+                domEye: '#16a34a',
+                domAccent: '#166534',
+                shape: 'scout',
+                heldItem: { kind: 'flag', glyph: '⚑' },
+            },
+            nova: {
+                id: 'nova',
+                name: 'Nova',
+                price: 22,
+                defaultOwned: false,
+                summary: 'Starfield frame with a prism core and crystal shard.',
+                dark: 0x111827,
+                body: 0x6366f1,
+                visor: 0xe0e7ff,
+                eye: 0xc084fc,
+                accent: 0xf472b6,
+                domDark: '#111827',
+                domBody: '#6366f1',
+                domVisor: '#e0e7ff',
+                domEye: '#c084fc',
+                domAccent: '#f472b6',
+                shape: 'spark',
+                heldItem: { kind: 'crystal', glyph: '◆' },
             },
         };
 
@@ -481,6 +644,7 @@
         const bgGraphics = new PIXI.Graphics();
         const stripeGraphics = new PIXI.Graphics();
         const groundLine = new PIXI.Graphics();
+        const coinLayer = new PIXI.Container();
         const obstacleLayer = new PIXI.Container();
         const robot = new PIXI.Container();
 
@@ -489,19 +653,21 @@
         const robotVisor = new PIXI.Graphics();
         const robotEye1 = new PIXI.Graphics();
         const robotEye2 = new PIXI.Graphics();
+        const robotHeldItem = new PIXI.Graphics();
         const robotArmLeft = new PIXI.Graphics();
         const robotArmRight = new PIXI.Graphics();
         const robotLegLeft = new PIXI.Graphics();
         const robotLegRight = new PIXI.Graphics();
 
         app.stage.addChild(world);
-        world.addChild(bgGraphics, stripeGraphics, groundLine, obstacleLayer, robot);
+        world.addChild(bgGraphics, stripeGraphics, groundLine, coinLayer, obstacleLayer, robot);
         robot.addChild(
             robotHead,
             robotBody,
             robotVisor,
             robotEye1,
             robotEye2,
+            robotHeldItem,
             robotArmLeft,
             robotArmRight,
             robotLegLeft,
@@ -515,6 +681,7 @@
             elapsed: 0,
             displayedTenths: -1,
             spawnTimer: 0,
+            coinSpawnTimer: 0,
             speed: 260,
             distance: 0,
             worldWidth: 0,
@@ -527,10 +694,17 @@
                 onGround: true,
             },
             obstacles: [],
+            coins: [],
+            coinsCollected: 0,
+            bankCoins: 0,
             jump: {
                 charging: false,
                 holdTime: 0,
                 startedOnGround: false,
+            },
+            garage: {
+                owned: ['scout', 'tank', 'spark'],
+                equipped: 'scout',
             },
             selectedRobot: 'scout',
             lives: MAX_LIVES,
@@ -548,6 +722,36 @@
             return Number.isFinite(best) && best > 0 ? best : 0;
         }
 
+        function readCoinBank() {
+            const raw = localStorage.getItem(COIN_BANK_KEY);
+            const coins = Number(raw);
+            return Number.isFinite(coins) && coins >= 0 ? coins : 0;
+        }
+
+        function writeCoinBank(value) {
+            localStorage.setItem(COIN_BANK_KEY, String(Math.max(0, Math.floor(value))));
+        }
+
+        function readGarage() {
+            const defaultOwned = Object.values(ROBOTS)
+                .filter((robot) => robot.defaultOwned)
+                .map((robot) => robot.id);
+
+            try {
+                const parsed = JSON.parse(localStorage.getItem(ROBOT_GARAGE_KEY) || '{}');
+                const storedOwned = Array.isArray(parsed.owned) ? parsed.owned.filter((id) => ROBOTS[id]) : [];
+                const owned = Array.from(new Set([...defaultOwned, ...storedOwned]));
+                const equipped = owned.includes(parsed.equipped) ? parsed.equipped : 'scout';
+                return { owned, equipped };
+            } catch {
+                return { owned: defaultOwned, equipped: 'scout' };
+            }
+        }
+
+        function writeGarage() {
+            localStorage.setItem(ROBOT_GARAGE_KEY, JSON.stringify(state.garage));
+        }
+
         function writeBest(value) {
             localStorage.setItem(BEST_KEY, String(value));
         }
@@ -563,6 +767,17 @@
             chargeLabelEl.textContent = `${percent}%`;
         }
 
+        function updateCoinUI() {
+            coinCountEl.textContent = String(state.bankCoins);
+            coinCountEl.classList.remove('coin-pop');
+            void coinCountEl.offsetWidth;
+            coinCountEl.classList.add('coin-pop');
+        }
+
+        function updateWalletUI() {
+            walletCoinsEl.textContent = String(state.bankCoins);
+        }
+
         function updateLivesUI() {
             const fullHearts = '❤️'.repeat(Math.max(0, state.lives));
             const emptyHearts = '🤍'.repeat(Math.max(0, MAX_LIVES - state.lives));
@@ -573,6 +788,68 @@
             return ROBOTS[state.selectedRobot] || ROBOTS.scout;
         }
 
+        function isOwned(robotId) {
+            return state.garage.owned.includes(robotId);
+        }
+
+        function renderRobotOptions() {
+            const ownedRobots = state.garage.owned
+                .map((robotId) => ROBOTS[robotId])
+                .filter(Boolean);
+
+            robotOptionsEl.innerHTML = ownedRobots.map((robot) => {
+                const activeClass = robot.id === state.selectedRobot ? ' active' : '';
+                return `
+                    <button type="button" class="robot-option robot-option-${robot.shape}${activeClass} inline-flex items-center gap-2 rounded-full border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 transition" data-robot-option="${robot.id}">
+                        <span class="robot-option-swatch"></span>
+                        ${robot.name}
+                    </button>
+                `;
+            }).join('');
+        }
+
+        function renderShop() {
+            updateWalletUI();
+            shopItemsEl.innerHTML = Object.values(ROBOTS).map((robot) => {
+                const owned = isOwned(robot.id);
+                const equipped = state.selectedRobot === robot.id;
+                const canAfford = state.bankCoins >= robot.price;
+                let buttonLabel = 'Owned';
+                let disabledAttr = 'disabled';
+                let buttonClass = 'bg-slate-100 text-slate-500';
+
+                if (!owned) {
+                    buttonLabel = canAfford ? `Buy ${robot.price} coins` : `${robot.price} coins`;
+                    disabledAttr = canAfford ? '' : 'disabled';
+                    buttonClass = canAfford ? 'bg-amber-500 hover:bg-amber-600 text-white' : 'bg-slate-100 text-slate-400';
+                } else if (!equipped) {
+                    buttonLabel = 'Equip';
+                    disabledAttr = '';
+                    buttonClass = 'bg-sky-600 hover:bg-sky-700 text-white';
+                } else {
+                    buttonLabel = 'Equipped';
+                    buttonClass = 'bg-emerald-100 text-emerald-700';
+                }
+
+                return `
+                    <div class="shop-card${owned ? ' owned' : ''}">
+                        <div class="flex items-start gap-3">
+                            <div class="shop-preview" style="background:${robot.domBody}; border:2px solid ${robot.domDark}; color:${robot.domAccent};">${robot.heldItem?.glyph || '•'}</div>
+                            <div class="flex-1 min-w-0">
+                                <div class="flex items-center justify-between gap-2">
+                                    <h3 class="text-base font-black text-slate-900">${robot.name}</h3>
+                                    <span class="text-xs font-bold uppercase tracking-wide ${owned ? 'text-emerald-600' : 'text-slate-500'}">${owned ? 'Owned' : 'Locked'}</span>
+                                </div>
+                                <p class="mt-1 text-sm text-slate-600">${robot.summary}</p>
+                                <div class="mt-2 text-xs font-semibold text-slate-500">Shape: ${robot.shape} • Gear: ${robot.heldItem?.kind || 'none'}</div>
+                                <button type="button" class="mt-3 rounded-lg px-3 py-2 text-sm font-bold transition ${buttonClass}" data-shop-robot="${robot.id}" ${disabledAttr}>${buttonLabel}</button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
         function applyRobotTheme() {
             const config = currentRobotConfig();
             robotDomEl.dataset.robot = config.shape;
@@ -581,12 +858,9 @@
             robotDomEl.style.setProperty('--robot-visor', config.domVisor);
             robotDomEl.style.setProperty('--robot-eye', config.domEye);
             robotDomEl.style.setProperty('--robot-accent', config.domAccent);
-
-            robotOptionEls.forEach((button) => {
-                const isActive = button.dataset.robotOption === state.selectedRobot;
-                button.classList.toggle('active', isActive);
-                button.setAttribute('aria-pressed', isActive ? 'true' : 'false');
-            });
+            robotHeldItemDomEl.textContent = config.heldItem?.glyph || '';
+            renderRobotOptions();
+            renderShop();
         }
 
         function groundY() {
@@ -693,6 +967,39 @@
             robotEye2.drawRect(20, 21, 6, 5);
             robotEye2.endFill();
 
+            robotHeldItem.clear();
+            if (config.heldItem?.kind === 'wrench') {
+                robotHeldItem.beginFill(config.accent);
+                robotHeldItem.drawRect(30, 17, 6, 2);
+                robotHeldItem.drawCircle(36, 18, 3);
+                robotHeldItem.endFill();
+            } else if (config.heldItem?.kind === 'flag') {
+                robotHeldItem.beginFill(config.dark);
+                robotHeldItem.drawRect(32, 14, 2, 12);
+                robotHeldItem.endFill();
+                robotHeldItem.beginFill(config.accent);
+                robotHeldItem.drawPolygon([34, 14, 42, 17, 34, 20]);
+                robotHeldItem.endFill();
+            } else if (config.heldItem?.kind === 'torch') {
+                robotHeldItem.beginFill(config.dark);
+                robotHeldItem.drawRect(32, 16, 2, 10);
+                robotHeldItem.endFill();
+                robotHeldItem.beginFill(config.accent);
+                robotHeldItem.drawCircle(33, 14, 4);
+                robotHeldItem.endFill();
+            } else if (config.heldItem?.kind === 'crystal') {
+                robotHeldItem.beginFill(config.accent);
+                robotHeldItem.drawPolygon([34, 12, 39, 18, 34, 25, 29, 18]);
+                robotHeldItem.endFill();
+            } else if (config.heldItem?.kind === 'scanner') {
+                robotHeldItem.beginFill(config.accent);
+                robotHeldItem.drawCircle(34, 18, 4);
+                robotHeldItem.endFill();
+                robotHeldItem.beginFill(config.visor);
+                robotHeldItem.drawCircle(34, 18, 2);
+                robotHeldItem.endFill();
+            }
+
             robotArmLeft.clear();
             robotArmLeft.beginFill(config.dark);
             robotArmLeft.drawRect(-4, 18, 6, 4);
@@ -753,6 +1060,22 @@
             return g;
         }
 
+        function buildCoinSprite(coin) {
+            const g = new PIXI.Graphics();
+            g.beginFill(0xfbbf24);
+            g.drawCircle(coin.r, coin.r, coin.r);
+            g.endFill();
+            g.beginFill(0xfef3c7);
+            g.drawCircle(coin.r, coin.r, coin.r * 0.56);
+            g.endFill();
+            g.beginFill(0xf59e0b);
+            g.drawRoundedRect(coin.r - 2, coin.r * 0.42, 4, coin.r * 1.16, 2);
+            g.endFill();
+            g.x = coin.x;
+            g.y = coin.y;
+            return g;
+        }
+
         function createObstacle(type, xOffset = 0) {
             const baseY = groundY();
             let width = 22;
@@ -792,6 +1115,20 @@
             obstacleLayer.addChild(obstacle.sprite);
         }
 
+        function createCoin(xOffset = 0) {
+            const coin = {
+                x: state.worldWidth + 24 + xOffset,
+                y: groundY() - 42 - Math.random() * 96,
+                r: COIN_RADIUS,
+                w: COIN_RADIUS * 2,
+                h: COIN_RADIUS * 2,
+                sprite: null,
+            };
+            coin.sprite = buildCoinSprite(coin);
+            state.coins.push(coin);
+            coinLayer.addChild(coin.sprite);
+        }
+
         function spawnObstacle() {
             const elapsed = state.elapsed;
 
@@ -815,6 +1152,22 @@
             state.spawnTimer = minDelay + Math.random() * (maxDelay - minDelay);
         }
 
+        function scheduleNextCoinSpawn() {
+            const elapsed = state.elapsed;
+            const minDelay = Math.max(0.35, 1.05 - elapsed * 0.015);
+            const maxDelay = Math.max(0.85, 1.95 - elapsed * 0.014);
+            state.coinSpawnTimer = minDelay + Math.random() * (maxDelay - minDelay);
+        }
+
+        function spawnCoins() {
+            const count = Math.random() < 0.32 ? 2 : 1;
+            const baseOffset = Math.random() * 80;
+            for (let index = 0; index < count; index += 1) {
+                createCoin(baseOffset + index * (28 + Math.random() * 22));
+            }
+            scheduleNextCoinSpawn();
+        }
+
         function collides(a, b) {
             const insetX = 6;
             const insetY = 4;
@@ -824,6 +1177,14 @@
                 a.y + insetY < b.y + b.h &&
                 a.y + a.h - insetY > b.y
             );
+        }
+
+        function coinCollides(robotRect, coin) {
+            const closestX = Math.max(coin.x, Math.min(robotRect.x + robotRect.w / 2, coin.x + coin.w));
+            const closestY = Math.max(coin.y, Math.min(robotRect.y + robotRect.h / 2, coin.y + coin.h));
+            const dx = robotRect.x + robotRect.w / 2 - closestX;
+            const dy = robotRect.y + robotRect.h / 2 - closestY;
+            return dx * dx + dy * dy <= coin.r * coin.r;
         }
 
         function syncObstacleSprites() {
@@ -836,6 +1197,20 @@
             const stale = obstacleLayer.children.filter(child => !activeSprites.has(child));
             for (const child of stale) {
                 obstacleLayer.removeChild(child);
+                child.destroy();
+            }
+        }
+
+        function syncCoinSprites() {
+            for (const coin of state.coins) {
+                coin.sprite.x = coin.x;
+                coin.sprite.y = coin.y;
+            }
+
+            const activeSprites = new Set(state.coins.map(coin => coin.sprite));
+            const stale = coinLayer.children.filter(child => !activeSprites.has(child));
+            for (const child of stale) {
+                coinLayer.removeChild(child);
                 child.destroy();
             }
         }
@@ -916,6 +1291,11 @@
                 spawnObstacle();
             }
 
+            state.coinSpawnTimer -= dt;
+            if (state.coinSpawnTimer <= 0) {
+                spawnCoins();
+            }
+
             state.robot.vy += 1700 * dt;
             state.robot.y += state.robot.vy * dt;
             const floorY = groundY() - state.robot.h;
@@ -933,8 +1313,31 @@
                 }
             }
 
+            for (const coin of state.coins) {
+                coin.x -= state.speed * dt;
+            }
+
+            const remainingCoins = [];
+            for (const coin of state.coins) {
+                if (coin.x + coin.w <= -20) {
+                    continue;
+                }
+                if (coinCollides(state.robot, coin)) {
+                    state.coinsCollected += 1;
+                    state.bankCoins += 1;
+                    writeCoinBank(state.bankCoins);
+                    updateCoinUI();
+                    updateWalletUI();
+                    renderShop();
+                    continue;
+                }
+                remainingCoins.push(coin);
+            }
+            state.coins = remainingCoins;
+
             state.obstacles = state.obstacles.filter(obstacle => obstacle.x + obstacle.w > -40);
             syncObstacleSprites();
+            syncCoinSprites();
         }
 
         function render() {
@@ -976,9 +1379,12 @@
             state.elapsed = 0;
             state.displayedTenths = -1;
             state.spawnTimer = 0.8;
+            state.coinSpawnTimer = 0.55;
             state.speed = 260;
             state.distance = 0;
             state.obstacles = [];
+            state.coins = [];
+            state.coinsCollected = 0;
             state.lives = MAX_LIVES;
             state.hitInvulnerable = 0;
             state.jump.charging = false;
@@ -986,6 +1392,7 @@
             state.jump.startedOnGround = false;
 
             obstacleLayer.removeChildren().forEach(child => child.destroy());
+            coinLayer.removeChildren().forEach(child => child.destroy());
 
             resetRobotToGround();
             overlayEl.style.display = 'flex';
@@ -994,6 +1401,8 @@
             timeEl.textContent = formatSeconds(0);
             setChargeUI(0);
             updateLivesUI();
+            updateCoinUI();
+            updateWalletUI();
         }
 
         function startGame() {
@@ -1006,13 +1415,27 @@
         }
 
         function selectRobot(robotId) {
-            if (!ROBOTS[robotId]) return;
+            if (!ROBOTS[robotId] || !isOwned(robotId)) return;
             state.selectedRobot = robotId;
+            state.garage.equipped = robotId;
+            writeGarage();
             applyRobotTheme();
             initRobotGraphics();
             if (!state.started || state.gameOver) {
                 resetGame();
             }
+        }
+
+        function buyRobot(robotId) {
+            const robot = ROBOTS[robotId];
+            if (!robot || isOwned(robotId) || state.bankCoins < robot.price) return;
+
+            state.bankCoins -= robot.price;
+            state.garage.owned = [...state.garage.owned, robotId];
+            writeCoinBank(state.bankCoins);
+            writeGarage();
+            updateWalletUI();
+            selectRobot(robotId);
         }
 
         function beginJumpCharge() {
@@ -1127,8 +1550,20 @@
             resetGame();
             startGame();
         });
-        robotOptionEls.forEach((button) => {
-            button.addEventListener('click', () => selectRobot(button.dataset.robotOption));
+        robotOptionsEl.addEventListener('click', (event) => {
+            const button = event.target.closest('[data-robot-option]');
+            if (!button) return;
+            selectRobot(button.dataset.robotOption);
+        });
+        shopItemsEl.addEventListener('click', (event) => {
+            const button = event.target.closest('[data-shop-robot]');
+            if (!button) return;
+            const robotId = button.dataset.shopRobot;
+            if (isOwned(robotId)) {
+                selectRobot(robotId);
+                return;
+            }
+            buyRobot(robotId);
         });
 
         wirePressControls(stageEl);
@@ -1172,6 +1607,9 @@
         });
         window.addEventListener('resize', resizeStage);
 
+        state.bankCoins = readCoinBank();
+        state.garage = readGarage();
+        state.selectedRobot = state.garage.equipped;
         applyRobotTheme();
         initRobotGraphics();
         bestEl.textContent = formatSeconds(readBest());
