@@ -133,51 +133,51 @@
         <div class="scene-wrap" id="scene-wrap" aria-label="3D Connect Four board">
           <div class="hud-overlay">
             <div class="hud-pill" id="turn-pill"></div>
-            <div class="hud-pill" id="hint-pill">Drag to rotate. Tap or click a top cell to drop.</div>
+            <div class="hud-pill" id="hint-pill">{{ translate(lang, 'games.connect_four_3d.hint_drag_tap') }}</div>
           </div>
         </div>
       </div>
 
       <div class="lg:col-span-1">
         <div class="bg-white rounded-2xl shadow-xl ring-1 ring-slate-200 p-5 sm:p-6">
-          <h2 class="text-xl font-bold text-slate-900">Status</h2>
-          <div id="status" class="mt-2 text-lg font-bold text-slate-800">Red to move</div>
-          <div id="substatus" class="mt-1 text-sm text-slate-600">Tap any top cell to drop a piece.</div>
+          <h2 class="text-xl font-bold text-slate-900">{{ translate(lang, 'games.connect_four_3d.status') }}</h2>
+          <div id="status" class="mt-2 text-lg font-bold text-slate-800">{{ translate(lang, 'games.connect_four_3d.red_to_move') }}</div>
+          <div id="substatus" class="mt-1 text-sm text-slate-600">{{ translate(lang, 'games.connect_four_3d.tap_top_cell') }}</div>
 
           <div class="mt-5 btn-row">
-            <button id="new-game" class="btn-solid btn-primary">New Game</button>
-            <button id="undo-move" class="btn-solid btn-muted">Undo</button>
+            <button id="new-game" class="btn-solid btn-primary">{{ translate(lang, 'games.connect_four_3d.new_game') }}</button>
+            <button id="undo-move" class="btn-solid btn-muted">{{ translate(lang, 'games.connect_four_3d.undo') }}</button>
           </div>
 
           <div class="mt-2 btn-row">
-            <button id="roll-left" class="btn-solid btn-muted">Roll Left</button>
-            <button id="roll-right" class="btn-solid btn-muted">Roll Right</button>
-            <button id="reset-view" class="btn-solid btn-muted">Reset View</button>
+            <button id="roll-left" class="btn-solid btn-muted">{{ translate(lang, 'games.connect_four_3d.roll_left') }}</button>
+            <button id="roll-right" class="btn-solid btn-muted">{{ translate(lang, 'games.connect_four_3d.roll_right') }}</button>
+            <button id="reset-view" class="btn-solid btn-muted">{{ translate(lang, 'games.connect_four_3d.reset_view') }}</button>
           </div>
 
           <div class="mt-6 grid grid-cols-2 gap-3">
             <div class="rounded-xl bg-red-50 ring-1 ring-red-100 p-4">
-              <div class="text-xs font-semibold uppercase tracking-wide text-red-700">Red Wins</div>
+              <div class="text-xs font-semibold uppercase tracking-wide text-red-700">{{ translate(lang, 'games.connect_four_3d.red_wins_label') }}</div>
               <div id="score-red" class="mt-1 text-3xl font-extrabold text-red-900">0</div>
             </div>
             <div class="rounded-xl bg-yellow-50 ring-1 ring-yellow-100 p-4">
-              <div class="text-xs font-semibold uppercase tracking-wide text-yellow-700">Yellow Wins</div>
+              <div class="text-xs font-semibold uppercase tracking-wide text-yellow-700">{{ translate(lang, 'games.connect_four_3d.yellow_wins_label') }}</div>
               <div id="score-yellow" class="mt-1 text-3xl font-extrabold text-yellow-900">0</div>
             </div>
             <div class="rounded-xl bg-slate-50 ring-1 ring-slate-200 p-4 col-span-2">
-              <div class="text-xs font-semibold uppercase tracking-wide text-slate-600">Games Played</div>
+              <div class="text-xs font-semibold uppercase tracking-wide text-slate-600">{{ translate(lang, 'games.connect_four_3d.games_played') }}</div>
               <div id="score-games" class="mt-1 text-3xl font-extrabold text-slate-900">0</div>
             </div>
           </div>
 
           <div class="mt-6">
-            <h3 class="text-sm font-bold text-slate-700 mb-2">How to play</h3>
+            <h3 class="text-sm font-bold text-slate-700 mb-2">{{ translate(lang, 'games.connect_four_3d.how_to_play') }}</h3>
             <ul class="text-sm text-slate-600 space-y-1">
-              <li>• Two players share one device.</li>
-              <li>• Drag with mouse or finger to rotate the 3D board.</li>
-              <li>• Use Roll buttons (or Shift+drag / Q and E) for the third axis.</li>
-              <li>• Tap or click a top cell to drop your piece.</li>
-              <li>• Connect 4 in any straight 3D direction to win.</li>
+              <li>• {{ translate(lang, 'games.connect_four_3d.rule_1') }}</li>
+              <li>• {{ translate(lang, 'games.connect_four_3d.rule_2') }}</li>
+              <li>• {{ translate(lang, 'games.connect_four_3d.rule_3') }}</li>
+              <li>• {{ translate(lang, 'games.connect_four_3d.rule_4') }}</li>
+              <li>• {{ translate(lang, 'games.connect_four_3d.rule_5') }}</li>
             </ul>
           </div>
         </div>
@@ -191,6 +191,25 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
 (() => {
+  const t = {
+    lib_failed: "{{ translate(lang, 'games.connect_four_3d.lib_failed') }}",
+    lib_refresh: "{{ translate(lang, 'games.connect_four_3d.lib_refresh') }}",
+    rotate_clearer: "{{ translate(lang, 'games.connect_four_3d.rotate_clearer') }}",
+    column_full: "{{ translate(lang, 'games.connect_four_3d.column_full') }}",
+    move_undone: "{{ translate(lang, 'games.connect_four_3d.move_undone') }}",
+    red_wins: "{{ translate(lang, 'games.connect_four_3d.red_wins') }}",
+    yellow_wins: "{{ translate(lang, 'games.connect_four_3d.yellow_wins') }}",
+    draw: "{{ translate(lang, 'games.connect_four_3d.draw') }}",
+    start_new_or_undo: "{{ translate(lang, 'games.connect_four_3d.start_new_or_undo') }}",
+    drag_to_rotate_keep: "{{ translate(lang, 'games.connect_four_3d.drag_to_rotate_keep') }}",
+    red_to_move: "{{ translate(lang, 'games.connect_four_3d.red_to_move') }}",
+    yellow_to_move: "{{ translate(lang, 'games.connect_four_3d.yellow_to_move') }}",
+    tap_top_cell: "{{ translate(lang, 'games.connect_four_3d.tap_top_cell') }}",
+    game_over: "{{ translate(lang, 'games.connect_four_3d.game_over') }}",
+    red_turn: "{{ translate(lang, 'games.connect_four_3d.red_turn') }}",
+    yellow_turn: "{{ translate(lang, 'games.connect_four_3d.yellow_turn') }}"
+  };
+
   const SIZE = 4;
   const SPACING = 1.35;
   const SCORE_KEY = 'c4-3d:scores:v1';
@@ -205,8 +224,8 @@
   const scoreGamesEl = document.getElementById('score-games');
 
   if (!window.THREE) {
-    statusEl.textContent = '3D library failed to load';
-    substatusEl.textContent = 'Please refresh this page.';
+    statusEl.textContent = t.lib_failed;
+    substatusEl.textContent = t.lib_refresh;
     return;
   }
 
@@ -425,7 +444,7 @@
     winningCells = [];
     currentPlayer = prev.player;
     updatePieces();
-    updateStatus('Move undone.');
+    updateStatus(t.move_undone);
   });
 
   function rotateRoll(delta) {
@@ -622,7 +641,7 @@
 
     const selector = getSelectorFromPointer(clientX, clientY);
     if (!selector) {
-      updateStatus('Rotate to a clearer angle and tap a top cell.');
+      updateStatus(t.rotate_clearer);
       return;
     }
 
@@ -676,7 +695,7 @@
     }
 
     if (placedZ === -1) {
-      updateStatus('Column is full. Try another top cell.');
+      updateStatus(t.column_full);
       return;
     }
 
@@ -687,7 +706,7 @@
       winningCells = winLine;
       gameOver = true;
       updatePieces();
-      const winnerText = currentPlayer === 1 ? 'Red wins!' : 'Yellow wins!';
+      const winnerText = currentPlayer === 1 ? t.red_wins : t.yellow_wins;
       updateStatus(winnerText, true);
       const scores = loadScores();
       if (currentPlayer === 1) scores.red += 1;
@@ -702,7 +721,7 @@
       gameOver = true;
       winningCells = [];
       updatePieces();
-      updateStatus('Draw game!', true);
+      updateStatus(t.draw, true);
       const scores = loadScores();
       scores.games += 1;
       saveScores(scores);
@@ -803,7 +822,7 @@
   function updateStatus(message = null, lockColor = false) {
     if (message) {
       statusEl.textContent = message;
-      substatusEl.textContent = gameOver ? 'Start a new game or undo the last move.' : 'Drag to rotate and keep playing.';
+      substatusEl.textContent = gameOver ? t.start_new_or_undo : t.drag_to_rotate_keep;
       statusEl.style.color = lockColor ? '#0f172a' : '#1e293b';
       updateTurnPill();
       return;
@@ -812,19 +831,19 @@
     if (gameOver) return;
 
     const redTurn = currentPlayer === 1;
-    statusEl.textContent = redTurn ? 'Red to move' : 'Yellow to move';
-    substatusEl.textContent = 'Tap or click a top cell to drop your piece.';
+    statusEl.textContent = redTurn ? t.red_to_move : t.yellow_to_move;
+    substatusEl.textContent = t.tap_top_cell;
     statusEl.style.color = '#0f172a';
     updateTurnPill();
   }
 
   function updateTurnPill() {
     if (gameOver) {
-      turnPillEl.textContent = 'Game Over';
+      turnPillEl.textContent = t.game_over;
       return;
     }
     const redTurn = currentPlayer === 1;
-    turnPillEl.innerHTML = `${redTurn ? '<span class="turn-dot dot-red"></span>' : '<span class="turn-dot dot-yellow"></span>'}${redTurn ? 'Red turn' : 'Yellow turn'}`;
+    turnPillEl.innerHTML = `${redTurn ? '<span class="turn-dot dot-red"></span>' : '<span class="turn-dot dot-yellow"></span>'}${redTurn ? t.red_turn : t.yellow_turn}`;
   }
 
   function resizeRenderer() {
