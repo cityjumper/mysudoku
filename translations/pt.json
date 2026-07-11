@@ -759,6 +759,12 @@
       "rule_2": "Clique num palito aceso para pegá-lo, depois clique num espaço vazio para colocá-lo — esse é um movimento.",
       "rule_3": "Resolva o quebra-cabeça usando exatamente o número de movimentos mostrado, nem mais nem menos.",
       "rule_4": "Desfaça ou reinicie se ficar preso, ou revele uma solução para ver uma forma de resolver."
+    },
+    "simcity": {
+      "name": "SimCity",
+      "description": "Zoneie, conecte e eletrifique uma cidade em crescimento enquanto equilibra o orçamento e a demanda.",
+      "title": "SimCity",
+      "subtitle": "Construa estradas, zoneie áreas residenciais, comerciais e industriais e mantenha o orçamento saudável."
     }
   },
   "common": {

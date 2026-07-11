@@ -1,0 +1,619 @@
+{% extends "base.html" %}
+
+{% block title %}{{ translate(lang, 'games.simcity.title') }}{% endblock %}
+
+{% block extra_head %}
+<style>
+  #grid-scroll { overflow-x: auto; touch-action: pan-x pan-y; }
+  #city-grid {
+    display: grid;
+    gap: 1px;
+    background: #94a3b8;
+    border-radius: 0.5rem;
+    overflow: hidden;
+    min-width: 560px;
+    touch-action: none;
+    user-select: none;
+  }
+  .sc-cell {
+    aspect-ratio: 1 / 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: clamp(9px, 1.6vw, 15px);
+    line-height: 1;
+    cursor: pointer;
+    position: relative;
+    background: #e2e8f0;
+  }
+  .sc-empty { background: #eef2f7; }
+  .sc-road { background: #334155; }
+  .sc-park { background: #86efac; }
+  .sc-power { background: #fde68a; font-size: clamp(12px, 2.4vw, 22px); }
+  .sc-residential-0 { background: repeating-linear-gradient(45deg,#dcfce7,#dcfce7 4px,#bbf7d0 4px,#bbf7d0 8px); }
+  .sc-residential-1 { background: #4ade80; }
+  .sc-residential-2 { background: #16a34a; }
+  .sc-residential-3 { background: #14532d; color: #fff; }
+  .sc-commercial-0 { background: repeating-linear-gradient(45deg,#dbeafe,#dbeafe 4px,#bfdbfe 4px,#bfdbfe 8px); }
+  .sc-commercial-1 { background: #60a5fa; }
+  .sc-commercial-2 { background: #2563eb; }
+  .sc-commercial-3 { background: #1e3a8a; color: #fff; }
+  .sc-industrial-0 { background: repeating-linear-gradient(45deg,#ffedd5,#ffedd5 4px,#fed7aa 4px,#fed7aa 8px); }
+  .sc-industrial-1 { background: #fb923c; }
+  .sc-industrial-2 { background: #ea580c; }
+  .sc-industrial-3 { background: #7c2d12; color: #fff; }
+  .sc-noaccess::after {
+    content: '';
+    position: absolute;
+    inset: 1px;
+    border: 1px dashed rgba(239,68,68,0.7);
+    pointer-events: none;
+  }
+  .sc-nopower::before {
+    content: '⚡';
+    position: absolute;
+    top: 1px;
+    right: 1px;
+    width: 1.15em;
+    height: 1.15em;
+    font-size: 0.6em;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #dc2626;
+    color: #fff;
+    border-radius: 999px;
+    box-shadow: 0 0 0 1px #fff;
+    pointer-events: none;
+    z-index: 2;
+  }
+  .tool-btn { touch-action: manipulation; user-select: none; }
+  .tool-btn.active { outline: 2px solid #4338ca; outline-offset: -2px; }
+  .tool-btn:active { transform: scale(0.96); }
+  .demand-bar-track { background: #e2e8f0; border-radius: 999px; overflow: hidden; }
+  .demand-bar-fill { height: 100%; border-radius: 999px; transition: width 0.3s ease; }
+</style>
+{% endblock %}
+
+{% block body_class %}bg-gradient-to-br from-slate-50 to-emerald-100 min-h-screen{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+  <div class="max-w-6xl mx-auto mb-6 flex items-center justify-between">
+    <a href="/" class="inline-flex items-center text-emerald-800 hover:text-emerald-950 font-semibold">
+      <svg class="w-5 h-5 mr-2" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+        <path fill-rule="evenodd" d="M12.707 15.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 111.414 1.414L7.414 9H17a1 1 0 110 2H7.414l5.293 5.293a1 1 0 010 1.414z" clip-rule="evenodd" />
+      </svg>
+      {{ translate(lang, 'common.home') }}
+    </a>
+  </div>
+
+  <div class="max-w-6xl mx-auto">
+    <header class="text-center mb-6">
+      <h1 class="text-4xl sm:text-5xl font-extrabold tracking-tight text-slate-900">{{ translate(lang, 'games.simcity.title') }}</h1>
+      <p class="mt-2 text-slate-600">{{ translate(lang, 'games.simcity.subtitle') }}</p>
+      <div class="mt-4 flex items-center justify-center gap-2 flex-wrap">
+        <button id="city-name-btn" type="button" class="inline-flex items-center gap-2 rounded-full bg-white ring-1 ring-slate-200 hover:ring-emerald-300 px-4 py-1.5 text-xs sm:text-sm font-semibold text-slate-700 shadow-sm" title="Click to rename your city">
+          🏙️ <span id="city-name-label">New City</span>
+          <span class="text-slate-400 font-normal">✏️</span>
+        </button>
+        <span id="power-status-badge" class="inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-xs sm:text-sm font-semibold ring-1 bg-red-50 text-red-700 ring-red-200">🚫 No Power</span>
+        <button id="new-city-btn" type="button" class="inline-flex items-center gap-1 rounded-full bg-white ring-1 ring-slate-200 hover:ring-red-300 hover:text-red-700 px-4 py-1.5 text-xs sm:text-sm font-semibold text-slate-700 shadow-sm">🔄 New City</button>
+      </div>
+    </header>
+
+    <!-- Stat bar -->
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
+      <div class="bg-white rounded-xl shadow ring-1 ring-slate-200 p-3 text-center">
+        <div class="text-xs font-bold text-slate-500 uppercase tracking-wide">Funds</div>
+        <div id="funds-val" class="text-lg font-extrabold text-emerald-700">$10,000</div>
+      </div>
+      <div class="bg-white rounded-xl shadow ring-1 ring-slate-200 p-3 text-center">
+        <div class="text-xs font-bold text-slate-500 uppercase tracking-wide">Population</div>
+        <div id="pop-val" class="text-lg font-extrabold text-slate-900">0</div>
+      </div>
+      <div class="bg-white rounded-xl shadow ring-1 ring-slate-200 p-3 text-center">
+        <div class="text-xs font-bold text-slate-500 uppercase tracking-wide">Jobs</div>
+        <div id="jobs-val" class="text-lg font-extrabold text-slate-900">0</div>
+      </div>
+      <div class="bg-white rounded-xl shadow ring-1 ring-slate-200 p-3 text-center">
+        <div class="text-xs font-bold text-slate-500 uppercase tracking-wide">Date</div>
+        <div id="date-val" class="text-lg font-extrabold text-slate-900">Jan Y1</div>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+      <div class="lg:col-span-3">
+        <!-- Toolbar -->
+        <div class="bg-white rounded-2xl shadow-xl ring-1 ring-slate-200 p-3 sm:p-4 mb-4">
+          <div class="flex flex-wrap gap-2">
+            <button data-tool="road" class="tool-btn active flex-1 min-w-[84px] rounded-lg bg-slate-100 hover:bg-slate-200 font-semibold text-slate-800 py-2 px-2 text-xs sm:text-sm">🛣️ Road<br><span class="font-normal text-slate-500">$10</span></button>
+            <button data-tool="residential" class="tool-btn flex-1 min-w-[84px] rounded-lg bg-green-100 hover:bg-green-200 font-semibold text-green-900 py-2 px-2 text-xs sm:text-sm">🏠 Res<br><span class="font-normal text-green-700">$50</span></button>
+            <button data-tool="commercial" class="tool-btn flex-1 min-w-[84px] rounded-lg bg-blue-100 hover:bg-blue-200 font-semibold text-blue-900 py-2 px-2 text-xs sm:text-sm">🏬 Comm<br><span class="font-normal text-blue-700">$60</span></button>
+            <button data-tool="industrial" class="tool-btn flex-1 min-w-[84px] rounded-lg bg-orange-100 hover:bg-orange-200 font-semibold text-orange-900 py-2 px-2 text-xs sm:text-sm">🏭 Ind<br><span class="font-normal text-orange-700">$60</span></button>
+            <button data-tool="park" class="tool-btn flex-1 min-w-[84px] rounded-lg bg-emerald-100 hover:bg-emerald-200 font-semibold text-emerald-900 py-2 px-2 text-xs sm:text-sm">🌳 Park<br><span class="font-normal text-emerald-700">$30</span></button>
+            <button data-tool="power" class="tool-btn flex-1 min-w-[84px] rounded-lg bg-amber-100 hover:bg-amber-200 font-semibold text-amber-900 py-2 px-2 text-xs sm:text-sm">⚡ Power<br><span class="font-normal text-amber-700">$500</span></button>
+            <button data-tool="bulldoze" class="tool-btn flex-1 min-w-[84px] rounded-lg bg-red-100 hover:bg-red-200 font-semibold text-red-900 py-2 px-2 text-xs sm:text-sm">💥 Clear<br><span class="font-normal text-red-700">free</span></button>
+          </div>
+        </div>
+
+        <!-- Grid -->
+        <div class="bg-white rounded-2xl shadow-xl ring-1 ring-slate-200 p-3 sm:p-4">
+          <div id="grid-scroll">
+            <div id="city-grid"></div>
+          </div>
+          <div id="funds-warning" class="hidden mt-3 rounded-lg bg-red-50 ring-1 ring-red-200 text-red-700 text-sm font-semibold px-3 py-2">
+            ⚠️ Your city is broke! Raise taxes or bulldoze upkeep-heavy buildings.
+          </div>
+        </div>
+
+        <!-- Speed / play controls -->
+        <div class="bg-white rounded-2xl shadow-xl ring-1 ring-slate-200 p-4 mt-4 flex flex-wrap items-center gap-3">
+          <button id="play-pause-btn" type="button" class="rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-4 py-2 text-sm">▶ Play</button>
+          <div class="flex gap-1">
+            <button data-speed="slow" class="speed-btn rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 font-semibold px-3 py-2 text-sm">1x</button>
+            <button data-speed="normal" class="speed-btn active rounded-lg bg-slate-800 text-white font-semibold px-3 py-2 text-sm">2x</button>
+            <button data-speed="fast" class="speed-btn rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 font-semibold px-3 py-2 text-sm">3x</button>
+          </div>
+          <div class="flex items-center gap-2 ml-auto">
+            <label for="tax-slider" class="text-sm font-semibold text-slate-700">Tax rate: <span id="tax-val">9</span>%</label>
+            <input id="tax-slider" type="range" min="0" max="25" value="9" class="w-32 accent-emerald-600">
+          </div>
+        </div>
+      </div>
+
+      <!-- Sidebar -->
+      <div class="lg:col-span-1 flex flex-col gap-4">
+        <div class="bg-white rounded-2xl shadow-xl ring-1 ring-slate-200 p-4">
+          <h3 class="text-xs font-bold text-slate-500 uppercase tracking-wide mb-3">RCI Demand</h3>
+          <div class="space-y-3">
+            <div>
+              <div class="flex justify-between text-xs font-semibold text-green-700 mb-1"><span>Residential</span><span id="r-demand-txt">0%</span></div>
+              <div class="demand-bar-track h-2"><div id="r-demand-bar" class="demand-bar-fill bg-green-500" style="width:0%"></div></div>
+            </div>
+            <div>
+              <div class="flex justify-between text-xs font-semibold text-blue-700 mb-1"><span>Commercial</span><span id="c-demand-txt">0%</span></div>
+              <div class="demand-bar-track h-2"><div id="c-demand-bar" class="demand-bar-fill bg-blue-500" style="width:0%"></div></div>
+            </div>
+            <div>
+              <div class="flex justify-between text-xs font-semibold text-orange-700 mb-1"><span>Industrial</span><span id="i-demand-txt">0%</span></div>
+              <div class="demand-bar-track h-2"><div id="i-demand-bar" class="demand-bar-fill bg-orange-500" style="width:0%"></div></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="bg-white rounded-2xl shadow-xl ring-1 ring-slate-200 p-4">
+          <h3 class="text-xs font-bold text-slate-500 uppercase tracking-wide mb-2">City Log</h3>
+          <ul id="msg-log" class="text-xs text-slate-600 space-y-1.5 min-h-[80px]"></ul>
+        </div>
+
+        <div class="bg-white rounded-2xl shadow-xl ring-1 ring-slate-200 p-4 hidden lg:block">
+          <h3 class="text-sm font-bold text-slate-700 mb-2">How to play</h3>
+          <ul class="text-xs text-slate-600 space-y-1">
+            <li>• Build roads first, then zone R/C/I next to them.</li>
+            <li>• Zones only grow if powered and touching a road.</li>
+            <li>• Build a Power Plant to electrify the whole city.</li>
+            <li>• Higher tax = more income but slower growth.</li>
+            <li>• Drag across the grid to paint roads quickly.</li>
+            <li>• Keys: 1-6 pick tools, 0 clears, Space plays/pauses.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+(function () {
+  const COLS = 16;
+  const ROWS = 10;
+  const STORAGE_KEY = 'simcity-save-v1';
+
+  const COST = { road: 10, residential: 50, commercial: 60, industrial: 60, park: 30, power: 500, bulldoze: 0 };
+  const CAP = {
+    residential: [0, 4, 10, 24],
+    commercial: [0, 3, 8, 18],
+    industrial: [0, 5, 12, 28],
+  };
+  const ICON = {
+    residential: ['', '🏠', '🏘️', '🏢'],
+    commercial: ['', '🏬', '🏢', '🏙️'],
+    industrial: ['', '🏭', '🏭', '🏭'],
+    park: '🌳',
+    power: '⚡',
+  };
+  const SPEED_MS = { slow: 1400, normal: 800, fast: 300 };
+
+  const gridEl = document.getElementById('city-grid');
+  const fundsVal = document.getElementById('funds-val');
+  const popVal = document.getElementById('pop-val');
+  const jobsVal = document.getElementById('jobs-val');
+  const dateVal = document.getElementById('date-val');
+  const fundsWarning = document.getElementById('funds-warning');
+  const taxSlider = document.getElementById('tax-slider');
+  const taxVal = document.getElementById('tax-val');
+  const playPauseBtn = document.getElementById('play-pause-btn');
+  const msgLog = document.getElementById('msg-log');
+  const newCityBtn = document.getElementById('new-city-btn');
+  const cityNameBtn = document.getElementById('city-name-btn');
+  const cityNameLabel = document.getElementById('city-name-label');
+  const powerStatusBadge = document.getElementById('power-status-badge');
+
+  const rDemandBar = document.getElementById('r-demand-bar');
+  const cDemandBar = document.getElementById('c-demand-bar');
+  const iDemandBar = document.getElementById('i-demand-bar');
+  const rDemandTxt = document.getElementById('r-demand-txt');
+  const cDemandTxt = document.getElementById('c-demand-txt');
+  const iDemandTxt = document.getElementById('i-demand-txt');
+
+  gridEl.style.gridTemplateColumns = `repeat(${COLS}, 1fr)`;
+
+  let state = null;
+  let cellEls = [];
+  let selectedTool = 'road';
+  let speed = 'normal';
+  let playing = false;
+  let timer = null;
+  let dragging = false;
+  let dragVisited = new Set();
+  let lastPopMilestone = 0;
+
+  function freshState() {
+    return {
+      grid: Array.from({ length: ROWS }, () => Array.from({ length: COLS }, () => ({ type: 'empty', level: 0 }))),
+      funds: 10000,
+      taxRate: 9,
+      month: 0,
+      year: 1,
+      cityName: null,
+    };
+  }
+
+  function promptCityName(defaultName) {
+    const input = window.prompt('Name your city:', defaultName);
+    const trimmed = (input || '').trim();
+    return trimmed ? trimmed.slice(0, 40) : defaultName;
+  }
+
+  function updateCityNameDisplay() {
+    cityNameLabel.textContent = state.cityName;
+    document.title = state.cityName + ' – SimCity';
+  }
+
+  function idx(x, y) { return y * COLS + x; }
+
+  function buildGridDom() {
+    gridEl.innerHTML = '';
+    cellEls = [];
+    for (let y = 0; y < ROWS; y++) {
+      for (let x = 0; x < COLS; x++) {
+        const div = document.createElement('div');
+        div.className = 'sc-cell sc-empty';
+        div.dataset.x = x;
+        div.dataset.y = y;
+        gridEl.appendChild(div);
+        cellEls.push(div);
+      }
+    }
+  }
+
+  function hasRoadAdjacent(x, y) {
+    const deltas = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+    for (const [dx, dy] of deltas) {
+      const nx = x + dx, ny = y + dy;
+      if (nx < 0 || nx >= COLS || ny < 0 || ny >= ROWS) continue;
+      if (state.grid[ny][nx].type === 'road') return true;
+    }
+    return false;
+  }
+
+  function cityHasPower() {
+    for (let y = 0; y < ROWS; y++) {
+      for (let x = 0; x < COLS; x++) {
+        if (state.grid[y][x].type === 'power') return true;
+      }
+    }
+    return false;
+  }
+
+  function computeStats() {
+    let population = 0, jobsCom = 0, jobsInd = 0;
+    let roadCount = 0, parkCount = 0, powerCount = 0;
+    let zonedCount = 0;
+    for (let y = 0; y < ROWS; y++) {
+      for (let x = 0; x < COLS; x++) {
+        const c = state.grid[y][x];
+        if (c.type === 'road') roadCount++;
+        else if (c.type === 'park') parkCount++;
+        else if (c.type === 'power') powerCount++;
+        else if (c.type === 'residential') { population += CAP.residential[c.level]; zonedCount++; }
+        else if (c.type === 'commercial') { jobsCom += CAP.commercial[c.level]; zonedCount++; }
+        else if (c.type === 'industrial') { jobsInd += CAP.industrial[c.level]; zonedCount++; }
+      }
+    }
+    return { population, jobsCom, jobsInd, jobsTotal: jobsCom + jobsInd, roadCount, parkCount, powerCount, zonedCount };
+  }
+
+  function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
+
+  function computeDemand(stats) {
+    const taxFactor = clamp(1 - (state.taxRate / 100) * 1.3, 0.15, 1);
+    const r = clamp((stats.jobsTotal - stats.population) * 2 + 25, 0, 100) * taxFactor;
+    const c = clamp(stats.population * 0.5 - stats.jobsCom * 1.6, 0, 100) * taxFactor;
+    const i = clamp(stats.population * 0.4 - stats.jobsInd * 1.2 + 12, 0, 100) * taxFactor;
+    return { r, c, i };
+  }
+
+  function pushMessage(text) {
+    const li = document.createElement('li');
+    li.textContent = text;
+    msgLog.prepend(li);
+    while (msgLog.children.length > 6) msgLog.removeChild(msgLog.lastChild);
+  }
+
+  function growthDecayStep(demand, powered) {
+    const demandKey = { residential: demand.r, commercial: demand.c, industrial: demand.i };
+    for (let y = 0; y < ROWS; y++) {
+      for (let x = 0; x < COLS; x++) {
+        const c = state.grid[y][x];
+        if (c.type !== 'residential' && c.type !== 'commercial' && c.type !== 'industrial') continue;
+        const served = powered && hasRoadAdjacent(x, y);
+        if (served) {
+          if (c.level < 3) {
+            const chance = (demandKey[c.type] / 100) * 0.16;
+            if (Math.random() < chance) c.level++;
+          }
+        } else if (c.level > 0) {
+          if (Math.random() < 0.06) c.level--;
+        }
+      }
+    }
+  }
+
+  function budgetStep(stats) {
+    const income = stats.population * (state.taxRate / 100) * 0.6 + stats.jobsTotal * (state.taxRate / 100) * 0.4;
+    const maintenance = stats.roadCount * 0.4 + stats.parkCount * 0.8 + stats.powerCount * 45 + stats.zonedCount * 0.15;
+    state.funds += income - maintenance;
+  }
+
+  function fmtMoney(v) {
+    const sign = v < 0 ? '-' : '';
+    return sign + '$' + Math.round(Math.abs(v)).toLocaleString();
+  }
+
+  const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+  function advanceDate() {
+    state.month++;
+    if (state.month >= 12) { state.month = 0; state.year++; }
+  }
+
+  function tick() {
+    const preStats = computeStats();
+    const demand = computeDemand(preStats);
+    const powered = cityHasPower();
+    growthDecayStep(demand, powered);
+    const postStats = computeStats();
+    budgetStep(postStats);
+    advanceDate();
+
+    if (postStats.population >= lastPopMilestone + 100 || (lastPopMilestone === 0 && postStats.population >= 25)) {
+      const milestone = Math.floor(postStats.population / 100) * 100;
+      if (milestone > lastPopMilestone) {
+        lastPopMilestone = milestone;
+        pushMessage(`👥 Population reached ${postStats.population.toLocaleString()}!`);
+      }
+    }
+    if (!powered && preStats.zonedCount > 0 && Math.random() < 0.15) {
+      pushMessage('⚡ Zones are unpowered — build a Power Plant.');
+    }
+
+    render(demand);
+    save();
+  }
+
+  function render(demand) {
+    const powered = cityHasPower();
+    for (let y = 0; y < ROWS; y++) {
+      for (let x = 0; x < COLS; x++) {
+        const c = state.grid[y][x];
+        const el = cellEls[idx(x, y)];
+        const isZone = c.type === 'residential' || c.type === 'commercial' || c.type === 'industrial';
+        let cls = 'sc-cell sc-' + c.type;
+        if (isZone) cls += '-' + c.level;
+        let title = '';
+        if (isZone) {
+          if (!hasRoadAdjacent(x, y)) { cls += ' sc-noaccess'; title += 'No road access. '; }
+          if (!powered) { cls += ' sc-nopower'; title += 'No power. '; }
+        }
+        el.className = cls;
+        el.title = title.trim();
+        if (c.type === 'park' || c.type === 'power') {
+          el.textContent = ICON[c.type];
+        } else if (isZone) {
+          el.textContent = ICON[c.type][c.level];
+        } else {
+          el.textContent = '';
+        }
+      }
+    }
+    const stats = computeStats();
+    fundsVal.textContent = fmtMoney(state.funds);
+    fundsVal.className = 'text-lg font-extrabold ' + (state.funds < 0 ? 'text-red-600' : 'text-emerald-700');
+    popVal.textContent = stats.population.toLocaleString();
+    jobsVal.textContent = stats.jobsTotal.toLocaleString();
+    dateVal.textContent = `${MONTHS[state.month]} Y${state.year}`;
+    fundsWarning.classList.toggle('hidden', state.funds >= 0);
+    powerStatusBadge.textContent = powered ? '⚡ Powered' : '🚫 No Power — houses won\'t grow';
+    powerStatusBadge.className = 'inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-xs sm:text-sm font-semibold ring-1 ' +
+      (powered ? 'bg-emerald-50 text-emerald-700 ring-emerald-200' : 'bg-red-50 text-red-700 ring-red-200');
+
+    if (demand) {
+      rDemandBar.style.width = demand.r + '%';
+      cDemandBar.style.width = demand.c + '%';
+      iDemandBar.style.width = demand.i + '%';
+      rDemandTxt.textContent = Math.round(demand.r) + '%';
+      cDemandTxt.textContent = Math.round(demand.c) + '%';
+      iDemandTxt.textContent = Math.round(demand.i) + '%';
+    }
+  }
+
+  function applyTool(x, y) {
+    const c = state.grid[y][x];
+    if (selectedTool === 'bulldoze') {
+      if (c.type === 'empty') return;
+      c.type = 'empty';
+      c.level = 0;
+      render();
+      return;
+    }
+    if (c.type !== 'empty') return;
+    const cost = COST[selectedTool];
+    if (state.funds < cost) {
+      pushMessage('🚫 Not enough funds for that.');
+      return;
+    }
+    state.funds -= cost;
+    c.type = selectedTool;
+    c.level = 0;
+    render();
+  }
+
+  function cellFromPoint(clientX, clientY) {
+    const target = document.elementFromPoint(clientX, clientY);
+    if (!target || !target.classList.contains('sc-cell')) return null;
+    return { x: Number(target.dataset.x), y: Number(target.dataset.y) };
+  }
+
+  gridEl.addEventListener('pointerdown', (e) => {
+    const cell = cellFromPoint(e.clientX, e.clientY);
+    if (!cell) return;
+    dragging = true;
+    dragVisited = new Set();
+    const key = cell.x + ',' + cell.y;
+    dragVisited.add(key);
+    applyTool(cell.x, cell.y);
+    e.preventDefault();
+  });
+
+  window.addEventListener('pointermove', (e) => {
+    if (!dragging) return;
+    const cell = cellFromPoint(e.clientX, e.clientY);
+    if (!cell) return;
+    const key = cell.x + ',' + cell.y;
+    if (dragVisited.has(key)) return;
+    dragVisited.add(key);
+    applyTool(cell.x, cell.y);
+  });
+
+  window.addEventListener('pointerup', () => { dragging = false; });
+
+  document.querySelectorAll('.tool-btn').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      selectedTool = btn.dataset.tool;
+      document.querySelectorAll('.tool-btn').forEach((b) => b.classList.remove('active'));
+      btn.classList.add('active');
+    });
+  });
+
+  document.querySelectorAll('.speed-btn').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      speed = btn.dataset.speed;
+      document.querySelectorAll('.speed-btn').forEach((b) => {
+        b.classList.remove('active', 'bg-slate-800', 'text-white');
+        b.classList.add('bg-slate-100', 'text-slate-800');
+      });
+      btn.classList.add('active', 'bg-slate-800', 'text-white');
+      btn.classList.remove('bg-slate-100', 'text-slate-800');
+      if (playing) restartTimer();
+    });
+  });
+
+  taxSlider.addEventListener('input', () => {
+    state.taxRate = Number(taxSlider.value);
+    taxVal.textContent = state.taxRate;
+    save();
+  });
+
+  function restartTimer() {
+    if (timer) clearInterval(timer);
+    timer = setInterval(tick, SPEED_MS[speed]);
+  }
+
+  function setPlaying(next) {
+    playing = next;
+    playPauseBtn.textContent = playing ? '⏸ Pause' : '▶ Play';
+    if (playing) restartTimer();
+    else if (timer) { clearInterval(timer); timer = null; }
+  }
+
+  playPauseBtn.addEventListener('click', () => setPlaying(!playing));
+
+  document.addEventListener('keydown', (e) => {
+    const map = { '1': 'road', '2': 'residential', '3': 'commercial', '4': 'industrial', '5': 'park', '6': 'power', '0': 'bulldoze' };
+    if (map[e.key]) {
+      selectedTool = map[e.key];
+      document.querySelectorAll('.tool-btn').forEach((b) => b.classList.toggle('active', b.dataset.tool === selectedTool));
+    } else if (e.key === ' ') {
+      e.preventDefault();
+      setPlaying(!playing);
+    }
+  });
+
+  newCityBtn.addEventListener('click', () => {
+    if (!confirm('Start a brand new city? This will erase your current progress.')) return;
+    const name = promptCityName('New City');
+    localStorage.removeItem(STORAGE_KEY);
+    setPlaying(false);
+    init(true, name);
+  });
+
+  cityNameBtn.addEventListener('click', () => {
+    const name = promptCityName(state.cityName || 'New City');
+    state.cityName = name;
+    updateCityNameDisplay();
+    save();
+  });
+
+  function save() {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    } catch (e) { /* ignore quota errors */ }
+  }
+
+  function load() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
+      if (!parsed || !Array.isArray(parsed.grid)) return null;
+      return parsed;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  function init(forceFresh, presetName) {
+    const loaded = forceFresh ? null : load();
+    state = loaded || freshState();
+    if (!state.cityName) {
+      state.cityName = presetName || promptCityName('New City');
+    }
+    updateCityNameDisplay();
+    taxSlider.value = state.taxRate;
+    taxVal.textContent = state.taxRate;
+    lastPopMilestone = 0;
+    buildGridDom();
+    msgLog.innerHTML = '';
+    pushMessage(`🏙️ Welcome to ${state.cityName}, Mayor! Build roads, then zone next to them.`);
+    render();
+    save();
+  }
+
+  init(false);
+})();
+</script>
+{% endblock %}

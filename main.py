@@ -378,6 +378,13 @@ async def tetris(request: Request):
     return templates.TemplateResponse("tetris.html", {"request": request, "lang": lang})
 
 
+@app.get("/simcity", response_class=HTMLResponse)
+async def simcity(request: Request):
+    """SimCity-lite city builder page endpoint."""
+    lang = get_current_lang(request)
+    return templates.TemplateResponse("simcity.html", {"request": request, "lang": lang})
+
+
 @app.get("/api")
 async def api_root():
     """API root endpoint with API information."""

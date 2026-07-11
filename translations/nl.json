@@ -760,6 +760,12 @@
       "rule_2": "Klik op een brandende lucifer om hem op te pakken, klik dan op een lege plek om hem neer te zetten — dat is één zet.",
       "rule_3": "Los de puzzel op met precies het getoonde aantal zetten, niet meer en niet minder.",
       "rule_4": "Maak ongedaan of reset als je vastzit, of toon een oplossing om te zien hoe het kan."
+    },
+    "simcity": {
+      "name": "SimCity",
+      "description": "Bestem, verbind en elektrificeer een groeiende stad terwijl je budget en vraag in balans houdt.",
+      "title": "SimCity",
+      "subtitle": "Bouw wegen, bestem woon-, winkel- en industriegebied en houd de begroting gezond."
     }
   },
   "common": {

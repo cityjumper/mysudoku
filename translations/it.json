@@ -760,6 +760,12 @@
       "rule_2": "Clicca su un fiammifero acceso per prenderlo, poi clicca su uno spazio vuoto per posizionarlo — questa è una mossa.",
       "rule_3": "Risolvi il puzzle usando esattamente il numero di mosse indicato, né di più né di meno.",
       "rule_4": "Annulla o reimposta se sei bloccato, oppure rivela una soluzione per vedere come risolverlo."
+    },
+    "simcity": {
+      "name": "SimCity",
+      "description": "Pianifica, collega ed elettrifica una città in crescita bilanciando bilancio e domanda.",
+      "title": "SimCity",
+      "subtitle": "Costruisci strade, delimita zone residenziali, commerciali e industriali e mantieni sano il bilancio."
     }
   },
   "common": {

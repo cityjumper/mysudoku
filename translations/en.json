@@ -760,6 +760,12 @@
       "rule_2": "Click a lit matchstick to pick it up, then click an empty slot to place it — that's one move.",
       "rule_3": "Solve the puzzle using exactly the number of moves shown, no more, no less.",
       "rule_4": "Undo or reset if you get stuck, or reveal a solution to see one way to fix it."
+    },
+    "simcity": {
+      "name": "SimCity",
+      "description": "Zone, connect and power a growing city while balancing budget and demand.",
+      "title": "SimCity",
+      "subtitle": "Build roads, zone Residential, Commercial and Industrial land, and keep the budget healthy."
     }
   },
   "common": {
