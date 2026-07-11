@@ -1,0 +1,618 @@
+{% extends "base.html" %}
+
+{% block title %}{{ translate(lang, 'games.chinese_checkers.title') }}{% endblock %}
+
+{% block extra_head %}
+<style>
+  #board-wrap {
+    background: radial-gradient(circle at 50% 45%, #fef3c7 0%, #fde68a 55%, #f5d998 100%);
+  }
+
+  .cc-hole {
+    fill: #fffaf0;
+    stroke: #c9a86a;
+    stroke-width: 1.4;
+    cursor: pointer;
+    transition: fill 0.15s ease, stroke 0.15s ease;
+  }
+  .cc-hole:hover { stroke: #92702f; }
+  .cc-hole.cc-selected { stroke: #0f172a !important; stroke-width: 3.5 !important; }
+  .cc-hole.cc-legal { fill: #bbf7d0 !important; stroke: #16a34a !important; stroke-width: 2.2 !important; }
+
+  .cc-piece { pointer-events: none; filter: drop-shadow(0 2px 2px rgba(0,0,0,0.4)); }
+  .cc-piece-label {
+    font-size: 6.5px;
+    font-weight: 800;
+    fill: white;
+    pointer-events: none;
+    text-anchor: middle;
+    dominant-baseline: central;
+  }
+
+  .cc-count-btn {
+    border: 2px solid transparent;
+    transition: transform 0.15s, border-color 0.15s;
+  }
+  .cc-count-btn.cc-selected-count {
+    border-color: #0f172a;
+    box-shadow: 0 0 0 2px white inset;
+  }
+
+  .cc-color-swatch {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    border: 2px solid transparent;
+    cursor: pointer;
+    transition: transform 0.15s;
+    padding: 0;
+  }
+  .cc-color-swatch:hover { transform: scale(1.12); }
+  .cc-color-swatch.cc-selected {
+    border-color: #0f172a;
+    box-shadow: 0 0 0 2px white inset;
+  }
+
+  @keyframes cc-pop {
+    0% { transform: scale(0.6); opacity: 0; }
+    100% { transform: scale(1); opacity: 1; }
+  }
+  #win-modal .cc-piece-preview { animation: cc-pop 0.35s ease; }
+</style>
+{% endblock %}
+
+{% block body_class %}bg-gradient-to-br from-slate-50 to-amber-100 min-h-screen{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+  <div class="max-w-6xl mx-auto mb-6 flex items-center justify-between">
+    <a href="/" class="inline-flex items-center text-amber-800 hover:text-amber-950 font-semibold">
+      <svg class="w-5 h-5 mr-2" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+        <path fill-rule="evenodd" d="M12.707 15.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 111.414 1.414L7.414 9H17a1 1 0 110 2H7.414l5.293 5.293a1 1 0 010 1.414z" clip-rule="evenodd" />
+      </svg>
+      {{ translate(lang, 'common.home') }}
+    </a>
+  </div>
+
+  <div class="max-w-6xl mx-auto">
+    <header class="text-center mb-8">
+      <h1 class="text-4xl sm:text-5xl font-extrabold tracking-tight text-slate-900">{{ translate(lang, 'games.chinese_checkers.title') }}</h1>
+      <p class="mt-2 text-slate-600">{{ translate(lang, 'games.chinese_checkers.subtitle') }}</p>
+    </header>
+
+    <!-- SETUP SCREEN -->
+    <div id="setup-screen" class="bg-white rounded-2xl shadow-xl ring-1 ring-slate-200 p-6 sm:p-8">
+      <div class="mb-6">
+        <h2 class="text-xl font-bold text-slate-900 mb-1">How many players?</h2>
+        <p class="text-sm text-slate-500 mb-3">Chinese Checkers is played with 2, 3 or 6 players, each taking a point of the star.</p>
+        <div class="flex gap-3">
+          <button type="button" data-count="2" class="cc-count-btn flex-1 rounded-xl bg-slate-100 hover:bg-slate-200 font-bold text-slate-800 py-3">2 Players</button>
+          <button type="button" data-count="3" class="cc-count-btn flex-1 rounded-xl bg-slate-100 hover:bg-slate-200 font-bold text-slate-800 py-3">3 Players</button>
+          <button type="button" data-count="6" class="cc-count-btn flex-1 rounded-xl bg-slate-100 hover:bg-slate-200 font-bold text-slate-800 py-3">6 Players</button>
+        </div>
+      </div>
+
+      <div id="player-rows" class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6"></div>
+
+      <div class="flex justify-center">
+        <button id="start-game" type="button" class="rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold px-8 py-3 text-lg shadow-lg transition-colors">Start Game ⭐</button>
+      </div>
+    </div>
+
+    <!-- GAME SCREEN -->
+    <div id="game-screen" class="hidden grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div class="lg:col-span-2">
+        <div class="bg-white rounded-2xl shadow-xl ring-1 ring-slate-200 p-4 sm:p-6">
+          <div id="board-wrap" class="relative w-full rounded-xl overflow-hidden ring-1 ring-slate-200 select-none">
+            <svg id="board-svg" class="w-full h-full" preserveAspectRatio="xMidYMid meet"></svg>
+          </div>
+        </div>
+      </div>
+
+      <div class="lg:col-span-1 flex flex-col gap-4">
+        <div class="bg-white rounded-2xl shadow-xl ring-1 ring-slate-200 p-5 text-center">
+          <div id="turn-banner" class="rounded-xl px-4 py-3 font-bold text-lg mb-2 transition-colors"></div>
+          <div id="message" class="text-sm text-slate-600 min-h-[40px]"></div>
+        </div>
+
+        <div class="bg-white rounded-2xl shadow-xl ring-1 ring-slate-200 p-5">
+          <h3 class="text-sm font-bold text-slate-700 uppercase tracking-wide mb-3">Players</h3>
+          <div id="player-list" class="space-y-2"></div>
+        </div>
+
+        <div class="bg-white rounded-2xl shadow-xl ring-1 ring-slate-200 p-5 flex gap-2">
+          <button id="restart-btn" type="button" class="flex-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 font-semibold px-4 py-2 text-sm transition-colors">Play Again</button>
+          <button id="change-players-btn" type="button" class="flex-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 font-semibold px-4 py-2 text-sm transition-colors">Change Players</button>
+        </div>
+
+        <div class="bg-white rounded-2xl shadow-xl ring-1 ring-slate-200 p-5">
+          <h3 class="text-sm font-bold text-slate-700 mb-2">Rules</h3>
+          <ul class="text-sm text-slate-600 space-y-1">
+            <li>• Each player starts with 10 pieces in their colored point of the star.</li>
+            <li>• On your turn, move one piece a single step into an adjacent empty hole...</li>
+            <li>• ...or jump it over any pieces (yours or an opponent's) in a chain, landing in empty holes.</li>
+            <li>• You can't mix a step and a jump in the same turn.</li>
+            <li>• The dashed ring marks your target point — be first to fill it with all 10 pieces to win!</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- WIN MODAL -->
+<div id="win-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4">
+  <div class="bg-white rounded-2xl shadow-2xl p-8 max-w-sm w-full text-center">
+    <div id="win-piece-preview" class="cc-piece-preview mx-auto mb-4 rounded-full" style="width:56px;height:56px;"></div>
+    <h2 id="win-title" class="text-2xl font-extrabold text-slate-900 mb-2"></h2>
+    <p class="text-slate-600 mb-6">filled their target point first!</p>
+    <div class="flex gap-3">
+      <button id="win-play-again" type="button" class="flex-1 rounded-lg bg-amber-600 hover:bg-amber-700 text-white font-bold px-4 py-2 transition-colors">Play Again</button>
+      <button id="win-change-players" type="button" class="flex-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold px-4 py-2 transition-colors">Change Players</button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+(function () {
+  const COLORS = [
+    { name: 'Red', hex: '#ef4444' },
+    { name: 'Yellow', hex: '#eab308' },
+    { name: 'Green', hex: '#22c55e' },
+    { name: 'Blue', hex: '#3b82f6' },
+    { name: 'Purple', hex: '#a855f7' },
+    { name: 'Black', hex: '#1e293b' },
+  ];
+
+  // Cube directions (x+y+z=0) — the 6 hex neighbor steps.
+  const DIRS = [[1, -1, 0], [1, 0, -1], [0, 1, -1], [-1, 1, 0], [-1, 0, 1], [0, -1, 1]];
+  // The 6 star points, in clockwise order starting at the top.
+  const CORNER_ORDER = ['Z-', 'X+', 'Y-', 'Z+', 'X-', 'Y+'];
+
+  const UNIT = 10;
+  const HOLE_R = 6.2;
+  const PIECE_R = 5.4;
+
+  function key(x, y, z) { return x + ',' + y + ',' + z; }
+
+  // ---------- Board geometry (static) ----------
+
+  const cellsMap = new Map(); // key -> { x, y, z, px, py, corner }
+  const homeGroups = { 'X+': [], 'X-': [], 'Y+': [], 'Y-': [], 'Z+': [], 'Z-': [] };
+
+  (function buildCells() {
+    for (let x = -8; x <= 8; x++) {
+      for (let y = -8; y <= 8; y++) {
+        const z = -x - y;
+        if (Math.abs(z) > 8) continue;
+        const inRange = [x, y, z].filter((v) => Math.abs(v) <= 4).length;
+        if (inRange < 2) continue;
+
+        let corner = null;
+        if (!(Math.abs(x) <= 4 && Math.abs(y) <= 4 && Math.abs(z) <= 4)) {
+          if (x > 4) corner = 'X+';
+          else if (x < -4) corner = 'X-';
+          else if (y > 4) corner = 'Y+';
+          else if (y < -4) corner = 'Y-';
+          else if (z > 4) corner = 'Z+';
+          else corner = 'Z-';
+        }
+
+        const px = UNIT * (Math.sqrt(3) * (x + z / 2));
+        const py = UNIT * (1.5 * z);
+        const k = key(x, y, z);
+        cellsMap.set(k, { x, y, z, px, py, corner });
+        if (corner) homeGroups[corner].push(k);
+      }
+    }
+  })();
+
+  function targetOf(corner) {
+    return CORNER_ORDER[(CORNER_ORDER.indexOf(corner) + 3) % 6];
+  }
+
+  function assignCorners(n) {
+    if (n === 2) return [CORNER_ORDER[0], CORNER_ORDER[3]];
+    if (n === 3) return [CORNER_ORDER[0], CORNER_ORDER[2], CORNER_ORDER[4]];
+    return CORNER_ORDER.slice();
+  }
+
+  // ---------- DOM ----------
+
+  const setupScreen = document.getElementById('setup-screen');
+  const gameScreen = document.getElementById('game-screen');
+  const rowsContainer = document.getElementById('player-rows');
+  const startGameBtn = document.getElementById('start-game');
+  const countBtns = Array.from(document.querySelectorAll('.cc-count-btn'));
+
+  const boardWrap = document.getElementById('board-wrap');
+  const svg = document.getElementById('board-svg');
+  const turnBanner = document.getElementById('turn-banner');
+  const messageEl = document.getElementById('message');
+  const playerListEl = document.getElementById('player-list');
+  const restartBtn = document.getElementById('restart-btn');
+  const changePlayersBtn = document.getElementById('change-players-btn');
+
+  const winModal = document.getElementById('win-modal');
+  const winPiecePreview = document.getElementById('win-piece-preview');
+  const winTitle = document.getElementById('win-title');
+  const winPlayAgain = document.getElementById('win-play-again');
+  const winChangePlayers = document.getElementById('win-change-players');
+
+  let playerCount = 2;
+  let playerDrafts = Array.from({ length: 6 }, (_, i) => ({
+    name: '',
+    color: COLORS[i % COLORS.length].hex,
+  }));
+
+  let players = [];
+  let board = new Map(); // key -> playerId
+  let currentIndex = 0;
+  let selected = null;
+  let legalMoves = new Map();
+  let gameActive = false;
+
+  const holeEls = new Map();
+
+  function escapeHtml(str) {
+    return String(str).replace(/[&<>"']/g, (c) => ({
+      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+    }[c]));
+  }
+
+  function initials(name) {
+    const parts = name.trim().split(/\s+/).filter(Boolean);
+    if (parts.length === 0) return '?';
+    if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+    return (parts[0][0] + parts[1][0]).toUpperCase();
+  }
+
+  // ---------- Setup screen ----------
+
+  function renderPlayerRows() {
+    rowsContainer.innerHTML = '';
+    for (let i = 0; i < playerCount; i++) {
+      const draft = playerDrafts[i];
+      const card = document.createElement('div');
+      card.className = 'rounded-xl border-2 p-4 transition-colors';
+      card.style.borderColor = draft.color;
+      card.innerHTML = `
+        <div class="flex items-center gap-3 mb-3">
+          <div class="rounded-full" style="width:36px;height:36px;background:${draft.color};box-shadow:0 2px 4px rgba(0,0,0,0.3);"></div>
+          <input type="text" data-idx="${i}" class="cc-name-input flex-1 border border-slate-300 rounded-lg px-3 py-2 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-amber-500" placeholder="Player ${i + 1}" value="${escapeHtml(draft.name)}" maxlength="16">
+        </div>
+        <div class="flex flex-wrap gap-2 cc-color-row" data-idx="${i}">
+          ${COLORS.map((c) => `<button type="button" data-color="${c.hex}" class="cc-color-swatch${c.hex === draft.color ? ' cc-selected' : ''}" style="background:${c.hex}" title="${c.name}" aria-label="${c.name}"></button>`).join('')}
+        </div>
+      `;
+      rowsContainer.appendChild(card);
+    }
+    attachRowListeners();
+  }
+
+  function attachRowListeners() {
+    rowsContainer.querySelectorAll('.cc-name-input').forEach((input) => {
+      input.addEventListener('input', (e) => {
+        const idx = Number(e.target.dataset.idx);
+        playerDrafts[idx].name = e.target.value;
+      });
+    });
+
+    rowsContainer.querySelectorAll('.cc-color-row').forEach((row) => {
+      const idx = Number(row.dataset.idx);
+      row.querySelectorAll('.cc-color-swatch').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          playerDrafts[idx].color = btn.dataset.color;
+          renderPlayerRows();
+        });
+      });
+    });
+  }
+
+  function setPlayerCount(n) {
+    playerCount = n;
+    countBtns.forEach((btn) => {
+      btn.classList.toggle('cc-selected-count', Number(btn.dataset.count) === n);
+    });
+    renderPlayerRows();
+  }
+
+  countBtns.forEach((btn) => {
+    btn.addEventListener('click', () => setPlayerCount(Number(btn.dataset.count)));
+  });
+
+  startGameBtn.addEventListener('click', () => {
+    const corners = assignCorners(playerCount);
+    players = corners.map((corner, i) => {
+      const draft = playerDrafts[i];
+      return {
+        id: i,
+        name: draft.name.trim() || `Player ${i + 1}`,
+        color: draft.color,
+        corner,
+        target: targetOf(corner),
+      };
+    });
+
+    board = new Map();
+    players.forEach((p) => {
+      homeGroups[p.corner].forEach((k) => board.set(k, p.id));
+    });
+
+    currentIndex = 0;
+    gameActive = true;
+    clearSelectionState();
+
+    setupScreen.classList.add('hidden');
+    gameScreen.classList.remove('hidden');
+
+    paintCornerTints();
+    renderPieces();
+    renderPlayerList();
+    updateTurnUI();
+    messageEl.textContent = '';
+  });
+
+  // ---------- Board building (static geometry, built once) ----------
+
+  let boardBuilt = false;
+
+  function buildBoard() {
+    if (boardBuilt) return;
+
+    let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+    cellsMap.forEach((c) => {
+      minX = Math.min(minX, c.px); maxX = Math.max(maxX, c.px);
+      minY = Math.min(minY, c.py); maxY = Math.max(maxY, c.py);
+    });
+    const pad = UNIT * 1.4;
+    const vbX = minX - pad, vbY = minY - pad;
+    const vbW = (maxX - minX) + pad * 2, vbH = (maxY - minY) + pad * 2;
+    svg.setAttribute('viewBox', `${vbX} ${vbY} ${vbW} ${vbH}`);
+    boardWrap.style.aspectRatio = `${vbW} / ${vbH}`;
+
+    const holesGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+    holesGroup.id = 'holes-layer';
+    cellsMap.forEach((c, k) => {
+      const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+      circle.setAttribute('cx', c.px);
+      circle.setAttribute('cy', c.py);
+      circle.setAttribute('r', HOLE_R);
+      circle.setAttribute('class', 'cc-hole');
+      circle.dataset.key = k;
+      holesGroup.appendChild(circle);
+      holeEls.set(k, circle);
+    });
+    svg.appendChild(holesGroup);
+
+    const piecesGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+    piecesGroup.id = 'pieces-layer';
+    svg.appendChild(piecesGroup);
+
+    svg.addEventListener('click', (e) => {
+      const target = e.target.closest('[data-key]');
+      if (target) handleHoleClick(target.dataset.key);
+    });
+
+    boardBuilt = true;
+  }
+
+  function paintCornerTints() {
+    CORNER_ORDER.forEach((c) => {
+      homeGroups[c].forEach((k) => {
+        const el = holeEls.get(k);
+        el.style.fill = '';
+        el.style.stroke = '';
+        el.style.strokeWidth = '';
+        el.style.strokeDasharray = '';
+      });
+    });
+    players.forEach((p) => {
+      homeGroups[p.corner].forEach((k) => {
+        holeEls.get(k).style.fill = p.color + '33';
+      });
+      homeGroups[p.target].forEach((k) => {
+        const el = holeEls.get(k);
+        el.style.stroke = p.color;
+        el.style.strokeWidth = '2.4';
+        el.style.strokeDasharray = '2.6,2.2';
+      });
+    });
+  }
+
+  // ---------- Pieces ----------
+
+  function renderPieces() {
+    const piecesGroup = document.getElementById('pieces-layer');
+    piecesGroup.innerHTML = '';
+    board.forEach((playerId, k) => {
+      const c = cellsMap.get(k);
+      const p = players[playerId];
+      const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+      g.setAttribute('class', 'cc-piece');
+
+      const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+      circle.setAttribute('cx', c.px);
+      circle.setAttribute('cy', c.py);
+      circle.setAttribute('r', PIECE_R);
+      circle.setAttribute('fill', p.color);
+      circle.setAttribute('stroke', 'white');
+      circle.setAttribute('stroke-width', '1.2');
+      g.appendChild(circle);
+
+      const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+      label.setAttribute('x', c.px);
+      label.setAttribute('y', c.py + 0.5);
+      label.setAttribute('class', 'cc-piece-label');
+      label.textContent = initials(p.name);
+      g.appendChild(label);
+
+      piecesGroup.appendChild(g);
+    });
+  }
+
+  // ---------- Player list / turn UI ----------
+
+  function homeCountFor(p) {
+    return homeGroups[p.target].filter((k) => board.get(k) === p.id).length;
+  }
+
+  function renderPlayerList() {
+    playerListEl.innerHTML = players.map((p, i) => `
+      <div class="flex items-center gap-3 rounded-lg px-3 py-2" style="${i === currentIndex ? `background:${p.color}22; box-shadow:0 0 0 2px ${p.color} inset;` : 'background:#f8fafc;'}">
+        <div class="rounded-full flex-shrink-0" style="width:20px;height:20px;background:${p.color};"></div>
+        <div class="flex-1 text-sm font-semibold text-slate-800 truncate">${escapeHtml(p.name)}</div>
+        <div class="text-xs font-bold text-slate-500">${homeCountFor(p)}/10 home</div>
+      </div>
+    `).join('');
+  }
+
+  function updateTurnUI() {
+    const p = players[currentIndex];
+    turnBanner.style.background = p.color + '22';
+    turnBanner.style.color = p.color;
+    turnBanner.style.border = `2px solid ${p.color}`;
+    turnBanner.textContent = `${p.name}'s turn — select a piece to move.`;
+    renderPlayerList();
+  }
+
+  // ---------- Move logic ----------
+
+  function getLegalMoves(startKey) {
+    const result = new Map();
+    const c = cellsMap.get(startKey);
+
+    DIRS.forEach((d) => {
+      const nk = key(c.x + d[0], c.y + d[1], c.z + d[2]);
+      if (cellsMap.has(nk) && !board.has(nk)) result.set(nk, true);
+    });
+
+    const visited = new Set([startKey]);
+    const queue = [startKey];
+    while (queue.length) {
+      const cur = queue.shift();
+      const cc = cellsMap.get(cur);
+      DIRS.forEach((d) => {
+        const midKey = key(cc.x + d[0], cc.y + d[1], cc.z + d[2]);
+        const landKey = key(cc.x + d[0] * 2, cc.y + d[1] * 2, cc.z + d[2] * 2);
+        if (cellsMap.has(midKey) && board.has(midKey) && cellsMap.has(landKey) && !board.has(landKey) && !visited.has(landKey)) {
+          visited.add(landKey);
+          result.set(landKey, true);
+          queue.push(landKey);
+        }
+      });
+    }
+
+    return result;
+  }
+
+  let highlightedKeys = [];
+
+  function clearSelectionState() {
+    highlightedKeys.forEach((k) => {
+      const el = holeEls.get(k);
+      if (el) el.classList.remove('cc-selected', 'cc-legal');
+    });
+    highlightedKeys = [];
+    selected = null;
+    legalMoves = new Map();
+  }
+
+  function selectPiece(k) {
+    clearSelectionState();
+    selected = k;
+    legalMoves = getLegalMoves(k);
+    holeEls.get(k).classList.add('cc-selected');
+    legalMoves.forEach((_, dk) => holeEls.get(dk).classList.add('cc-legal'));
+    highlightedKeys = [k, ...legalMoves.keys()];
+  }
+
+  function handleHoleClick(k) {
+    if (!gameActive) return;
+    const cur = players[currentIndex];
+    const occupant = board.get(k);
+
+    if (selected) {
+      if (k === selected) {
+        clearSelectionState();
+        return;
+      }
+      if (legalMoves.has(k)) {
+        doMove(selected, k);
+        return;
+      }
+      if (occupant === cur.id) {
+        selectPiece(k);
+        return;
+      }
+      clearSelectionState();
+      messageEl.textContent = 'Choose one of your own pieces, or a highlighted hole.';
+      return;
+    }
+
+    if (occupant === cur.id) {
+      selectPiece(k);
+      messageEl.textContent = `${cur.name}: choose a highlighted destination.`;
+    }
+  }
+
+  function doMove(from, to) {
+    const cur = players[currentIndex];
+    board.delete(from);
+    board.set(to, cur.id);
+    clearSelectionState();
+    renderPieces();
+    renderPlayerList();
+
+    if (homeCountFor(cur) === 10) {
+      handleWin(cur);
+      return;
+    }
+
+    messageEl.textContent = `${cur.name} moved a piece.`;
+    currentIndex = (currentIndex + 1) % players.length;
+    updateTurnUI();
+  }
+
+  function handleWin(p) {
+    gameActive = false;
+    winPiecePreview.style.background = p.color;
+    winTitle.textContent = `${p.name} wins! 🎉`;
+    winModal.classList.remove('hidden');
+  }
+
+  function playAgain() {
+    board = new Map();
+    players.forEach((p) => {
+      homeGroups[p.corner].forEach((k) => board.set(k, p.id));
+    });
+    currentIndex = 0;
+    gameActive = true;
+    clearSelectionState();
+    winModal.classList.add('hidden');
+    renderPieces();
+    renderPlayerList();
+    updateTurnUI();
+    messageEl.textContent = '';
+  }
+
+  function changePlayers() {
+    gameActive = false;
+    clearSelectionState();
+    winModal.classList.add('hidden');
+    gameScreen.classList.add('hidden');
+    setupScreen.classList.remove('hidden');
+  }
+
+  restartBtn.addEventListener('click', playAgain);
+  changePlayersBtn.addEventListener('click', changePlayers);
+  winPlayAgain.addEventListener('click', playAgain);
+  winChangePlayers.addEventListener('click', changePlayers);
+
+  buildBoard();
+  setPlayerCount(2);
+})();
+</script>
+{% endblock %}

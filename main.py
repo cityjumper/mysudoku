@@ -212,6 +212,81 @@ async def memory_match(request: Request):
     return templates.TemplateResponse("memory_match.html", {"request": request, "lang": lang})
 
 
+SNL_I18N_KEYS = [
+    'setup_heading', 'setup_subheading', 'color_label', 'shape_label', 'player_placeholder',
+    'start_game', 'players_heading', 'play_again', 'change_players', 'start_label', 'roll_dice',
+    'turn_banner', 'msg_overshoot', 'msg_moved', 'msg_ladder', 'msg_snake', 'msg_extra_turn',
+    'win_title', 'win_subtitle',
+]
+
+
+@app.get("/snakes-and-ladders", response_class=HTMLResponse)
+async def snakes_and_ladders(request: Request):
+    """Snakes and Ladders page endpoint."""
+    lang = get_current_lang(request)
+    snl_i18n = {key: get_translation(lang, f'games.snakes_and_ladders.{key}') for key in SNL_I18N_KEYS}
+    return templates.TemplateResponse(
+        "snakes_and_ladders.html",
+        {"request": request, "lang": lang, "snl_i18n": snl_i18n},
+    )
+
+
+MASTERMIND_I18N_KEYS = [
+    'ready', 'pick_colors', 'keep_guessing', 'win_title', 'win_message',
+    'lose_title', 'lose_message', 'gave_up_title', 'no_best',
+]
+
+
+@app.get("/mastermind", response_class=HTMLResponse)
+async def mastermind(request: Request):
+    """Mastermind page endpoint."""
+    lang = get_current_lang(request)
+    mm_i18n = {key: get_translation(lang, f'games.mastermind.{key}') for key in MASTERMIND_I18N_KEYS}
+    return templates.TemplateResponse(
+        "mastermind.html",
+        {"request": request, "lang": lang, "mm_i18n": mm_i18n},
+    )
+
+
+@app.get("/go", response_class=HTMLResponse)
+async def go_game(request: Request):
+    """Go (board game) page endpoint."""
+    lang = get_current_lang(request)
+    return templates.TemplateResponse("go.html", {"request": request, "lang": lang})
+
+
+@app.get("/chinese-checkers", response_class=HTMLResponse)
+async def chinese_checkers(request: Request):
+    """Chinese Checkers page endpoint."""
+    lang = get_current_lang(request)
+    return templates.TemplateResponse("chinese_checkers.html", {"request": request, "lang": lang})
+
+
+@app.get("/backgammon", response_class=HTMLResponse)
+async def backgammon(request: Request):
+    """Backgammon page endpoint."""
+    lang = get_current_lang(request)
+    return templates.TemplateResponse("backgammon.html", {"request": request, "lang": lang})
+
+
+TRB_I18N_KEYS = [
+    'player_placeholder', 'start_game', 'players_heading', 'play_again', 'change_players',
+    'roll_dice', 'turn_banner', 'choose_peg', 'msg_exit', 'msg_moved', 'msg_bump',
+    'msg_blocked', 'msg_extra_turn', 'msg_home', 'win_title', 'win_subtitle',
+]
+
+
+@app.get("/trouble", response_class=HTMLResponse)
+async def trouble(request: Request):
+    """Trouble board game page endpoint."""
+    lang = get_current_lang(request)
+    trb_i18n = {key: get_translation(lang, f'games.trouble.{key}') for key in TRB_I18N_KEYS}
+    return templates.TemplateResponse(
+        "trouble.html",
+        {"request": request, "lang": lang, "trb_i18n": trb_i18n},
+    )
+
+
 @app.get("/api")
 async def api_root():
     """API root endpoint with API information."""

@@ -1,0 +1,691 @@
+{% extends "base.html" %}
+
+{% block title %}{{ translate(lang, 'games.backgammon.title') }}{% endblock %}
+
+{% block extra_head %}
+<style>
+  #board {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr) 0.5fr repeat(6, 1fr) 0.7fr;
+    grid-template-rows: 150px 150px;
+    gap: 3px;
+    background: #451a03;
+    padding: 10px;
+    border-radius: 14px;
+  }
+
+  @media (min-width: 640px) {
+    #board { grid-template-rows: 200px 200px; gap: 4px; padding: 14px; }
+  }
+
+  .bgm-point {
+    position: relative;
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    overflow: hidden;
+    -webkit-user-select: none;
+    user-select: none;
+  }
+  .bgm-point.row-top { flex-direction: column; justify-content: flex-start; }
+  .bgm-point.row-bottom { flex-direction: column-reverse; justify-content: flex-end; }
+
+  .bgm-point::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    transition: filter 0.15s ease;
+  }
+  .bgm-point.row-top::before { clip-path: polygon(0 0, 100% 0, 50% 100%); }
+  .bgm-point.row-bottom::before { clip-path: polygon(0 100%, 100% 100%, 50% 0%); }
+  .bgm-point.point-light::before { background: #fcd9a8; }
+  .bgm-point.point-dark::before { background: #92400e; }
+
+  .bgm-point.legal::before { filter: brightness(1.3); box-shadow: inset 0 0 0 3px #22c55e; }
+  .bgm-point.selected::before { box-shadow: inset 0 0 0 3px #0ea5e9; }
+
+  .bgm-checker {
+    position: relative;
+    z-index: 1;
+    width: 24px;
+    height: 24px;
+    border-radius: 9999px;
+    border: 2px solid rgba(0, 0, 0, 0.25);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    font-weight: 800;
+    flex-shrink: 0;
+    margin: 1px 0;
+  }
+  .bgm-checker.white { background: radial-gradient(circle at 30% 30%, #ffffff, #cbd5e1); color: #1e293b; }
+  .bgm-checker.black { background: radial-gradient(circle at 30% 30%, #64748b, #0f172a); color: #f1f5f9; }
+
+  @media (min-width: 640px) {
+    .bgm-checker { width: 32px; height: 32px; font-size: 13px; }
+  }
+
+  .bgm-bar, .bgm-off {
+    position: relative;
+    display: flex;
+    align-items: center;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 8px;
+    cursor: pointer;
+  }
+  .bgm-bar.row-top, .bgm-off.row-top { flex-direction: column; justify-content: flex-start; padding-top: 4px; }
+  .bgm-bar.row-bottom, .bgm-off.row-bottom { flex-direction: column-reverse; justify-content: flex-end; padding-bottom: 4px; }
+  .bgm-off { overflow-y: auto; }
+  .bgm-bar.legal { box-shadow: inset 0 0 0 3px #22c55e; }
+
+  .bgm-die {
+    width: 48px;
+    height: 48px;
+    background: white;
+    border: 3px solid #0f172a;
+    border-radius: 12px;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    grid-template-rows: repeat(3, 1fr);
+    padding: 7px;
+    gap: 2px;
+    transition: opacity 0.15s ease;
+  }
+  @media (min-width: 640px) {
+    .bgm-die { width: 56px; height: 56px; }
+  }
+  .bgm-die.used { opacity: 0.3; }
+
+  .bgm-pip {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #0f172a;
+    opacity: 0;
+    align-self: center;
+    justify-self: center;
+  }
+  .bgm-pip.on { opacity: 1; }
+
+  #end-turn-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+</style>
+{% endblock %}
+
+{% block body_class %}bg-gradient-to-br from-amber-50 via-orange-50 to-stone-100 min-h-screen{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+  <div class="max-w-6xl mx-auto mb-6 flex items-center justify-between">
+    <a href="/" class="inline-flex items-center text-teal-800 hover:text-teal-950 font-semibold">
+      <svg class="w-5 h-5 mr-2" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+        <path fill-rule="evenodd" d="M12.707 15.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 111.414 1.414L7.414 9H17a1 1 0 110 2H7.414l5.293 5.293a1 1 0 010 1.414z" clip-rule="evenodd" />
+      </svg>
+      {{ translate(lang, 'common.home') }}
+    </a>
+    <div class="flex items-center gap-4">
+      <a href="/checkers" class="text-sm font-semibold text-rose-700 hover:text-rose-900">{{ translate(lang, 'games.checkers.name') }}</a>
+      <a href="/chess" class="text-sm font-semibold text-purple-700 hover:text-purple-900">{{ translate(lang, 'games.chess.name') }}</a>
+      <a href="/snakes-and-ladders" class="text-sm font-semibold text-lime-700 hover:text-lime-900">{{ translate(lang, 'games.snakes_and_ladders.name') }}</a>
+    </div>
+  </div>
+
+  <div class="max-w-6xl mx-auto">
+    <header class="text-center mb-8">
+      <h1 class="text-4xl sm:text-5xl font-extrabold tracking-tight text-slate-900">{{ translate(lang, 'games.backgammon.title') }}</h1>
+      <p class="mt-2 text-slate-600">{{ translate(lang, 'games.backgammon.subtitle') }}</p>
+    </header>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div class="lg:col-span-2">
+        <div class="bg-white rounded-2xl shadow-xl ring-1 ring-slate-200 p-4 sm:p-8">
+          <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
+            <div>
+              <div class="text-sm font-semibold text-slate-500 uppercase tracking-wide">{{ translate(lang, 'games.backgammon.status') }}</div>
+              <div id="status" class="mt-1 text-2xl font-bold text-slate-900">{{ translate(lang, 'games.backgammon.white_to_move') }}</div>
+              <div id="substatus" class="mt-1 text-slate-600">{{ translate(lang, 'games.backgammon.prompt_roll') }}</div>
+            </div>
+            <div class="flex flex-wrap gap-2">
+              <button id="new-game" class="rounded-lg bg-teal-600 hover:bg-teal-700 text-white font-semibold px-4 py-2">{{ translate(lang, 'games.backgammon.new_game') }}</button>
+              <button id="reset-scores" class="rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 font-semibold px-4 py-2">{{ translate(lang, 'games.backgammon.reset_scores') }}</button>
+            </div>
+          </div>
+
+          <div class="flex items-center gap-4 mb-4">
+            <button id="roll-btn" class="rounded-lg bg-amber-600 hover:bg-amber-700 text-white font-semibold px-4 py-2">{{ translate(lang, 'games.backgammon.roll_dice') }}</button>
+            <div id="dice-wrap" class="flex items-center gap-2"></div>
+            <button id="end-turn-btn" class="ml-auto rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 font-semibold px-4 py-2" disabled>{{ translate(lang, 'games.backgammon.end_turn') }}</button>
+          </div>
+
+          <div id="board"></div>
+        </div>
+      </div>
+
+      <div class="lg:col-span-1">
+        <div class="bg-white rounded-2xl shadow-xl ring-1 ring-slate-200 p-6 sticky top-8">
+          <h2 class="text-xl font-bold text-slate-900 mb-4">{{ translate(lang, 'games.backgammon.scoreboard') }}</h2>
+          <div class="grid grid-cols-2 gap-3">
+            <div class="rounded-xl bg-slate-50 ring-1 ring-slate-200 p-4">
+              <div class="text-xs font-semibold uppercase tracking-wide text-slate-600">{{ translate(lang, 'games.backgammon.white_wins_label') }}</div>
+              <div id="score-white" class="mt-1 text-3xl font-extrabold text-slate-900">0</div>
+            </div>
+            <div class="rounded-xl bg-slate-800 ring-1 ring-slate-700 p-4">
+              <div class="text-xs font-semibold uppercase tracking-wide text-slate-300">{{ translate(lang, 'games.backgammon.black_wins_label') }}</div>
+              <div id="score-black" class="mt-1 text-3xl font-extrabold text-white">0</div>
+            </div>
+            <div class="rounded-xl bg-teal-50 ring-1 ring-teal-100 p-4 col-span-2">
+              <div class="text-xs font-semibold uppercase tracking-wide text-teal-700">{{ translate(lang, 'games.backgammon.games_played') }}</div>
+              <div id="games" class="mt-1 text-3xl font-extrabold text-teal-900">0</div>
+            </div>
+          </div>
+
+          <div class="mt-6">
+            <h3 class="text-sm font-bold text-slate-700 mb-2">{{ translate(lang, 'games.backgammon.rules') }}</h3>
+            <ul class="text-sm text-slate-600 space-y-1">
+              <li>• {{ translate(lang, 'games.backgammon.rule_1') }}</li>
+              <li>• {{ translate(lang, 'games.backgammon.rule_2') }}</li>
+              <li>• {{ translate(lang, 'games.backgammon.rule_3') }}</li>
+              <li>• {{ translate(lang, 'games.backgammon.rule_4') }}</li>
+              <li>• {{ translate(lang, 'games.backgammon.rule_5') }}</li>
+              <li>• {{ translate(lang, 'games.backgammon.rule_6') }}</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  const T = {
+    white_to_move: "{{ translate(lang, 'games.backgammon.white_to_move') }}",
+    black_to_move: "{{ translate(lang, 'games.backgammon.black_to_move') }}",
+    white_wins: "{{ translate(lang, 'games.backgammon.white_wins') }}",
+    black_wins: "{{ translate(lang, 'games.backgammon.black_wins') }}",
+    prompt_roll: "{{ translate(lang, 'games.backgammon.prompt_roll') }}",
+    prompt_select: "{{ translate(lang, 'games.backgammon.prompt_select') }}",
+    prompt_destination: "{{ translate(lang, 'games.backgammon.prompt_destination') }}",
+    must_enter_bar: "{{ translate(lang, 'games.backgammon.must_enter_bar') }}",
+    no_legal_moves: "{{ translate(lang, 'games.backgammon.no_legal_moves') }}",
+    doubles_rolled: "{{ translate(lang, 'games.backgammon.doubles_rolled') }}"
+  };
+</script>
+<script>
+  const SCORE_KEY = 'bgm:scores:v1';
+
+  const PIP_FACES = {
+    1: [5],
+    2: [1, 9],
+    3: [1, 5, 9],
+    4: [1, 3, 7, 9],
+    5: [1, 3, 5, 7, 9],
+    6: [1, 3, 4, 6, 7, 9],
+  };
+
+  let points = [];        // index 1..24: { color: 'white'|'black'|null, count: number }
+  let barWhite = 0, barBlack = 0;
+  let offWhite = 0, offBlack = 0;
+  let currentPlayer = 'white';
+  let dice = [];           // remaining usable die values this turn
+  let usedDiceFaces = [];  // original rolled faces, for display (marks used ones)
+  let selected = null;     // point number (1-24) or 'bar'
+  let legalDestinations = []; // [{die, dest}] dest is number or 'off'
+  let gameOver = false;
+  let rolling = false;
+
+  const boardEl = document.getElementById('board');
+  const statusEl = document.getElementById('status');
+  const substatusEl = document.getElementById('substatus');
+  const diceWrap = document.getElementById('dice-wrap');
+  const rollBtn = document.getElementById('roll-btn');
+  const endTurnBtn = document.getElementById('end-turn-btn');
+
+  const scoreWhiteEl = document.getElementById('score-white');
+  const scoreBlackEl = document.getElementById('score-black');
+  const gamesEl = document.getElementById('games');
+
+  // ---------- Scores ----------
+
+  function loadScores() {
+    try {
+      const raw = localStorage.getItem(SCORE_KEY);
+      if (!raw) return { white: 0, black: 0, games: 0 };
+      const parsed = JSON.parse(raw);
+      return {
+        white: Number(parsed.white) || 0,
+        black: Number(parsed.black) || 0,
+        games: Number(parsed.games) || 0,
+      };
+    } catch {
+      return { white: 0, black: 0, games: 0 };
+    }
+  }
+
+  function saveScores(scores) {
+    localStorage.setItem(SCORE_KEY, JSON.stringify(scores));
+  }
+
+  function renderScores() {
+    const scores = loadScores();
+    scoreWhiteEl.textContent = String(scores.white);
+    scoreBlackEl.textContent = String(scores.black);
+    gamesEl.textContent = String(scores.games);
+  }
+
+  document.getElementById('reset-scores').addEventListener('click', () => {
+    saveScores({ white: 0, black: 0, games: 0 });
+    renderScores();
+  });
+
+  // ---------- Board setup ----------
+
+  function createInitialPosition() {
+    points = Array.from({ length: 25 }, () => ({ color: null, count: 0 }));
+    points[24] = { color: 'white', count: 2 };
+    points[13] = { color: 'white', count: 5 };
+    points[8] = { color: 'white', count: 3 };
+    points[6] = { color: 'white', count: 5 };
+    points[1] = { color: 'black', count: 2 };
+    points[12] = { color: 'black', count: 5 };
+    points[17] = { color: 'black', count: 3 };
+    points[19] = { color: 'black', count: 5 };
+    barWhite = 0;
+    barBlack = 0;
+    offWhite = 0;
+    offBlack = 0;
+  }
+
+  function pointGridPos(p) {
+    if (p >= 13 && p <= 18) return { row: 1, col: p - 12 };
+    if (p >= 19 && p <= 24) return { row: 1, col: (p - 19) + 8 };
+    if (p >= 7 && p <= 12) return { row: 2, col: (12 - p) + 1 };
+    return { row: 2, col: (6 - p) + 8 }; // p 1..6
+  }
+
+  const pointEls = {};
+  let barTopEl, barBottomEl, offTopEl, offBottomEl;
+
+  function buildBoard() {
+    boardEl.innerHTML = '';
+
+    for (let p = 1; p <= 24; p++) {
+      const { row, col } = pointGridPos(p);
+      const el = document.createElement('div');
+      el.className = `bgm-point row-${row === 1 ? 'top' : 'bottom'} ${p % 2 === 0 ? 'point-light' : 'point-dark'}`;
+      el.style.gridRow = row;
+      el.style.gridColumn = col;
+      el.dataset.point = String(p);
+      el.addEventListener('click', () => onPointClick(p));
+      boardEl.appendChild(el);
+      pointEls[p] = el;
+    }
+
+    barTopEl = document.createElement('div');
+    barTopEl.className = 'bgm-bar row-top';
+    barTopEl.style.gridRow = 1;
+    barTopEl.style.gridColumn = 7;
+    barTopEl.addEventListener('click', () => onBarClick('black'));
+    boardEl.appendChild(barTopEl);
+
+    barBottomEl = document.createElement('div');
+    barBottomEl.className = 'bgm-bar row-bottom';
+    barBottomEl.style.gridRow = 2;
+    barBottomEl.style.gridColumn = 7;
+    barBottomEl.addEventListener('click', () => onBarClick('white'));
+    boardEl.appendChild(barBottomEl);
+
+    offTopEl = document.createElement('div');
+    offTopEl.className = 'bgm-off row-top';
+    offTopEl.style.gridRow = 1;
+    offTopEl.style.gridColumn = 14;
+    offTopEl.addEventListener('click', () => onOffClick('black'));
+    boardEl.appendChild(offTopEl);
+
+    offBottomEl = document.createElement('div');
+    offBottomEl.className = 'bgm-off row-bottom';
+    offBottomEl.style.gridRow = 2;
+    offBottomEl.style.gridColumn = 14;
+    offBottomEl.addEventListener('click', () => onOffClick('white'));
+    boardEl.appendChild(offBottomEl);
+  }
+
+  function renderCheckerStack(container, color, count) {
+    container.innerHTML = '';
+    if (!count) return;
+    const shown = Math.min(count, 5);
+    for (let i = 0; i < shown; i++) {
+      const c = document.createElement('div');
+      c.className = `bgm-checker ${color}`;
+      if (i === shown - 1 && count > 5) c.textContent = String(count);
+      container.appendChild(c);
+    }
+  }
+
+  // ---------- Rules helpers ----------
+
+  function direction(color) { return color === 'white' ? -1 : 1; }
+  function opponent(color) { return color === 'white' ? 'black' : 'white'; }
+  function ownBar(color) { return color === 'white' ? barWhite : barBlack; }
+  function homeRange(color) { return color === 'white' ? [1, 6] : [19, 24]; }
+  function distToOff(color, point) { return color === 'white' ? point : 25 - point; }
+
+  function isLandable(point, color) {
+    const p = points[point];
+    if (!p || p.count === 0) return true;
+    if (p.color === color) return true;
+    return p.count === 1;
+  }
+
+  function allInHome(color) {
+    if (ownBar(color) > 0) return false;
+    const [lo, hi] = homeRange(color);
+    for (let i = 1; i <= 24; i++) {
+      if (points[i].color === color && (i < lo || i > hi)) return false;
+    }
+    return true;
+  }
+
+  function furthestPointFromOff(color) {
+    const [lo, hi] = homeRange(color);
+    let best = null;
+    for (let i = lo; i <= hi; i++) {
+      if (points[i].color === color && points[i].count > 0) {
+        if (best === null || distToOff(color, i) > distToOff(color, best)) best = i;
+      }
+    }
+    return best;
+  }
+
+  function movesForOrigin(origin, color, diceValues) {
+    const moves = [];
+    const uniqueDice = [...new Set(diceValues)];
+    for (const d of uniqueDice) {
+      if (origin === 'bar') {
+        const entry = color === 'white' ? 25 - d : d;
+        if (isLandable(entry, color)) moves.push({ die: d, dest: entry });
+        continue;
+      }
+      const dest = origin + direction(color) * d;
+      if (dest >= 1 && dest <= 24) {
+        if (isLandable(dest, color)) moves.push({ die: d, dest });
+      } else if (allInHome(color)) {
+        const dist = distToOff(color, origin);
+        if (d === dist) {
+          moves.push({ die: d, dest: 'off' });
+        } else if (d > dist) {
+          const furthest = furthestPointFromOff(color);
+          if (furthest === null || distToOff(color, furthest) <= dist) {
+            moves.push({ die: d, dest: 'off' });
+          }
+        }
+      }
+    }
+    return moves;
+  }
+
+  function hasAnyLegalMove(color, diceValues) {
+    if (diceValues.length === 0) return false;
+    if (ownBar(color) > 0) return movesForOrigin('bar', color, diceValues).length > 0;
+    for (let i = 1; i <= 24; i++) {
+      if (points[i].color === color && points[i].count > 0) {
+        if (movesForOrigin(i, color, diceValues).length > 0) return true;
+      }
+    }
+    return false;
+  }
+
+  // ---------- Move execution ----------
+
+  function executeMove(origin, color, move) {
+    if (origin === 'bar') {
+      if (color === 'white') barWhite--; else barBlack--;
+    } else {
+      points[origin].count--;
+      if (points[origin].count === 0) points[origin].color = null;
+    }
+
+    if (move.dest === 'off') {
+      if (color === 'white') offWhite++; else offBlack++;
+    } else {
+      const target = points[move.dest];
+      if (target.count > 0 && target.color !== color) {
+        if (target.color === 'white') barWhite++; else barBlack++;
+        target.count = 0;
+        target.color = null;
+      }
+      target.count++;
+      target.color = color;
+    }
+
+    const idx = dice.indexOf(move.die);
+    if (idx !== -1) dice.splice(idx, 1);
+    markDieUsed(move.die);
+  }
+
+  function pickBearOffMove(moves) {
+    if (moves.length === 0) return null;
+    const exact = moves.find(m => m.dest === 'off');
+    return exact || null;
+  }
+
+  // ---------- Interaction ----------
+
+  function trySelectOrigin(origin) {
+    if (gameOver || dice.length === 0) return;
+
+    if (ownBar(currentPlayer) > 0 && origin !== 'bar') {
+      substatusEl.textContent = T.must_enter_bar;
+      return;
+    }
+
+    if (origin === 'bar') {
+      if (ownBar(currentPlayer) === 0) return;
+    } else {
+      const pt = points[origin];
+      if (!pt || pt.color !== currentPlayer || pt.count === 0) return;
+    }
+
+    const moves = movesForOrigin(origin, currentPlayer, dice);
+    if (moves.length === 0) return;
+
+    selected = origin;
+    legalDestinations = moves;
+    substatusEl.textContent = T.prompt_destination;
+    render();
+  }
+
+  function onPointClick(p) {
+    if (gameOver || dice.length === 0) return;
+    if (selected !== null) {
+      const mv = legalDestinations.find(m => m.dest === p);
+      if (mv) {
+        performMove(selected, mv);
+        return;
+      }
+    }
+    trySelectOrigin(p);
+  }
+
+  function onBarClick(color) {
+    if (gameOver || dice.length === 0) return;
+    if (color !== currentPlayer) return;
+    trySelectOrigin('bar');
+  }
+
+  function onOffClick(color) {
+    if (gameOver || dice.length === 0) return;
+    if (color !== currentPlayer || selected === null) return;
+    const mv = pickBearOffMove(legalDestinations);
+    if (mv) performMove(selected, mv);
+  }
+
+  function performMove(origin, move) {
+    executeMove(origin, currentPlayer, move);
+    selected = null;
+    legalDestinations = [];
+
+    if (checkWin()) {
+      render();
+      return;
+    }
+
+    if (dice.length === 0 || !hasAnyLegalMove(currentPlayer, dice)) {
+      endTurn();
+    } else {
+      substatusEl.textContent = T.prompt_select;
+    }
+    render();
+  }
+
+  function endTurn() {
+    dice = [];
+    usedDiceFaces = [];
+    currentPlayer = opponent(currentPlayer);
+    statusEl.textContent = currentPlayer === 'white' ? T.white_to_move : T.black_to_move;
+    substatusEl.textContent = T.prompt_roll;
+    rollBtn.disabled = false;
+    endTurnBtn.disabled = true;
+    diceWrap.innerHTML = '';
+  }
+
+  document.getElementById('end-turn-btn').addEventListener('click', () => {
+    if (dice.length === 0 || gameOver) return;
+    selected = null;
+    legalDestinations = [];
+    endTurn();
+    render();
+  });
+
+  function checkWin() {
+    if (offWhite === 15 || offBlack === 15) {
+      gameOver = true;
+      const winner = offWhite === 15 ? 'white' : 'black';
+      statusEl.textContent = winner === 'white' ? T.white_wins : T.black_wins;
+      substatusEl.textContent = '';
+      rollBtn.disabled = true;
+      endTurnBtn.disabled = true;
+      const scores = loadScores();
+      scores[winner]++;
+      scores.games++;
+      saveScores(scores);
+      renderScores();
+      return true;
+    }
+    return false;
+  }
+
+  // ---------- Dice ----------
+
+  function buildDiceFace(value, used) {
+    const die = document.createElement('div');
+    die.className = 'bgm-die' + (used ? ' used' : '');
+    const active = new Set(PIP_FACES[value] || [1]);
+    for (let i = 1; i <= 9; i++) {
+      const pip = document.createElement('div');
+      pip.className = 'bgm-pip' + (active.has(i) ? ' on' : '');
+      die.appendChild(pip);
+    }
+    return die;
+  }
+
+  function markDieUsed(value) {
+    const idx = usedDiceFaces.findIndex(f => f.value === value && !f.used);
+    if (idx !== -1) usedDiceFaces[idx].used = true;
+    renderDice();
+  }
+
+  function renderDice() {
+    diceWrap.innerHTML = '';
+    usedDiceFaces.forEach(f => diceWrap.appendChild(buildDiceFace(f.value, f.used)));
+  }
+
+  async function sleep(ms) { return new Promise(resolve => setTimeout(resolve, ms)); }
+
+  async function doRoll() {
+    if (rolling || gameOver || dice.length > 0) return;
+    rolling = true;
+    rollBtn.disabled = true;
+    selected = null;
+    legalDestinations = [];
+
+    diceWrap.innerHTML = '';
+    const spinnerA = buildDiceFace(1, false);
+    const spinnerB = buildDiceFace(1, false);
+    diceWrap.appendChild(spinnerA);
+    diceWrap.appendChild(spinnerB);
+
+    for (let i = 0; i < 8; i++) {
+      diceWrap.replaceChild(buildDiceFace(1 + Math.floor(Math.random() * 6), false), diceWrap.children[0]);
+      diceWrap.replaceChild(buildDiceFace(1 + Math.floor(Math.random() * 6), false), diceWrap.children[1]);
+      await sleep(60);
+    }
+
+    const d1 = 1 + Math.floor(Math.random() * 6);
+    const d2 = 1 + Math.floor(Math.random() * 6);
+    dice = d1 === d2 ? [d1, d1, d1, d1] : [d1, d2];
+    usedDiceFaces = dice.map(v => ({ value: v, used: false }));
+    renderDice();
+
+    rolling = false;
+
+    if (!hasAnyLegalMove(currentPlayer, dice)) {
+      substatusEl.textContent = T.no_legal_moves;
+      endTurnBtn.disabled = false;
+    } else {
+      substatusEl.textContent = d1 === d2 ? T.doubles_rolled : T.prompt_select;
+      endTurnBtn.disabled = false;
+    }
+    render();
+  }
+
+  rollBtn.addEventListener('click', doRoll);
+
+  // ---------- Render ----------
+
+  function render() {
+    for (let p = 1; p <= 24; p++) {
+      const el = pointEls[p];
+      el.classList.toggle('selected', selected === p);
+      el.classList.toggle('legal', legalDestinations.some(m => m.dest === p));
+      renderCheckerStack(el, points[p].color, points[p].count);
+    }
+
+    renderCheckerStack(barTopEl, 'black', barBlack);
+    renderCheckerStack(barBottomEl, 'white', barWhite);
+    barTopEl.classList.toggle('legal', selected === null && currentPlayer === 'black' && barBlack > 0 && dice.length > 0);
+    barBottomEl.classList.toggle('legal', selected === null && currentPlayer === 'white' && barWhite > 0 && dice.length > 0);
+
+    renderCheckerStack(offTopEl, 'black', offBlack);
+    renderCheckerStack(offBottomEl, 'white', offWhite);
+    const bearOffReady = selected !== null && legalDestinations.some(m => m.dest === 'off');
+    offTopEl.classList.toggle('legal', bearOffReady && currentPlayer === 'black');
+    offBottomEl.classList.toggle('legal', bearOffReady && currentPlayer === 'white');
+  }
+
+  function newGame() {
+    createInitialPosition();
+    currentPlayer = 'white';
+    dice = [];
+    usedDiceFaces = [];
+    selected = null;
+    legalDestinations = [];
+    gameOver = false;
+    rolling = false;
+    statusEl.textContent = T.white_to_move;
+    substatusEl.textContent = T.prompt_roll;
+    rollBtn.disabled = false;
+    endTurnBtn.disabled = true;
+    diceWrap.innerHTML = '';
+    buildBoard();
+    render();
+  }
+
+  document.getElementById('new-game').addEventListener('click', newGame);
+
+  renderScores();
+  newGame();
+</script>
+{% endblock %}

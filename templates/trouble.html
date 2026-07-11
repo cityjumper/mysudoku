@@ -1,0 +1,776 @@
+{% extends "base.html" %}
+
+{% block title %}{{ translate(lang, 'games.trouble.title') }}{% endblock %}
+
+{% block extra_head %}
+<style>
+  #board-wrap {
+    background: radial-gradient(circle at 50% 50%, #fefce8 0%, #fef3c7 55%, #fde68a 100%);
+  }
+
+  .trb-cell {
+    position: absolute;
+    width: 9%;
+    height: 9%;
+    transform: translate(-50%, -50%);
+    border-radius: 4px;
+    background: #ffffff;
+    border: 1px solid rgba(15, 23, 42, 0.12);
+    box-sizing: border-box;
+  }
+
+  .trb-home-cell {
+    position: absolute;
+    width: 7%;
+    height: 7%;
+    transform: translate(-50%, -50%);
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.75);
+    border: 2px solid;
+    box-sizing: border-box;
+  }
+
+  .trb-dimple {
+    position: absolute;
+    width: 8%;
+    height: 8%;
+    transform: translate(-50%, -50%);
+    border-radius: 50%;
+    background: rgba(15, 23, 42, 0.06);
+    border: 2px dashed rgba(15, 23, 42, 0.18);
+    box-sizing: border-box;
+  }
+
+  .trb-finish-hub {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 14%;
+    height: 14%;
+    transform: translate(-50%, -50%);
+    border-radius: 50%;
+    background: radial-gradient(circle, #fff 0%, #e2e8f0 70%, #cbd5e1 100%);
+    border: 2px solid rgba(15, 23, 42, 0.25);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+  }
+
+  .trb-peg {
+    position: absolute;
+    width: 7%;
+    aspect-ratio: 1 / 1;
+    min-width: 14px;
+    min-height: 14px;
+    max-width: 30px;
+    max-height: 30px;
+    transform: translate(-50%, -50%);
+    border-radius: 50%;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.4), 0 0 0 2px white inset;
+    background-image: radial-gradient(circle at 35% 30%, rgba(255, 255, 255, 0.6), rgba(255, 255, 255, 0) 60%);
+    transition: left 0.18s ease, top 0.18s ease;
+    z-index: 5;
+  }
+
+  .trb-peg.trb-movable {
+    cursor: pointer;
+    animation: trb-pulse 1s ease-in-out infinite;
+  }
+
+  @keyframes trb-pulse {
+    0%, 100% { box-shadow: 0 2px 4px rgba(0, 0, 0, 0.4), 0 0 0 2px white inset, 0 0 0 3px #fbbf24; }
+    50% { box-shadow: 0 2px 4px rgba(0, 0, 0, 0.4), 0 0 0 2px white inset, 0 0 0 7px rgba(251, 191, 36, 0.6); }
+  }
+
+  .trb-piece-preview {
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .trb-dome-wrap {
+    position: relative;
+    width: 96px;
+    height: 96px;
+  }
+
+  .trb-dome {
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    background: radial-gradient(circle at 35% 28%, rgba(255, 255, 255, 0.95), rgba(226, 232, 240, 0.35) 60%, rgba(148, 163, 184, 0.3) 100%);
+    border: 3px solid rgba(148, 163, 184, 0.7);
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15), inset 0 2px 6px rgba(255, 255, 255, 0.7);
+    pointer-events: none;
+  }
+
+  .trb-dome-wrap.trb-popping {
+    animation: trb-pop 0.25s ease;
+  }
+
+  @keyframes trb-pop {
+    0% { transform: scale(1); }
+    40% { transform: scale(0.86); }
+    100% { transform: scale(1); }
+  }
+
+  .trb-die {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: 56px;
+    height: 56px;
+    background: white;
+    border: 3px solid #0f172a;
+    border-radius: 12px;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    grid-template-rows: repeat(3, 1fr);
+    padding: 8px;
+    gap: 2px;
+  }
+
+  .trb-pip {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #0f172a;
+    opacity: 0;
+    align-self: center;
+    justify-self: center;
+  }
+
+  .trb-pip.trb-pip-on { opacity: 1; }
+
+  #roll-btn:disabled { cursor: not-allowed; }
+
+  .trb-peg-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    box-sizing: border-box;
+  }
+
+  @keyframes trb-pop-modal {
+    0% { transform: scale(0.6); opacity: 0; }
+    100% { transform: scale(1); opacity: 1; }
+  }
+  #win-modal .trb-piece-preview { animation: trb-pop-modal 0.35s ease; }
+</style>
+{% endblock %}
+
+{% block body_class %}bg-gradient-to-br from-slate-50 to-amber-100 min-h-screen{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+  <div class="max-w-6xl mx-auto mb-6 flex items-center justify-between">
+    <a href="/" class="inline-flex items-center text-amber-800 hover:text-amber-950 font-semibold">
+      <svg class="w-5 h-5 mr-2" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+        <path fill-rule="evenodd" d="M12.707 15.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 111.414 1.414L7.414 9H17a1 1 0 110 2H7.414l5.293 5.293a1 1 0 010 1.414z" clip-rule="evenodd" />
+      </svg>
+      {{ translate(lang, 'common.home') }}
+    </a>
+  </div>
+
+  <div class="max-w-6xl mx-auto">
+    <header class="text-center mb-8">
+      <h1 class="text-4xl sm:text-5xl font-extrabold tracking-tight text-slate-900">{{ translate(lang, 'games.trouble.title') }}</h1>
+      <p class="mt-2 text-slate-600">{{ translate(lang, 'games.trouble.subtitle') }}</p>
+    </header>
+
+    <!-- SETUP SCREEN -->
+    <div id="setup-screen" class="bg-white rounded-2xl shadow-xl ring-1 ring-slate-200 p-6 sm:p-8">
+      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+        <div>
+          <h2 class="text-xl font-bold text-slate-900">{{ translate(lang, 'games.trouble.setup_heading') }}</h2>
+          <p class="text-sm text-slate-500">{{ translate(lang, 'games.trouble.setup_subheading') }}</p>
+        </div>
+        <div class="flex items-center gap-3 bg-slate-100 rounded-xl p-2 self-start sm:self-auto">
+          <button id="count-minus" type="button" class="w-10 h-10 rounded-lg bg-white shadow text-xl font-bold text-slate-700 hover:bg-slate-50" aria-label="-">−</button>
+          <div id="count-display" class="w-10 text-center text-2xl font-extrabold text-slate-900">2</div>
+          <button id="count-plus" type="button" class="w-10 h-10 rounded-lg bg-white shadow text-xl font-bold text-slate-700 hover:bg-slate-50" aria-label="+">+</button>
+        </div>
+      </div>
+
+      <div id="player-rows" class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6"></div>
+
+      <div class="flex justify-center">
+        <button id="start-game" type="button" class="rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold px-8 py-3 text-lg shadow-lg transition-colors">{{ translate(lang, 'games.trouble.start_game') }} 🎲</button>
+      </div>
+    </div>
+
+    <!-- GAME SCREEN -->
+    <div id="game-screen" class="hidden grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div class="lg:col-span-2">
+        <div class="bg-white rounded-2xl shadow-xl ring-1 ring-slate-200 p-4 sm:p-6">
+          <div id="board-wrap" class="relative w-full aspect-square rounded-full overflow-hidden ring-1 ring-slate-200 select-none">
+            <div id="ring-layer" class="absolute inset-0"></div>
+            <div id="home-layer" class="absolute inset-0"></div>
+            <div id="dimple-layer" class="absolute inset-0"></div>
+            <div class="trb-finish-hub">🏁</div>
+            <div id="pieces-layer" class="absolute inset-0"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="lg:col-span-1 flex flex-col gap-4">
+        <div class="bg-white rounded-2xl shadow-xl ring-1 ring-slate-200 p-5 text-center">
+          <div id="turn-banner" class="rounded-xl px-4 py-3 font-bold text-lg mb-4 transition-colors"></div>
+          <div class="flex justify-center mb-4">
+            <div id="dome-wrap" class="trb-dome-wrap">
+              <div class="trb-dome"></div>
+              <div id="die" class="trb-die">
+                <div class="trb-pip"></div><div class="trb-pip"></div><div class="trb-pip"></div>
+                <div class="trb-pip"></div><div class="trb-pip"></div><div class="trb-pip"></div>
+                <div class="trb-pip"></div><div class="trb-pip"></div><div class="trb-pip"></div>
+              </div>
+            </div>
+          </div>
+          <button id="roll-btn" type="button" class="w-full rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-6 py-3 text-lg shadow-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed">{{ translate(lang, 'games.trouble.roll_dice') }}</button>
+          <div id="message" class="mt-4 text-sm text-slate-600 min-h-[40px]"></div>
+        </div>
+
+        <div class="bg-white rounded-2xl shadow-xl ring-1 ring-slate-200 p-5">
+          <h3 class="text-sm font-bold text-slate-700 uppercase tracking-wide mb-3">{{ translate(lang, 'games.trouble.players_heading') }}</h3>
+          <div id="player-list" class="space-y-2"></div>
+        </div>
+
+        <div class="bg-white rounded-2xl shadow-xl ring-1 ring-slate-200 p-5 flex gap-2">
+          <button id="restart-btn" type="button" class="flex-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 font-semibold px-4 py-2 text-sm transition-colors">{{ translate(lang, 'games.trouble.play_again') }}</button>
+          <button id="change-players-btn" type="button" class="flex-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 font-semibold px-4 py-2 text-sm transition-colors">{{ translate(lang, 'games.trouble.change_players') }}</button>
+        </div>
+
+        <div class="bg-white rounded-2xl shadow-xl ring-1 ring-slate-200 p-5">
+          <h3 class="text-sm font-bold text-slate-700 mb-2">{{ translate(lang, 'common.rules') }}</h3>
+          <ul class="text-sm text-slate-600 space-y-1">
+            <li>• {{ translate(lang, 'games.trouble.rule_1') }}</li>
+            <li>• {{ translate(lang, 'games.trouble.rule_2') }}</li>
+            <li>• {{ translate(lang, 'games.trouble.rule_3') }}</li>
+            <li>• {{ translate(lang, 'games.trouble.rule_4') }}</li>
+            <li>• {{ translate(lang, 'games.trouble.rule_5') }}</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- WIN MODAL -->
+<div id="win-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4">
+  <div class="bg-white rounded-2xl shadow-2xl p-8 max-w-sm w-full text-center">
+    <div id="win-piece-preview" class="trb-piece-preview mx-auto mb-4" style="width:56px;height:56px;"></div>
+    <h2 id="win-title" class="text-2xl font-extrabold text-slate-900 mb-2"></h2>
+    <p class="text-slate-600 mb-6">{{ translate(lang, 'games.trouble.win_subtitle') }}</p>
+    <div class="flex gap-3">
+      <button id="win-play-again" type="button" class="flex-1 rounded-lg bg-amber-600 hover:bg-amber-700 text-white font-bold px-4 py-2 transition-colors">{{ translate(lang, 'games.trouble.play_again') }}</button>
+      <button id="win-change-players" type="button" class="flex-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold px-4 py-2 transition-colors">{{ translate(lang, 'games.trouble.change_players') }}</button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+(function () {
+  const I18N = {{ trb_i18n | tojson }};
+
+  function fmt(str, vars) {
+    return str.replace(/\{(\w+)\}/g, (_, key) => (key in vars ? vars[key] : `{${key}}`));
+  }
+
+  const COLORS = [
+    { name: 'Red', hex: '#ef4444' },
+    { name: 'Blue', hex: '#3b82f6' },
+    { name: 'Yellow', hex: '#eab308' },
+    { name: 'Green', hex: '#22c55e' },
+  ];
+
+  const QUADRANTS_FOR_COUNT = { 2: [0, 2], 3: [0, 1, 2], 4: [0, 1, 2, 3] };
+
+  const RING_MIN = 14, RING_MAX = 86, CELL = (RING_MAX - RING_MIN) / 8;
+  const RING_LEN = 28;
+  const ENTRY = [3, 10, 17, 24];
+
+  const PIP_FACES = {
+    1: [5],
+    2: [1, 9],
+    3: [1, 5, 9],
+    4: [1, 3, 7, 9],
+    5: [1, 3, 5, 7, 9],
+    6: [1, 3, 4, 6, 7, 9],
+  };
+
+  function ringCellUnit(index) {
+    const side = Math.floor(index / 7), local = index % 7;
+    if (side === 0) return { row: 0, col: local };
+    if (side === 1) return { row: local, col: 7 };
+    if (side === 2) return { row: 7, col: 7 - local };
+    return { row: 7 - local, col: 0 };
+  }
+
+  function ringPos(index) {
+    const { row, col } = ringCellUnit(((index % RING_LEN) + RING_LEN) % RING_LEN);
+    return { x: RING_MIN + (col + 0.5) * CELL, y: RING_MIN + (row + 0.5) * CELL };
+  }
+
+  function homeStretchPos(entryIdx, slot) {
+    const e = ringPos(entryIdx);
+    const dx = 50 - e.x, dy = 50 - e.y;
+    const t = (slot + 1) / 5;
+    return { x: e.x + dx * t, y: e.y + dy * t };
+  }
+
+  function startDimplePos(entryIdx, slot) {
+    const e = ringPos(entryIdx);
+    const dx = e.x - 50, dy = e.y - 50;
+    const len = Math.hypot(dx, dy) || 1;
+    const ux = dx / len, uy = dy / len;
+    const px = -uy, py = ux;
+    const clusterX = 50 + dx * 1.3, clusterY = 50 + dy * 1.3;
+    const row = Math.floor(slot / 2), col = slot % 2;
+    const spacing = 7;
+    return {
+      x: clusterX + (col - 0.5) * spacing * px + (row - 0.5) * spacing * ux,
+      y: clusterY + (col - 0.5) * spacing * py + (row - 0.5) * spacing * uy,
+    };
+  }
+
+  const setupScreen = document.getElementById('setup-screen');
+  const gameScreen = document.getElementById('game-screen');
+  const countMinus = document.getElementById('count-minus');
+  const countPlus = document.getElementById('count-plus');
+  const countDisplay = document.getElementById('count-display');
+  const rowsContainer = document.getElementById('player-rows');
+  const startGameBtn = document.getElementById('start-game');
+
+  const ringLayer = document.getElementById('ring-layer');
+  const homeLayer = document.getElementById('home-layer');
+  const dimpleLayer = document.getElementById('dimple-layer');
+  const piecesLayer = document.getElementById('pieces-layer');
+  const turnBanner = document.getElementById('turn-banner');
+  const domeWrap = document.getElementById('dome-wrap');
+  const dieEl = document.getElementById('die');
+  const rollBtn = document.getElementById('roll-btn');
+  const messageEl = document.getElementById('message');
+  const playerListEl = document.getElementById('player-list');
+  const restartBtn = document.getElementById('restart-btn');
+  const changePlayersBtn = document.getElementById('change-players-btn');
+
+  const winModal = document.getElementById('win-modal');
+  const winPiecePreview = document.getElementById('win-piece-preview');
+  const winTitle = document.getElementById('win-title');
+  const winPlayAgain = document.getElementById('win-play-again');
+  const winChangePlayers = document.getElementById('win-change-players');
+
+  let playerCount = 2;
+  let playerDrafts = Array.from({ length: 4 }, () => ({ name: '' }));
+
+  let players = [];
+  let currentIndex = 0;
+  let rolling = false;
+  let gameActive = false;
+  let boardBuilt = false;
+  let awaitingChoice = null; // { player, roll, movable }
+
+  function escapeHtml(str) {
+    return String(str).replace(/[&<>"']/g, (c) => ({
+      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+    }[c]));
+  }
+
+  function sleep(ms) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+  }
+
+  // ---------- Setup screen ----------
+
+  function renderPlayerRows() {
+    rowsContainer.innerHTML = '';
+    for (let i = 0; i < playerCount; i++) {
+      const draft = playerDrafts[i];
+      const color = COLORS[i].hex;
+      const card = document.createElement('div');
+      card.className = 'rounded-xl border-2 p-4 transition-colors';
+      card.style.borderColor = color;
+      card.innerHTML = `
+        <div class="flex items-center gap-3">
+          <div class="trb-piece-preview" style="width:40px;height:40px;background:${color};"></div>
+          <input type="text" data-idx="${i}" class="trb-name-input flex-1 border border-slate-300 rounded-lg px-3 py-2 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-amber-500" placeholder="${escapeHtml(fmt(I18N.player_placeholder, { n: i + 1 }))}" value="${escapeHtml(draft.name)}" maxlength="16">
+        </div>
+      `;
+      rowsContainer.appendChild(card);
+    }
+    rowsContainer.querySelectorAll('.trb-name-input').forEach((input) => {
+      input.addEventListener('input', (e) => {
+        const idx = Number(e.target.dataset.idx);
+        playerDrafts[idx].name = e.target.value;
+      });
+    });
+  }
+
+  countMinus.addEventListener('click', () => {
+    playerCount = Math.max(2, playerCount - 1);
+    countDisplay.textContent = String(playerCount);
+    renderPlayerRows();
+  });
+
+  countPlus.addEventListener('click', () => {
+    playerCount = Math.min(4, playerCount + 1);
+    countDisplay.textContent = String(playerCount);
+    renderPlayerRows();
+  });
+
+  startGameBtn.addEventListener('click', () => {
+    const quadrants = QUADRANTS_FOR_COUNT[playerCount];
+    players = [];
+    for (let i = 0; i < playerCount; i++) {
+      const draft = playerDrafts[i];
+      const name = draft.name.trim() || fmt(I18N.player_placeholder, { n: i + 1 });
+      const quadrant = quadrants[i];
+      players.push({
+        id: i,
+        name,
+        color: COLORS[quadrant].hex,
+        quadrant,
+        entry: ENTRY[quadrant],
+        pegs: [{ pos: null }, { pos: null }, { pos: null }, { pos: null }],
+      });
+    }
+    currentIndex = 0;
+    gameActive = true;
+    rolling = false;
+    awaitingChoice = null;
+    boardBuilt = false;
+
+    setupScreen.classList.add('hidden');
+    gameScreen.classList.remove('hidden');
+
+    buildBoard();
+    renderPieces();
+    renderPlayerList();
+    updateTurnUI();
+    setDieFace(1);
+    messageEl.textContent = '';
+    rollBtn.disabled = false;
+  });
+
+  // ---------- Board ----------
+
+  function buildBoard() {
+    if (boardBuilt) return;
+    ringLayer.innerHTML = '';
+    for (let i = 0; i < RING_LEN; i++) {
+      const pos = ringPos(i);
+      const cell = document.createElement('div');
+      cell.className = 'trb-cell';
+      cell.style.left = pos.x + '%';
+      cell.style.top = pos.y + '%';
+      const entryPlayer = players.find((p) => p.entry === i);
+      if (entryPlayer) {
+        cell.style.borderColor = entryPlayer.color;
+        cell.style.borderWidth = '2px';
+      }
+      ringLayer.appendChild(cell);
+    }
+
+    homeLayer.innerHTML = '';
+    dimpleLayer.innerHTML = '';
+    players.forEach((p) => {
+      for (let slot = 0; slot < 4; slot++) {
+        const hp = homeStretchPos(p.entry, slot);
+        const hEl = document.createElement('div');
+        hEl.className = 'trb-home-cell';
+        hEl.style.left = hp.x + '%';
+        hEl.style.top = hp.y + '%';
+        hEl.style.borderColor = p.color;
+        homeLayer.appendChild(hEl);
+
+        const dp = startDimplePos(p.entry, slot);
+        const dEl = document.createElement('div');
+        dEl.className = 'trb-dimple';
+        dEl.style.left = dp.x + '%';
+        dEl.style.top = dp.y + '%';
+        dEl.style.borderColor = p.color + '80';
+        dimpleLayer.appendChild(dEl);
+      }
+    });
+    boardBuilt = true;
+  }
+
+  // ---------- Pieces ----------
+
+  function pegScreenPos(player, peg) {
+    if (peg.pos === null) {
+      const slot = player.pegs.indexOf(peg);
+      return startDimplePos(player.entry, slot);
+    }
+    if (peg.pos <= 23) {
+      const boardIndex = (player.entry + peg.pos) % RING_LEN;
+      return ringPos(boardIndex);
+    }
+    return homeStretchPos(player.entry, peg.pos - 24);
+  }
+
+  function renderPieces() {
+    piecesLayer.innerHTML = '';
+    players.forEach((player) => {
+      player.pegs.forEach((peg, pegIdx) => {
+        const { x, y } = pegScreenPos(player, peg);
+        const el = document.createElement('div');
+        const isMovable = !!(awaitingChoice && awaitingChoice.player === player && awaitingChoice.movable.includes(pegIdx));
+        el.className = 'trb-peg' + (isMovable ? ' trb-movable' : '');
+        el.style.background = player.color;
+        el.style.left = x + '%';
+        el.style.top = y + '%';
+        if (isMovable) {
+          el.addEventListener('click', () => onPegClick(player, pegIdx));
+        }
+        piecesLayer.appendChild(el);
+      });
+    });
+  }
+
+  // ---------- Player list / turn UI ----------
+
+  function pegDotStyle(peg, color) {
+    if (peg.pos === null) return `background:transparent;border:2px solid ${color}80;`;
+    if (peg.pos === 27) return `background:${color};box-shadow:0 0 0 2px ${color}55;`;
+    return `background:${color};`;
+  }
+
+  function renderPlayerList() {
+    playerListEl.innerHTML = players.map((p, i) => `
+      <div class="flex items-center gap-3 rounded-lg px-3 py-2" style="${i === currentIndex ? `background:${p.color}22; box-shadow:0 0 0 2px ${p.color} inset;` : 'background:#f8fafc;'}">
+        <div class="trb-piece-preview" style="width:20px;height:20px;background:${p.color};"></div>
+        <div class="flex-1 text-sm font-semibold text-slate-800 truncate">${escapeHtml(p.name)}</div>
+        <div class="flex items-center gap-1">
+          ${p.pegs.map((peg) => `<span class="trb-peg-dot" style="${pegDotStyle(peg, p.color)}"></span>`).join('')}
+        </div>
+      </div>
+    `).join('');
+  }
+
+  function updateTurnUI() {
+    const p = players[currentIndex];
+    turnBanner.style.background = p.color + '22';
+    turnBanner.style.color = p.color;
+    turnBanner.style.border = `2px solid ${p.color}`;
+    turnBanner.textContent = fmt(I18N.turn_banner, { name: p.name });
+    renderPlayerList();
+  }
+
+  // ---------- Dice ----------
+
+  function setDieFace(n) {
+    const pips = dieEl.querySelectorAll('.trb-pip');
+    const active = new Set(PIP_FACES[n] || [1]);
+    pips.forEach((pip, i) => {
+      pip.classList.toggle('trb-pip-on', active.has(i + 1));
+    });
+  }
+
+  // ---------- Game rules ----------
+
+  function ownPegAtRelative(player, pos) {
+    return player.pegs.some((pg) => pg.pos === pos);
+  }
+
+  function movablePegs(player, roll) {
+    const result = [];
+    player.pegs.forEach((peg, idx) => {
+      if (peg.pos === 27) return;
+      if (peg.pos === null) {
+        if (roll === 6 && !ownPegAtRelative(player, 0)) result.push(idx);
+        return;
+      }
+      const dest = peg.pos + roll;
+      if (dest > 27) return;
+      if (ownPegAtRelative(player, dest)) return;
+      result.push(idx);
+    });
+    return result;
+  }
+
+  function findOccupant(boardIndex, exceptPlayer) {
+    for (const player of players) {
+      if (player === exceptPlayer) continue;
+      for (let idx = 0; idx < player.pegs.length; idx++) {
+        const peg = player.pegs[idx];
+        if (peg.pos !== null && peg.pos <= 23 && (player.entry + peg.pos) % RING_LEN === boardIndex) {
+          return { player, idx };
+        }
+      }
+    }
+    return null;
+  }
+
+  async function performMove(player, pegIdx, roll) {
+    const peg = player.pegs[pegIdx];
+    const wasInStart = peg.pos === null;
+
+    if (wasInStart) {
+      peg.pos = 0;
+      renderPieces();
+      await sleep(200);
+    } else {
+      const from = peg.pos;
+      const to = from + roll;
+      for (let s = from + 1; s <= to; s++) {
+        peg.pos = s;
+        renderPieces();
+        await sleep(150);
+      }
+    }
+
+    let bumped = null;
+    if (peg.pos <= 23) {
+      const boardIndex = (player.entry + peg.pos) % RING_LEN;
+      const occupant = findOccupant(boardIndex, player);
+      if (occupant) {
+        occupant.player.pegs[occupant.idx].pos = null;
+        bumped = occupant.player;
+        renderPieces();
+      }
+    }
+
+    return { wasInStart, bumped, finished: peg.pos === 27 };
+  }
+
+  function clearAwaitingChoice() {
+    awaitingChoice = null;
+    renderPieces();
+  }
+
+  function onPegClick(player, pegIdx) {
+    if (!awaitingChoice || awaitingChoice.player !== player) return;
+    if (!awaitingChoice.movable.includes(pegIdx)) return;
+    const roll = awaitingChoice.roll;
+    clearAwaitingChoice();
+    performMove(player, pegIdx, roll).then((result) => afterMove(player, roll, result));
+  }
+
+  function composeMoveMessage(player, roll, result) {
+    let msg = result.wasInStart
+      ? fmt(I18N.msg_exit, { name: player.name })
+      : fmt(I18N.msg_moved, { name: player.name, roll });
+    if (result.bumped) {
+      msg += ' ' + fmt(I18N.msg_bump, { name: player.name, other: result.bumped.name });
+    }
+    if (result.finished) {
+      msg += ' ' + fmt(I18N.msg_home, { name: player.name });
+    }
+    if (roll === 6) {
+      msg += I18N.msg_extra_turn;
+    }
+    return msg;
+  }
+
+  function afterMove(player, roll, result) {
+    messageEl.textContent = composeMoveMessage(player, roll, result);
+    renderPlayerList();
+
+    if (player.pegs.every((pg) => pg.pos === 27)) {
+      handleWin(player);
+      return;
+    }
+    finishTurn(roll === 6);
+  }
+
+  async function doRoll() {
+    if (rolling || !gameActive || awaitingChoice) return;
+    rolling = true;
+    rollBtn.disabled = true;
+    messageEl.textContent = '';
+    domeWrap.classList.remove('trb-popping');
+    void domeWrap.offsetWidth;
+    domeWrap.classList.add('trb-popping');
+
+    for (let i = 0; i < 8; i++) {
+      setDieFace(1 + Math.floor(Math.random() * 6));
+      await sleep(70);
+    }
+    const roll = 1 + Math.floor(Math.random() * 6);
+    setDieFace(roll);
+    await sleep(250);
+
+    const player = players[currentIndex];
+    const movable = movablePegs(player, roll);
+
+    if (movable.length === 0) {
+      messageEl.textContent = fmt(I18N.msg_blocked, { name: player.name, roll });
+      await sleep(500);
+      finishTurn(roll === 6);
+      return;
+    }
+
+    if (movable.length === 1) {
+      const result = await performMove(player, movable[0], roll);
+      afterMove(player, roll, result);
+      return;
+    }
+
+    rolling = false;
+    awaitingChoice = { player, roll, movable };
+    messageEl.textContent = I18N.choose_peg;
+    renderPieces();
+  }
+
+  function finishTurn(extraTurn) {
+    rolling = false;
+    awaitingChoice = null;
+    if (!extraTurn) {
+      currentIndex = (currentIndex + 1) % players.length;
+    }
+    updateTurnUI();
+    rollBtn.disabled = false;
+  }
+
+  function handleWin(player) {
+    gameActive = false;
+    rolling = false;
+    awaitingChoice = null;
+    winPiecePreview.style.background = player.color;
+    winTitle.textContent = fmt(I18N.win_title, { name: player.name });
+    winModal.classList.remove('hidden');
+    rollBtn.disabled = true;
+  }
+
+  function playAgain() {
+    players.forEach((p) => {
+      p.pegs.forEach((peg) => { peg.pos = null; });
+    });
+    currentIndex = 0;
+    gameActive = true;
+    rolling = false;
+    awaitingChoice = null;
+    winModal.classList.add('hidden');
+    renderPieces();
+    renderPlayerList();
+    updateTurnUI();
+    messageEl.textContent = '';
+    setDieFace(1);
+    rollBtn.disabled = false;
+  }
+
+  function changePlayers() {
+    gameActive = false;
+    rolling = false;
+    awaitingChoice = null;
+    winModal.classList.add('hidden');
+    gameScreen.classList.add('hidden');
+    setupScreen.classList.remove('hidden');
+  }
+
+  rollBtn.addEventListener('click', doRoll);
+  domeWrap.addEventListener('click', doRoll);
+  restartBtn.addEventListener('click', playAgain);
+  changePlayersBtn.addEventListener('click', changePlayers);
+  winPlayAgain.addEventListener('click', playAgain);
+  winChangePlayers.addEventListener('click', changePlayers);
+
+  renderPlayerRows();
+})();
+</script>
+{% endblock %}

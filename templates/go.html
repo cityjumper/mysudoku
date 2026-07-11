@@ -1,0 +1,469 @@
+{% extends "base.html" %}
+
+{% block title %}{{ translate(lang, 'games.go.title') }}{% endblock %}
+
+{% block extra_head %}
+<style>
+  .go-board-wrap {
+    position: relative;
+    background-color: #dcb35c;
+    border: 2px solid #78350f;
+    border-radius: 4px;
+    box-shadow: inset 0 0 0 1px rgba(120, 53, 15, 0.3);
+  }
+  .go-star {
+    position: absolute;
+    width: 8px;
+    height: 8px;
+    border-radius: 9999px;
+    background: #78350f;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+  }
+  .go-point {
+    position: absolute;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transform: translate(-50%, -50%);
+    cursor: pointer;
+  }
+  .go-point.disabled { cursor: default; }
+  .go-stone {
+    border-radius: 9999px;
+    box-shadow: 0 2px 3px rgba(0, 0, 0, 0.45);
+  }
+  .go-stone.black {
+    background: radial-gradient(circle at 30% 30%, #52525b, #09090b);
+  }
+  .go-stone.white {
+    background: radial-gradient(circle at 30% 30%, #ffffff, #cbd5e1);
+    border: 1px solid #94a3b8;
+  }
+  .go-stone.last-move {
+    box-shadow: 0 0 0 2px #0ea5e9, 0 2px 3px rgba(0, 0, 0, 0.45);
+  }
+</style>
+{% endblock %}
+
+{% block body_class %}bg-gradient-to-br from-amber-50 via-orange-50 to-yellow-100 min-h-screen{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+  <div class="max-w-6xl mx-auto mb-6 flex items-center justify-between">
+    <a href="/" class="inline-flex items-center text-amber-800 hover:text-amber-950 font-semibold">
+      <svg class="w-5 h-5 mr-2" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+        <path fill-rule="evenodd" d="M12.707 15.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 111.414 1.414L7.414 9H17a1 1 0 110 2H7.414l5.293 5.293a1 1 0 010 1.414z" clip-rule="evenodd" />
+      </svg>
+      {{ translate(lang, 'common.home') }}
+    </a>
+    <div class="flex items-center gap-4">
+      <a href="/checkers" class="text-sm font-semibold text-rose-700 hover:text-rose-900">{{ translate(lang, 'games.checkers.name') }}</a>
+      <a href="/connect-four" class="text-sm font-semibold text-cyan-700 hover:text-cyan-900">{{ translate(lang, 'games.connect_four.name') }}</a>
+      <a href="/chess" class="text-sm font-semibold text-purple-700 hover:text-purple-900">{{ translate(lang, 'games.chess.name') }}</a>
+    </div>
+  </div>
+
+  <div class="max-w-6xl mx-auto">
+    <header class="text-center mb-8">
+      <h1 class="text-4xl sm:text-5xl font-extrabold tracking-tight text-slate-900">{{ translate(lang, 'games.go.title') }}</h1>
+      <p class="mt-2 text-slate-600">{{ translate(lang, 'games.go.subtitle') }}</p>
+    </header>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div class="lg:col-span-2">
+        <div class="bg-white rounded-2xl shadow-xl ring-1 ring-slate-200 p-6 sm:p-8">
+          <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
+            <div>
+              <div class="text-sm font-semibold text-slate-500 uppercase tracking-wide">{{ translate(lang, 'games.go.status') }}</div>
+              <div id="status" class="mt-1 text-2xl font-bold text-slate-900">{{ translate(lang, 'games.go.black_to_move') }}</div>
+              <div id="substatus" class="mt-1 text-slate-600">{{ translate(lang, 'games.go.select_point') }}</div>
+            </div>
+            <div class="flex flex-wrap items-center gap-2">
+              <select id="board-size" class="border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500">
+                <option value="9" selected>{{ translate(lang, 'games.go.size_9') }}</option>
+                <option value="13">{{ translate(lang, 'games.go.size_13') }}</option>
+                <option value="19">{{ translate(lang, 'games.go.size_19') }}</option>
+              </select>
+              <button id="pass-move" class="rounded-lg bg-slate-200 hover:bg-slate-300 text-slate-800 font-semibold px-4 py-2">{{ translate(lang, 'games.go.pass') }}</button>
+              <button id="new-game" class="rounded-lg bg-amber-600 hover:bg-amber-700 text-white font-semibold px-4 py-2">{{ translate(lang, 'games.go.new_game') }}</button>
+            </div>
+          </div>
+
+          <div class="flex justify-center overflow-x-auto py-2">
+            <div id="board" class="go-board-wrap"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="lg:col-span-1">
+        <div class="bg-white rounded-2xl shadow-xl ring-1 ring-slate-200 p-6 sticky top-8">
+          <h2 class="text-xl font-bold text-slate-900 mb-4">{{ translate(lang, 'games.go.scoreboard') }}</h2>
+          <div class="grid grid-cols-2 gap-3">
+            <div class="rounded-xl bg-slate-50 ring-1 ring-slate-200 p-4">
+              <div class="text-xs font-semibold uppercase tracking-wide text-slate-700">{{ translate(lang, 'games.go.black_stones') }}</div>
+              <div id="black-stones" class="mt-1 text-3xl font-extrabold text-slate-900">0</div>
+            </div>
+            <div class="rounded-xl bg-slate-50 ring-1 ring-slate-300 p-4">
+              <div class="text-xs font-semibold uppercase tracking-wide text-slate-700">{{ translate(lang, 'games.go.white_stones') }}</div>
+              <div id="white-stones" class="mt-1 text-3xl font-extrabold text-slate-900">0</div>
+            </div>
+            <div class="rounded-xl bg-amber-50 ring-1 ring-amber-100 p-4">
+              <div class="text-xs font-semibold uppercase tracking-wide text-amber-700">{{ translate(lang, 'games.go.black_captures') }}</div>
+              <div id="black-captures" class="mt-1 text-2xl font-extrabold text-amber-900">0</div>
+            </div>
+            <div class="rounded-xl bg-amber-50 ring-1 ring-amber-100 p-4">
+              <div class="text-xs font-semibold uppercase tracking-wide text-amber-700">{{ translate(lang, 'games.go.white_captures') }}</div>
+              <div id="white-captures" class="mt-1 text-2xl font-extrabold text-amber-900">0</div>
+            </div>
+            <div class="rounded-xl bg-emerald-50 ring-1 ring-emerald-100 p-4 col-span-2">
+              <div class="text-xs font-semibold uppercase tracking-wide text-emerald-700">{{ translate(lang, 'games.go.final_score') }}</div>
+              <div id="final-score" class="mt-1 text-lg font-extrabold text-emerald-900">&ndash;</div>
+            </div>
+          </div>
+
+          <div class="mt-6">
+            <h3 class="text-sm font-bold text-slate-700 mb-2">{{ translate(lang, 'games.go.rules') }}</h3>
+            <ul class="text-sm text-slate-600 space-y-1">
+              <li>&bull; {{ translate(lang, 'games.go.rule_1') }}</li>
+              <li>&bull; {{ translate(lang, 'games.go.rule_2') }}</li>
+              <li>&bull; {{ translate(lang, 'games.go.rule_3') }}</li>
+              <li>&bull; {{ translate(lang, 'games.go.rule_4') }}</li>
+              <li>&bull; {{ translate(lang, 'games.go.rule_5') }}</li>
+            </ul>
+            <p class="mt-3 text-xs text-slate-400">{{ translate(lang, 'games.go.komi_note') }}</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  const goTranslations = {
+    black_to_move: "{{ translate(lang, 'games.go.black_to_move') }}",
+    white_to_move: "{{ translate(lang, 'games.go.white_to_move') }}",
+    black_wins: "{{ translate(lang, 'games.go.black_wins') }}",
+    white_wins: "{{ translate(lang, 'games.go.white_wins') }}",
+    draw: "{{ translate(lang, 'games.go.draw') }}",
+    select_point: "{{ translate(lang, 'games.go.select_point') }}",
+    occupied_point: "{{ translate(lang, 'games.go.occupied_point') }}",
+    illegal_suicide: "{{ translate(lang, 'games.go.illegal_suicide') }}",
+    illegal_ko: "{{ translate(lang, 'games.go.illegal_ko') }}",
+    black_passed: "{{ translate(lang, 'games.go.black_passed') }}",
+    white_passed: "{{ translate(lang, 'games.go.white_passed') }}",
+    game_over_title: "{{ translate(lang, 'games.go.game_over_title') }}"
+  };
+
+  const CELL_SIZE = { 9: 44, 13: 34, 19: 24 };
+  const STAR_POINTS = {
+    9: [[2, 2], [2, 6], [6, 2], [6, 6], [4, 4]],
+    13: [[3, 3], [3, 9], [9, 3], [9, 9], [3, 6], [9, 6], [6, 3], [6, 9], [6, 6]],
+    19: [[3, 3], [3, 9], [3, 15], [9, 3], [9, 9], [9, 15], [15, 3], [15, 9], [15, 15]]
+  };
+  const KOMI = 6.5;
+
+  let SIZE = 9;
+  let board = [];
+  let currentPlayer = 'black';
+  let blackCaptures = 0;
+  let whiteCaptures = 0;
+  let koPoint = null;
+  let lastMove = null;
+  let passStreak = 0;
+  let gameOver = false;
+  let pointEls = [];
+
+  const boardEl = document.getElementById('board');
+  const statusEl = document.getElementById('status');
+  const substatusEl = document.getElementById('substatus');
+  const sizeSelect = document.getElementById('board-size');
+
+  function emptyBoard(n) {
+    return Array.from({ length: n }, () => Array(n).fill(null));
+  }
+
+  function neighbors(r, c) {
+    const out = [];
+    if (r > 0) out.push([r - 1, c]);
+    if (r < SIZE - 1) out.push([r + 1, c]);
+    if (c > 0) out.push([r, c - 1]);
+    if (c < SIZE - 1) out.push([r, c + 1]);
+    return out;
+  }
+
+  function getGroup(b, r, c) {
+    const color = b[r][c];
+    const stones = [[r, c]];
+    const visited = new Set([r + ',' + c]);
+    const liberties = new Set();
+    let i = 0;
+    while (i < stones.length) {
+      const [cr, cc] = stones[i++];
+      for (const [nr, nc] of neighbors(cr, cc)) {
+        const key = nr + ',' + nc;
+        const val = b[nr][nc];
+        if (val === null) {
+          liberties.add(key);
+        } else if (val === color && !visited.has(key)) {
+          visited.add(key);
+          stones.push([nr, nc]);
+        }
+      }
+    }
+    return { stones, liberties };
+  }
+
+  function cloneBoard(b) {
+    return b.map(row => row.slice());
+  }
+
+  function buildBoardDom() {
+    const px = CELL_SIZE[SIZE];
+    const dim = (SIZE - 1) * px;
+    boardEl.style.width = dim + 'px';
+    boardEl.style.height = dim + 'px';
+    boardEl.style.backgroundImage =
+      'linear-gradient(to right, #78350f 1px, transparent 1px), linear-gradient(to bottom, #78350f 1px, transparent 1px)';
+    boardEl.style.backgroundSize = `${px}px ${px}px`;
+    boardEl.style.backgroundPosition = 'top left';
+    boardEl.innerHTML = '';
+    pointEls = [];
+
+    for (const [r, c] of STAR_POINTS[SIZE]) {
+      const star = document.createElement('div');
+      star.className = 'go-star';
+      star.style.left = (c * px) + 'px';
+      star.style.top = (r * px) + 'px';
+      boardEl.appendChild(star);
+    }
+
+    for (let r = 0; r < SIZE; r++) {
+      const rowEls = [];
+      for (let c = 0; c < SIZE; c++) {
+        const point = document.createElement('div');
+        point.className = 'go-point';
+        point.style.left = (c * px) + 'px';
+        point.style.top = (r * px) + 'px';
+        point.style.width = px + 'px';
+        point.style.height = px + 'px';
+        point.addEventListener('click', () => attemptMove(r, c));
+
+        const stone = document.createElement('div');
+        stone.className = 'go-stone';
+        stone.style.width = (px * 0.86) + 'px';
+        stone.style.height = (px * 0.86) + 'px';
+        stone.style.display = 'none';
+        point.appendChild(stone);
+
+        boardEl.appendChild(point);
+        rowEls.push({ point, stone });
+      }
+      pointEls.push(rowEls);
+    }
+  }
+
+  function renderBoard() {
+    for (let r = 0; r < SIZE; r++) {
+      for (let c = 0; c < SIZE; c++) {
+        const { stone } = pointEls[r][c];
+        const value = board[r][c];
+        if (value) {
+          stone.style.display = 'block';
+          stone.className = 'go-stone ' + value + (lastMove && lastMove[0] === r && lastMove[1] === c ? ' last-move' : '');
+        } else {
+          stone.style.display = 'none';
+          stone.className = 'go-stone';
+        }
+      }
+    }
+    updateStats();
+  }
+
+  function updateStats() {
+    let blackStones = 0;
+    let whiteStones = 0;
+    for (let r = 0; r < SIZE; r++) {
+      for (let c = 0; c < SIZE; c++) {
+        if (board[r][c] === 'black') blackStones++;
+        if (board[r][c] === 'white') whiteStones++;
+      }
+    }
+    document.getElementById('black-stones').textContent = String(blackStones);
+    document.getElementById('white-stones').textContent = String(whiteStones);
+    document.getElementById('black-captures').textContent = String(blackCaptures);
+    document.getElementById('white-captures').textContent = String(whiteCaptures);
+  }
+
+  function setSubstatus(text) {
+    substatusEl.textContent = text;
+  }
+
+  function updateStatusForTurn() {
+    statusEl.textContent = currentPlayer === 'black' ? goTranslations.black_to_move : goTranslations.white_to_move;
+    setSubstatus(goTranslations.select_point);
+  }
+
+  function attemptMove(r, c) {
+    if (gameOver) return;
+    if (board[r][c] !== null) {
+      setSubstatus(goTranslations.occupied_point);
+      return;
+    }
+
+    const trial = cloneBoard(board);
+    trial[r][c] = currentPlayer;
+    const opponent = currentPlayer === 'black' ? 'white' : 'black';
+    const captured = [];
+
+    for (const [nr, nc] of neighbors(r, c)) {
+      if (trial[nr][nc] === opponent) {
+        const alreadyCaptured = captured.some(([cr, cc]) => cr === nr && cc === nc);
+        if (!alreadyCaptured) {
+          const grp = getGroup(trial, nr, nc);
+          if (grp.liberties.size === 0) {
+            for (const [gr, gc] of grp.stones) {
+              trial[gr][gc] = null;
+              captured.push([gr, gc]);
+            }
+          }
+        }
+      }
+    }
+
+    const ownGroup = getGroup(trial, r, c);
+    if (ownGroup.liberties.size === 0) {
+      setSubstatus(goTranslations.illegal_suicide);
+      return;
+    }
+
+    if (
+      koPoint && koPoint[0] === r && koPoint[1] === c &&
+      captured.length === 1 && ownGroup.stones.length === 1 && ownGroup.liberties.size === 1
+    ) {
+      setSubstatus(goTranslations.illegal_ko);
+      return;
+    }
+
+    board = trial;
+    lastMove = [r, c];
+
+    if (captured.length === 1 && ownGroup.stones.length === 1 && ownGroup.liberties.size === 1) {
+      koPoint = captured[0];
+    } else {
+      koPoint = null;
+    }
+
+    if (currentPlayer === 'black') {
+      blackCaptures += captured.length;
+    } else {
+      whiteCaptures += captured.length;
+    }
+
+    passStreak = 0;
+    currentPlayer = opponent;
+    updateStatusForTurn();
+    renderBoard();
+  }
+
+  function passMove() {
+    if (gameOver) return;
+    setSubstatus(currentPlayer === 'black' ? goTranslations.black_passed : goTranslations.white_passed);
+    passStreak++;
+    currentPlayer = currentPlayer === 'black' ? 'white' : 'black';
+    koPoint = null;
+
+    if (passStreak >= 2) {
+      endGame();
+    } else {
+      statusEl.textContent = currentPlayer === 'black' ? goTranslations.black_to_move : goTranslations.white_to_move;
+    }
+  }
+
+  function computeScore() {
+    const visited = Array.from({ length: SIZE }, () => Array(SIZE).fill(false));
+    let blackTerritory = 0;
+    let whiteTerritory = 0;
+    let blackStones = 0;
+    let whiteStones = 0;
+
+    for (let r = 0; r < SIZE; r++) {
+      for (let c = 0; c < SIZE; c++) {
+        if (board[r][c] === 'black') blackStones++;
+        if (board[r][c] === 'white') whiteStones++;
+      }
+    }
+
+    for (let r = 0; r < SIZE; r++) {
+      for (let c = 0; c < SIZE; c++) {
+        if (board[r][c] !== null || visited[r][c]) continue;
+
+        const region = [[r, c]];
+        visited[r][c] = true;
+        const borderColors = new Set();
+        let i = 0;
+        while (i < region.length) {
+          const [cr, cc] = region[i++];
+          for (const [nr, nc] of neighbors(cr, cc)) {
+            const val = board[nr][nc];
+            if (val === null) {
+              if (!visited[nr][nc]) {
+                visited[nr][nc] = true;
+                region.push([nr, nc]);
+              }
+            } else {
+              borderColors.add(val);
+            }
+          }
+        }
+
+        if (borderColors.size === 1) {
+          const owner = [...borderColors][0];
+          if (owner === 'black') blackTerritory += region.length;
+          else whiteTerritory += region.length;
+        }
+      }
+    }
+
+    const blackScore = blackStones + blackTerritory;
+    const whiteScore = whiteStones + whiteTerritory + KOMI;
+    return { blackScore, whiteScore, blackTerritory, whiteTerritory };
+  }
+
+  function endGame() {
+    gameOver = true;
+    const s = computeScore();
+    document.getElementById('final-score').textContent =
+      `${s.blackScore.toFixed(1)} - ${s.whiteScore.toFixed(1)}`;
+
+    statusEl.textContent = s.blackScore === s.whiteScore
+      ? goTranslations.draw
+      : (s.blackScore > s.whiteScore ? goTranslations.black_wins : goTranslations.white_wins);
+    setSubstatus(goTranslations.game_over_title);
+  }
+
+  function newGame() {
+    SIZE = parseInt(sizeSelect.value, 10);
+    board = emptyBoard(SIZE);
+    currentPlayer = 'black';
+    blackCaptures = 0;
+    whiteCaptures = 0;
+    koPoint = null;
+    lastMove = null;
+    passStreak = 0;
+    gameOver = false;
+    document.getElementById('final-score').textContent = '–';
+    buildBoardDom();
+    updateStatusForTurn();
+    renderBoard();
+  }
+
+  document.getElementById('new-game').addEventListener('click', newGame);
+  document.getElementById('pass-move').addEventListener('click', passMove);
+  sizeSelect.addEventListener('change', newGame);
+
+  newGame();
+</script>
+{% endblock %}

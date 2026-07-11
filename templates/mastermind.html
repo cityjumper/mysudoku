@@ -1,0 +1,545 @@
+{% extends "base.html" %}
+
+{% block title %}{{ translate(lang, 'games.mastermind.title') }}{% endblock %}
+
+{% block extra_head %}
+<style>
+  .mm-peg-slot {
+    width: 3rem;
+    height: 3rem;
+    border-radius: 50%;
+    border: 3px dashed #cbd5e1;
+    background: #f8fafc;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: transform 0.15s ease;
+    flex-shrink: 0;
+  }
+
+  .mm-peg-slot:hover {
+    transform: scale(1.06);
+  }
+
+  .mm-peg-slot.filled {
+    border-style: solid;
+    box-shadow: inset 0 0 0 3px rgba(255, 255, 255, 0.5), 0 2px 4px rgba(0, 0, 0, 0.25);
+  }
+
+  .mm-peg-slot.locked {
+    cursor: default;
+  }
+
+  .mm-swatch {
+    width: 2.75rem;
+    height: 2.75rem;
+    border-radius: 50%;
+    cursor: pointer;
+    border: 3px solid transparent;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.25);
+    transition: transform 0.15s ease;
+    padding: 0;
+  }
+
+  .mm-swatch:hover {
+    transform: scale(1.1);
+  }
+
+  .mm-swatch:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+    transform: none;
+  }
+
+  .mm-history-row {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.5rem 0.75rem;
+    border-radius: 0.75rem;
+  }
+
+  .mm-history-row:nth-child(odd) {
+    background: #f8fafc;
+  }
+
+  .mm-history-number {
+    width: 1.75rem;
+    flex-shrink: 0;
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: #94a3b8;
+    text-align: center;
+  }
+
+  .mm-mini-peg {
+    width: 1.65rem;
+    height: 1.65rem;
+    border-radius: 50%;
+    box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.5);
+    flex-shrink: 0;
+  }
+
+  .mm-feedback-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 0.6rem);
+    gap: 3px;
+    margin-left: auto;
+    flex-shrink: 0;
+  }
+
+  .mm-feedback-dot {
+    width: 0.6rem;
+    height: 0.6rem;
+    border-radius: 50%;
+    background: #e2e8f0;
+  }
+
+  .mm-feedback-dot.black {
+    background: #0f172a;
+  }
+
+  .mm-feedback-dot.white {
+    background: #ffffff;
+    box-shadow: inset 0 0 0 1px #94a3b8;
+  }
+
+  .mm-secret-peg {
+    width: 2.25rem;
+    height: 2.25rem;
+    border-radius: 50%;
+    box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.5), 0 2px 4px rgba(0, 0, 0, 0.25);
+  }
+
+  @media (max-width: 480px) {
+    .mm-peg-slot {
+      width: 2.5rem;
+      height: 2.5rem;
+    }
+
+    .mm-swatch {
+      width: 2.35rem;
+      height: 2.35rem;
+    }
+  }
+</style>
+{% endblock %}
+
+{% block body_class %}bg-gradient-to-br from-slate-100 via-white to-teal-100 min-h-screen{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+  <div class="max-w-6xl mx-auto mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+    <a href="/" class="inline-flex items-center text-teal-800 hover:text-teal-950 font-semibold">
+      <svg class="w-5 h-5 mr-2" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+        <path fill-rule="evenodd" d="M12.707 15.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 111.414 1.414L7.414 9H17a1 1 0 110 2H7.414l5.293 5.293a1 1 0 010 1.414z" clip-rule="evenodd" />
+      </svg>
+      {{ translate(lang, 'common.home') }}
+    </a>
+    <div class="flex flex-wrap items-center gap-4 text-sm font-semibold">
+      <a href="/memory-match" class="text-violet-700 hover:text-violet-900">{{ translate(lang, 'games.memory_match.name') }}</a>
+      <a href="/gems" class="text-emerald-700 hover:text-emerald-900">{{ translate(lang, 'games.gems.name') }}</a>
+      <a href="/kenken" class="text-indigo-700 hover:text-indigo-900">{{ translate(lang, 'games.kenken.name') }}</a>
+    </div>
+  </div>
+
+  <div class="max-w-6xl mx-auto">
+    <header class="text-center mb-8">
+      <h1 class="text-4xl sm:text-5xl font-extrabold tracking-tight text-slate-900">{{ translate(lang, 'games.mastermind.title') }}</h1>
+      <p class="mt-2 text-slate-600 max-w-2xl mx-auto">{{ translate(lang, 'games.mastermind.subtitle') }}</p>
+    </header>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div class="lg:col-span-2">
+        <div class="bg-white rounded-3xl shadow-xl ring-1 ring-slate-200 p-5 sm:p-8">
+          <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between mb-6">
+            <div>
+              <div class="text-sm font-semibold uppercase tracking-wide text-teal-700">{{ translate(lang, 'common.status') }}</div>
+              <div id="status" class="mt-1 text-2xl font-bold text-slate-900">{{ translate(lang, 'games.mastermind.ready') }}</div>
+              <div id="substatus" class="mt-1 text-slate-600">{{ translate(lang, 'games.mastermind.pick_colors') }}</div>
+            </div>
+            <div class="flex flex-wrap gap-2">
+              <label class="inline-flex items-center gap-2 text-sm font-semibold text-slate-700">
+                {{ translate(lang, 'games.mastermind.difficulty') }}
+                <select id="difficulty" class="rounded-lg border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-teal-500">
+                  <option value="easy">{{ translate(lang, 'games.mastermind.easy') }}</option>
+                  <option value="medium" selected>{{ translate(lang, 'games.mastermind.medium') }}</option>
+                  <option value="hard">{{ translate(lang, 'games.mastermind.hard') }}</option>
+                </select>
+              </label>
+              <button id="new-game" type="button" class="rounded-lg bg-teal-600 hover:bg-teal-700 text-white font-semibold px-4 py-2">{{ translate(lang, 'games.mastermind.new_game') }}</button>
+              <button id="give-up" type="button" class="rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 font-semibold px-4 py-2">{{ translate(lang, 'games.mastermind.give_up') }}</button>
+            </div>
+          </div>
+
+          <div id="secret-reveal" class="hidden mb-6 rounded-2xl bg-slate-50 ring-1 ring-slate-200 p-4">
+            <div class="text-xs font-semibold uppercase tracking-wide text-slate-500 mb-2">{{ translate(lang, 'games.mastermind.secret_was') }}</div>
+            <div id="secret-pegs" class="flex gap-2"></div>
+          </div>
+
+          <div class="mb-6">
+            <div class="text-xs font-semibold uppercase tracking-wide text-slate-500 mb-2">{{ translate(lang, 'games.mastermind.your_guess') }}</div>
+            <div class="flex flex-wrap items-center gap-3">
+              <div id="active-row" class="flex gap-2"></div>
+              <button id="submit-guess" type="button" class="rounded-lg bg-teal-600 hover:bg-teal-700 disabled:bg-slate-300 disabled:cursor-not-allowed text-white font-semibold px-4 py-2">{{ translate(lang, 'games.mastermind.submit') }}</button>
+              <button id="clear-guess" type="button" class="rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 font-semibold px-4 py-2">{{ translate(lang, 'games.mastermind.clear') }}</button>
+            </div>
+          </div>
+
+          <div class="mb-6">
+            <div class="text-xs font-semibold uppercase tracking-wide text-slate-500 mb-2">{{ translate(lang, 'games.mastermind.colors_heading') }}</div>
+            <div id="palette" class="flex flex-wrap gap-3"></div>
+          </div>
+
+          <div>
+            <div class="text-xs font-semibold uppercase tracking-wide text-slate-500 mb-2">{{ translate(lang, 'games.mastermind.history_heading') }}</div>
+            <div id="history" class="space-y-1 max-h-96 overflow-y-auto"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="space-y-6">
+        <div class="bg-white rounded-3xl shadow-xl ring-1 ring-slate-200 p-6">
+          <h2 class="text-xl font-bold text-slate-900 mb-4">{{ translate(lang, 'games.mastermind.current_run') }}</h2>
+          <div class="grid grid-cols-2 gap-3">
+            <div class="rounded-2xl bg-teal-50 ring-1 ring-teal-100 p-4 text-center">
+              <div class="text-xs font-semibold uppercase tracking-wide text-teal-700">{{ translate(lang, 'games.mastermind.guesses_used') }}</div>
+              <div id="guesses-used" class="mt-2 text-3xl font-extrabold text-teal-950">0</div>
+            </div>
+            <div class="rounded-2xl bg-sky-50 ring-1 ring-sky-100 p-4 text-center">
+              <div class="text-xs font-semibold uppercase tracking-wide text-sky-700">{{ translate(lang, 'games.mastermind.guesses_left') }}</div>
+              <div id="guesses-left" class="mt-2 text-3xl font-extrabold text-sky-950">0</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="bg-white rounded-3xl shadow-xl ring-1 ring-slate-200 p-6">
+          <h2 class="text-xl font-bold text-slate-900 mb-4">{{ translate(lang, 'common.scoreboard') }}</h2>
+          <div class="rounded-2xl bg-amber-50 ring-1 ring-amber-100 p-4">
+            <div class="text-xs font-semibold uppercase tracking-wide text-amber-700">{{ translate(lang, 'games.mastermind.best_guesses') }}</div>
+            <div id="best-guesses" class="mt-2 text-2xl font-extrabold text-amber-950">{{ translate(lang, 'games.mastermind.no_best') }}</div>
+          </div>
+          <button id="reset-best" type="button" class="mt-3 w-full rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 font-semibold px-4 py-2 text-sm">{{ translate(lang, 'games.mastermind.reset_best') }}</button>
+        </div>
+
+        <div class="bg-white rounded-3xl shadow-xl ring-1 ring-slate-200 p-6">
+          <h2 class="text-xl font-bold text-slate-900 mb-4">{{ translate(lang, 'games.mastermind.legend_heading') }}</h2>
+          <div class="space-y-2 text-sm text-slate-600">
+            <div class="flex items-center gap-3"><span class="mm-feedback-dot black"></span>{{ translate(lang, 'games.mastermind.legend_black') }}</div>
+            <div class="flex items-center gap-3"><span class="mm-feedback-dot white"></span>{{ translate(lang, 'games.mastermind.legend_white') }}</div>
+          </div>
+        </div>
+
+        <div class="bg-white rounded-3xl shadow-xl ring-1 ring-slate-200 p-6">
+          <h2 class="text-xl font-bold text-slate-900 mb-4">{{ translate(lang, 'common.rules') }}</h2>
+          <ul class="space-y-2 text-sm text-slate-600">
+            <li>• {{ translate(lang, 'games.mastermind.rule_1') }}</li>
+            <li>• {{ translate(lang, 'games.mastermind.rule_2') }}</li>
+            <li>• {{ translate(lang, 'games.mastermind.rule_3') }}</li>
+            <li>• {{ translate(lang, 'games.mastermind.rule_4') }}</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  const I18N = {{ mm_i18n | tojson }};
+
+  function fmt(str, vars) {
+    return str.replace(/\{(\w+)\}/g, (_, key) => (key in vars ? vars[key] : `{${key}}`));
+  }
+
+  const SCORE_KEY = 'mastermind:best:v1';
+  const DIFFICULTIES = {
+    easy: { pegs: 4, colors: 5, guesses: 12 },
+    medium: { pegs: 4, colors: 6, guesses: 10 },
+    hard: { pegs: 5, colors: 7, guesses: 10 }
+  };
+  const COLORS = [
+    { key: 'red', hex: '#ef4444' },
+    { key: 'orange', hex: '#f97316' },
+    { key: 'amber', hex: '#eab308' },
+    { key: 'green', hex: '#22c55e' },
+    { key: 'blue', hex: '#3b82f6' },
+    { key: 'purple', hex: '#a855f7' },
+    { key: 'pink', hex: '#ec4899' }
+  ];
+
+  const statusEl = document.getElementById('status');
+  const substatusEl = document.getElementById('substatus');
+  const difficultyEl = document.getElementById('difficulty');
+  const activeRowEl = document.getElementById('active-row');
+  const paletteEl = document.getElementById('palette');
+  const historyEl = document.getElementById('history');
+  const submitBtn = document.getElementById('submit-guess');
+  const clearBtn = document.getElementById('clear-guess');
+  const guessesUsedEl = document.getElementById('guesses-used');
+  const guessesLeftEl = document.getElementById('guesses-left');
+  const bestGuessesEl = document.getElementById('best-guesses');
+  const secretRevealEl = document.getElementById('secret-reveal');
+  const secretPegsEl = document.getElementById('secret-pegs');
+
+  let secret = [];
+  let activeGuess = [];
+  let history = [];
+  let gameActive = false;
+
+  function currentDifficulty() {
+    return difficultyEl.value;
+  }
+
+  function colorByKey(key) {
+    return COLORS.find((c) => c.key === key);
+  }
+
+  function loadBestScores() {
+    try {
+      const raw = localStorage.getItem(SCORE_KEY);
+      return raw ? JSON.parse(raw) : {};
+    } catch {
+      return {};
+    }
+  }
+
+  function saveBestScores(scores) {
+    localStorage.setItem(SCORE_KEY, JSON.stringify(scores));
+  }
+
+  function renderBestScores() {
+    const best = loadBestScores()[currentDifficulty()];
+    bestGuessesEl.textContent = Number.isInteger(best) ? String(best) : I18N.no_best;
+  }
+
+  function setStatus(title, subtitle) {
+    statusEl.textContent = title;
+    substatusEl.textContent = subtitle;
+  }
+
+  function updateStats() {
+    const { guesses } = DIFFICULTIES[currentDifficulty()];
+    guessesUsedEl.textContent = String(history.length);
+    guessesLeftEl.textContent = String(Math.max(0, guesses - history.length));
+  }
+
+  function makePeg(hex, sizeClass) {
+    const span = document.createElement('span');
+    span.className = sizeClass;
+    span.style.background = hex;
+    return span;
+  }
+
+  function renderActiveRow() {
+    activeRowEl.innerHTML = '';
+    activeGuess.forEach((key, index) => {
+      const slot = document.createElement('button');
+      slot.type = 'button';
+      slot.className = 'mm-peg-slot' + (key ? ' filled' : '') + (gameActive ? '' : ' locked');
+      if (key) {
+        slot.style.background = colorByKey(key).hex;
+      }
+      slot.setAttribute('aria-label', 'Guess slot ' + (index + 1));
+      slot.addEventListener('click', () => {
+        if (!gameActive) return;
+        activeGuess[index] = null;
+        renderActiveRow();
+        updateSubmitState();
+      });
+      activeRowEl.appendChild(slot);
+    });
+  }
+
+  function renderPalette() {
+    const { colors } = DIFFICULTIES[currentDifficulty()];
+    paletteEl.innerHTML = '';
+    COLORS.slice(0, colors).forEach((color) => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'mm-swatch';
+      btn.style.background = color.hex;
+      btn.setAttribute('aria-label', color.key);
+      btn.addEventListener('click', () => {
+        if (!gameActive) return;
+        const emptyIndex = activeGuess.findIndex((v) => v === null);
+        if (emptyIndex === -1) return;
+        activeGuess[emptyIndex] = color.key;
+        renderActiveRow();
+        updateSubmitState();
+      });
+      paletteEl.appendChild(btn);
+    });
+  }
+
+  function updateSubmitState() {
+    const full = activeGuess.every((v) => v !== null);
+    submitBtn.disabled = !gameActive || !full;
+  }
+
+  function scoreGuess(guess) {
+    let black = 0;
+    const secretLeft = [];
+    const guessLeft = [];
+    secret.forEach((color, index) => {
+      if (guess[index] === color) {
+        black += 1;
+      } else {
+        secretLeft.push(color);
+        guessLeft.push(guess[index]);
+      }
+    });
+    const counts = {};
+    secretLeft.forEach((color) => {
+      counts[color] = (counts[color] || 0) + 1;
+    });
+    let white = 0;
+    guessLeft.forEach((color) => {
+      if (counts[color] > 0) {
+        white += 1;
+        counts[color] -= 1;
+      }
+    });
+    return { black, white };
+  }
+
+  function renderHistory() {
+    historyEl.innerHTML = '';
+    history.forEach((entry, index) => {
+      const row = document.createElement('div');
+      row.className = 'mm-history-row';
+
+      const number = document.createElement('div');
+      number.className = 'mm-history-number';
+      number.textContent = String(index + 1);
+      row.appendChild(number);
+
+      entry.guess.forEach((key) => {
+        row.appendChild(makePeg(colorByKey(key).hex, 'mm-mini-peg'));
+      });
+
+      const feedback = document.createElement('div');
+      feedback.className = 'mm-feedback-grid';
+      const { pegs } = DIFFICULTIES[currentDifficulty()];
+      const dots = [];
+      for (let i = 0; i < entry.black; i += 1) dots.push('black');
+      for (let i = 0; i < entry.white; i += 1) dots.push('white');
+      while (dots.length < pegs) dots.push('empty');
+      dots.forEach((kind) => {
+        const dot = document.createElement('span');
+        dot.className = 'mm-feedback-dot' + (kind !== 'empty' ? ' ' + kind : '');
+        feedback.appendChild(dot);
+      });
+      row.appendChild(feedback);
+
+      historyEl.appendChild(row);
+    });
+    historyEl.scrollTop = historyEl.scrollHeight;
+  }
+
+  function revealSecret() {
+    secretPegsEl.innerHTML = '';
+    secret.forEach((key) => {
+      secretPegsEl.appendChild(makePeg(colorByKey(key).hex, 'mm-secret-peg'));
+    });
+    secretRevealEl.classList.remove('hidden');
+  }
+
+  function saveIfBest() {
+    const difficulty = currentDifficulty();
+    const scores = loadBestScores();
+    const existing = scores[difficulty];
+    const attempts = history.length;
+    scores[difficulty] = Number.isInteger(existing) ? Math.min(existing, attempts) : attempts;
+    saveBestScores(scores);
+    renderBestScores();
+  }
+
+  function endGame(won, gaveUp) {
+    gameActive = false;
+    updateSubmitState();
+    renderActiveRow();
+    revealSecret();
+
+    if (won) {
+      saveIfBest();
+      setStatus(I18N.win_title, fmt(I18N.win_message, { count: history.length }));
+    } else if (gaveUp) {
+      setStatus(I18N.gave_up_title, I18N.lose_message);
+    } else {
+      setStatus(I18N.lose_title, I18N.lose_message);
+    }
+  }
+
+  function submitGuess() {
+    if (!gameActive || activeGuess.some((v) => v === null)) return;
+
+    const guess = [...activeGuess];
+    const { black, white } = scoreGuess(guess);
+    history.push({ guess, black, white });
+    renderHistory();
+    updateStats();
+
+    const { pegs, guesses } = DIFFICULTIES[currentDifficulty()];
+    activeGuess = new Array(pegs).fill(null);
+    renderActiveRow();
+    updateSubmitState();
+
+    if (black === pegs) {
+      endGame(true, false);
+      return;
+    }
+
+    if (history.length >= guesses) {
+      endGame(false, false);
+      return;
+    }
+
+    setStatus(I18N.ready, I18N.keep_guessing);
+  }
+
+  function newGame() {
+    const { pegs, colors, guesses } = DIFFICULTIES[currentDifficulty()];
+    secret = Array.from({ length: pegs }, () => COLORS[Math.floor(Math.random() * colors)].key);
+    activeGuess = new Array(pegs).fill(null);
+    history = [];
+    gameActive = true;
+
+    secretRevealEl.classList.add('hidden');
+    renderPalette();
+    renderActiveRow();
+    renderHistory();
+    renderBestScores();
+    updateStats();
+    updateSubmitState();
+    setStatus(I18N.ready, I18N.pick_colors);
+
+    void guesses;
+  }
+
+  submitBtn.addEventListener('click', submitGuess);
+  clearBtn.addEventListener('click', () => {
+    if (!gameActive) return;
+    const { pegs } = DIFFICULTIES[currentDifficulty()];
+    activeGuess = new Array(pegs).fill(null);
+    renderActiveRow();
+    updateSubmitState();
+  });
+  document.getElementById('new-game').addEventListener('click', newGame);
+  document.getElementById('give-up').addEventListener('click', () => {
+    if (!gameActive) return;
+    endGame(false, true);
+  });
+  difficultyEl.addEventListener('change', newGame);
+  document.getElementById('reset-best').addEventListener('click', () => {
+    const scores = loadBestScores();
+    delete scores[currentDifficulty()];
+    saveBestScores(scores);
+    renderBestScores();
+  });
+
+  newGame();
+</script>
+{% endblock %}
