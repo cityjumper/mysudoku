@@ -1,0 +1,346 @@
+{% extends "base.html" %}
+
+{% block title %}{{ translate(lang, 'games.eight_queens.title') }}{% endblock %}
+
+{% block extra_head %}
+<style>
+  .eq-square {
+    width: 52px;
+    height: 52px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 34px;
+    cursor: pointer;
+    -webkit-user-select: none;
+    user-select: none;
+    position: relative;
+    transition: background-color 0.15s ease;
+  }
+  .eq-board {
+    grid-template-columns: repeat(8, auto);
+  }
+  .eq-light { background-color: #f0d9b5; }
+  .eq-dark { background-color: #b58863; }
+  .eq-attacked.eq-light { background-color: #f6c7c0; }
+  .eq-attacked.eq-dark { background-color: #d99a8e; }
+  .eq-queen { color: #4c1d95; text-shadow: 0 1px 1px rgba(0,0,0,0.3); }
+  .eq-conflict { color: #b91c1c; }
+  .eq-conflict.eq-light, .eq-conflict.eq-dark { background-color: #fca5a5 !important; }
+  .eq-square:hover { filter: brightness(0.95); }
+  @media (min-width: 640px) {
+    .eq-square { width: 64px; height: 64px; font-size: 42px; }
+  }
+</style>
+{% endblock %}
+
+{% block body_class %}bg-gradient-to-br from-slate-50 to-purple-100 min-h-screen{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+  <div class="max-w-6xl mx-auto mb-6 flex items-center justify-between">
+    <a href="/" class="inline-flex items-center text-purple-800 hover:text-purple-950 font-semibold">
+      <svg class="w-5 h-5 mr-2" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+        <path fill-rule="evenodd" d="M12.707 15.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 111.414 1.414L7.414 9H17a1 1 0 110 2H7.414l5.293 5.293a1 1 0 010 1.414z" clip-rule="evenodd" />
+      </svg>
+      {{ translate(lang, 'common.home') }}
+    </a>
+    <div class="flex items-center gap-4">
+      <a href="/chess" class="text-sm font-semibold text-purple-700 hover:text-purple-900">{{ translate(lang, 'games.chess.name') }}</a>
+      <a href="/kenken" class="text-sm font-semibold text-indigo-700 hover:text-indigo-900">{{ translate(lang, 'games.kenken.name') }}</a>
+    </div>
+  </div>
+
+  <div class="max-w-6xl mx-auto">
+    <header class="text-center mb-8">
+      <h1 class="text-4xl sm:text-5xl font-extrabold tracking-tight text-slate-900">{{ translate(lang, 'games.eight_queens.title') }}</h1>
+      <p class="mt-2 text-slate-600 max-w-2xl mx-auto">{{ translate(lang, 'games.eight_queens.subtitle') }}</p>
+    </header>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div class="lg:col-span-2">
+        <div class="bg-white rounded-2xl shadow-xl ring-1 ring-slate-200 p-6 sm:p-8">
+          <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
+            <div>
+              <div class="text-sm font-semibold text-slate-500 uppercase tracking-wide">{{ translate(lang, 'common.status') }}</div>
+              <div id="status" class="mt-1 text-2xl font-bold text-slate-900">{{ translate(lang, 'games.eight_queens.ready') }}</div>
+              <div id="substatus" class="mt-1 text-slate-600">{{ translate(lang, 'games.eight_queens.prompt_place') }}</div>
+            </div>
+            <div class="flex flex-wrap gap-2">
+              <button id="hint-btn" type="button" class="rounded-lg bg-indigo-100 hover:bg-indigo-200 text-indigo-800 font-semibold px-4 py-2">{{ translate(lang, 'games.eight_queens.hint') }}</button>
+              <button id="solution-btn" type="button" class="rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 font-semibold px-4 py-2">{{ translate(lang, 'games.eight_queens.show_solution') }}</button>
+              <button id="clear-btn" type="button" class="rounded-lg bg-purple-600 hover:bg-purple-700 text-white font-semibold px-4 py-2">{{ translate(lang, 'games.eight_queens.clear_board') }}</button>
+            </div>
+          </div>
+
+          <div class="flex justify-center overflow-x-auto py-2">
+            <div id="board" class="eq-board inline-grid rounded-lg overflow-hidden shadow-inner ring-1 ring-slate-300"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="lg:col-span-1 space-y-6">
+        <div class="bg-white rounded-2xl shadow-xl ring-1 ring-slate-200 p-6">
+          <h2 class="text-xl font-bold text-slate-900 mb-4">{{ translate(lang, 'common.status') }}</h2>
+          <div class="grid grid-cols-2 gap-3">
+            <div class="rounded-xl bg-purple-50 ring-1 ring-purple-100 p-4 text-center">
+              <div class="text-xs font-semibold uppercase tracking-wide text-purple-700">{{ translate(lang, 'games.eight_queens.queens_label') }}</div>
+              <div id="queens-count" class="mt-1 text-3xl font-extrabold text-purple-950">0/8</div>
+            </div>
+            <div class="rounded-xl bg-rose-50 ring-1 ring-rose-100 p-4 text-center">
+              <div class="text-xs font-semibold uppercase tracking-wide text-rose-700">{{ translate(lang, 'games.eight_queens.conflicts_label') }}</div>
+              <div id="conflicts-count" class="mt-1 text-3xl font-extrabold text-rose-950">0</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="bg-white rounded-2xl shadow-xl ring-1 ring-slate-200 p-6">
+          <h2 class="text-xl font-bold text-slate-900 mb-4">{{ translate(lang, 'common.scoreboard') }}</h2>
+          <div class="rounded-xl bg-amber-50 ring-1 ring-amber-100 p-4">
+            <div class="text-xs font-semibold uppercase tracking-wide text-amber-700">{{ translate(lang, 'games.eight_queens.solved_count') }}</div>
+            <div id="solved-count" class="mt-1 text-2xl font-extrabold text-amber-950">0</div>
+          </div>
+          <button id="reset-score" type="button" class="mt-3 w-full rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 font-semibold px-4 py-2 text-sm">{{ translate(lang, 'common.reset_scores') }}</button>
+        </div>
+
+        <div class="bg-white rounded-2xl shadow-xl ring-1 ring-slate-200 p-6">
+          <h2 class="text-xl font-bold text-slate-900 mb-4">{{ translate(lang, 'common.rules') }}</h2>
+          <ul class="space-y-2 text-sm text-slate-600">
+            <li>&bull; {{ translate(lang, 'games.eight_queens.rule_1') }}</li>
+            <li>&bull; {{ translate(lang, 'games.eight_queens.rule_2') }}</li>
+            <li>&bull; {{ translate(lang, 'games.eight_queens.rule_3') }}</li>
+            <li>&bull; {{ translate(lang, 'games.eight_queens.rule_4') }}</li>
+          </ul>
+          <p class="mt-3 text-xs text-slate-400">{{ translate(lang, 'games.eight_queens.solutions_note') }}</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  const I18N = {
+    ready: "{{ translate(lang, 'games.eight_queens.ready') }}",
+    prompt_place: "{{ translate(lang, 'games.eight_queens.prompt_place') }}",
+    win_title: "{{ translate(lang, 'games.eight_queens.win_title') }}",
+    win_message: "{{ translate(lang, 'games.eight_queens.win_message') }}",
+    conflict_message: "{{ translate(lang, 'games.eight_queens.conflict_message') }}"
+  };
+
+  const N = 8;
+  const SIZE = { small: 52, large: 64 };
+  let placed = [];
+  let solved = false;
+  let solutions = [];
+
+  const boardEl = document.getElementById('board');
+  const statusEl = document.getElementById('status');
+  const substatusEl = document.getElementById('substatus');
+  const queensCountEl = document.getElementById('queens-count');
+  const conflictsCountEl = document.getElementById('conflicts-count');
+  const solvedCountEl = document.getElementById('solved-count');
+
+  const SCORE_KEY = 'eight_queens:solved:v1';
+  let cellEls = [];
+
+  function loadSolvedCount() {
+    const raw = localStorage.getItem(SCORE_KEY);
+    const n = parseInt(raw, 10);
+    return Number.isInteger(n) ? n : 0;
+  }
+
+  function saveSolvedCount(n) {
+    localStorage.setItem(SCORE_KEY, String(n));
+  }
+
+  function renderSolvedCount() {
+    solvedCountEl.textContent = String(loadSolvedCount());
+  }
+
+  function computeAllSolutions() {
+    const cols = new Array(N).fill(-1);
+    const results = [];
+    function backtrack(row, colUsed, diag1Used, diag2Used) {
+      if (row === N) {
+        results.push(cols.slice());
+        return;
+      }
+      for (let c = 0; c < N; c++) {
+        const d1 = row + c;
+        const d2 = row - c + (N - 1);
+        if (colUsed[c] || diag1Used[d1] || diag2Used[d2]) continue;
+        cols[row] = c;
+        colUsed[c] = diag1Used[d1] = diag2Used[d2] = true;
+        backtrack(row + 1, colUsed, diag1Used, diag2Used);
+        colUsed[c] = diag1Used[d1] = diag2Used[d2] = false;
+      }
+    }
+    backtrack(0, new Array(N).fill(false), new Array(2 * N - 1).fill(false), new Array(2 * N - 1).fill(false));
+    return results;
+  }
+
+  function buildBoard() {
+    boardEl.innerHTML = '';
+    cellEls = [];
+    for (let r = 0; r < N; r++) {
+      const rowEls = [];
+      for (let c = 0; c < N; c++) {
+        const cell = document.createElement('div');
+        cell.className = 'eq-square ' + ((r + c) % 2 === 0 ? 'eq-light' : 'eq-dark');
+        cell.addEventListener('click', () => toggleQueen(r, c));
+        boardEl.appendChild(cell);
+        rowEls.push(cell);
+      }
+      cellEls.push(rowEls);
+    }
+  }
+
+  function hasQueen(r, c) {
+    return placed.some(([pr, pc]) => pr === r && pc === c);
+  }
+
+  function attacks(a, b) {
+    const [r1, c1] = a;
+    const [r2, c2] = b;
+    return r1 === r2 || c1 === c2 || Math.abs(r1 - r2) === Math.abs(c1 - c2);
+  }
+
+  function computeConflictSet() {
+    const conflicted = new Set();
+    for (let i = 0; i < placed.length; i++) {
+      for (let j = i + 1; j < placed.length; j++) {
+        if (attacks(placed[i], placed[j])) {
+          conflicted.add(i);
+          conflicted.add(j);
+        }
+      }
+    }
+    return conflicted;
+  }
+
+  function computeAttackedCells() {
+    const attacked = new Set();
+    for (const q of placed) {
+      for (let r = 0; r < N; r++) {
+        for (let c = 0; c < N; c++) {
+          if (r === q[0] && c === q[1]) continue;
+          if (attacks(q, [r, c])) attacked.add(r + ',' + c);
+        }
+      }
+    }
+    return attacked;
+  }
+
+  function render() {
+    const conflictIdx = computeConflictSet();
+    const attackedCells = computeAttackedCells();
+
+    for (let r = 0; r < N; r++) {
+      for (let c = 0; c < N; c++) {
+        const cell = cellEls[r][c];
+        cell.textContent = '';
+        cell.classList.remove('eq-attacked', 'eq-conflict');
+        cell.classList.toggle('eq-attacked', attackedCells.has(r + ',' + c));
+      }
+    }
+
+    placed.forEach(([r, c], idx) => {
+      const cell = cellEls[r][c];
+      cell.textContent = '♛';
+      cell.classList.add('eq-queen');
+      if (conflictIdx.has(idx)) {
+        cell.classList.add('eq-conflict');
+      }
+    });
+
+    const conflictCount = conflictIdx.size > 0 ? new Set(conflictIdx).size : 0;
+    queensCountEl.textContent = `${placed.length}/8`;
+    conflictsCountEl.textContent = String(conflictCount);
+
+    if (placed.length === N && conflictCount === 0) {
+      if (!solved) {
+        solved = true;
+        saveSolvedCount(loadSolvedCount() + 1);
+        renderSolvedCount();
+      }
+      statusEl.textContent = I18N.win_title;
+      substatusEl.textContent = I18N.win_message;
+    } else {
+      solved = false;
+      statusEl.textContent = I18N.ready;
+      if (conflictCount > 0) {
+        substatusEl.textContent = I18N.conflict_message.replace('{count}', String(conflictCount));
+      } else {
+        substatusEl.textContent = I18N.prompt_place;
+      }
+    }
+  }
+
+  function toggleQueen(r, c) {
+    const idx = placed.findIndex(([pr, pc]) => pr === r && pc === c);
+    if (idx !== -1) {
+      placed.splice(idx, 1);
+    } else if (placed.length < N) {
+      placed.push([r, c]);
+    } else {
+      return;
+    }
+    render();
+  }
+
+  function clearBoard() {
+    placed = [];
+    solved = false;
+    render();
+  }
+
+  function showSolution() {
+    const solution = solutions[Math.floor(Math.random() * solutions.length)];
+    placed = solution.map((c, r) => [r, c]);
+    solved = false;
+    render();
+  }
+
+  function giveHint() {
+    const conflictIdx = computeConflictSet();
+    if (conflictIdx.size > 0) {
+      const [r, c] = placed[[...conflictIdx][0]];
+      const cell = cellEls[r][c];
+      cell.style.outline = '3px solid #ea580c';
+      setTimeout(() => { cell.style.outline = ''; }, 900);
+      return;
+    }
+    if (placed.length >= N) return;
+
+    const rowToCol = {};
+    placed.forEach(([r, c]) => { rowToCol[r] = c; });
+    const match = solutions.find((sol) =>
+      Object.entries(rowToCol).every(([r, c]) => sol[r] === c)
+    );
+    if (!match) return;
+
+    for (let r = 0; r < N; r++) {
+      if (!(r in rowToCol)) {
+        placed.push([r, match[r]]);
+        break;
+      }
+    }
+    render();
+  }
+
+  document.getElementById('clear-btn').addEventListener('click', clearBoard);
+  document.getElementById('solution-btn').addEventListener('click', showSolution);
+  document.getElementById('hint-btn').addEventListener('click', giveHint);
+  document.getElementById('reset-score').addEventListener('click', () => {
+    saveSolvedCount(0);
+    renderSolvedCount();
+  });
+
+  solutions = computeAllSolutions();
+  buildBoard();
+  render();
+  renderSolvedCount();
+</script>
+{% endblock %}

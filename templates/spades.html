@@ -1,0 +1,918 @@
+{% extends "base.html" %}
+
+{% block title %}{{ translate(lang, 'games.spades.title') }}{% endblock %}
+
+{% block extra_head %}
+<style>
+  .felt {
+    background: radial-gradient(circle at 50% 30%, #15803d 0%, #14532d 70%, #0f3d24 100%);
+  }
+
+  .spd-card {
+    position: relative;
+    width: 46px;
+    height: 66px;
+    border-radius: 6px;
+    background: #ffffff;
+    border: 1px solid rgba(15, 23, 42, 0.25);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.35);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 3px 4px;
+    box-sizing: border-box;
+    font-weight: 700;
+    line-height: 1;
+    user-select: none;
+    flex-shrink: 0;
+  }
+
+  @media (min-width: 640px) {
+    .spd-card { width: 60px; height: 86px; border-radius: 8px; padding: 5px 6px; }
+  }
+
+  .spd-card .spd-rank { font-size: 12px; }
+  .spd-card .spd-suit-mini { font-size: 11px; }
+  .spd-card .spd-suit-big {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    opacity: 0.85;
+  }
+  @media (min-width: 640px) {
+    .spd-card .spd-rank { font-size: 15px; }
+    .spd-card .spd-suit-mini { font-size: 13px; }
+    .spd-card .spd-suit-big { font-size: 28px; }
+  }
+
+  .spd-card.spd-red { color: #dc2626; }
+  .spd-card.spd-black { color: #0f172a; }
+
+  .spd-card.spd-playable {
+    cursor: pointer;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.45), 0 0 0 2px #facc15;
+  }
+  .spd-card.spd-playable:hover {
+    transform: translateY(-10px);
+  }
+  .spd-card.spd-dim {
+    opacity: 0.45;
+    filter: grayscale(40%);
+    pointer-events: none;
+  }
+
+  .spd-hand {
+    display: flex;
+    justify-content: center;
+    min-height: 70px;
+  }
+  @media (min-width: 640px) { .spd-hand { min-height: 92px; } }
+
+  .spd-hand .spd-card { transition: transform 0.15s ease; margin-left: -20px; }
+  .spd-hand .spd-card:first-child { margin-left: 0; }
+  @media (min-width: 640px) {
+    .spd-hand .spd-card { margin-left: -26px; }
+    .spd-hand .spd-card:first-child { margin-left: 0; }
+  }
+
+  .spd-back {
+    width: 26px;
+    height: 38px;
+    border-radius: 4px;
+    background: repeating-linear-gradient(45deg, #4338ca, #4338ca 4px, #3730a3 4px, #3730a3 8px);
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.4);
+    margin-left: -16px;
+    flex-shrink: 0;
+  }
+  .spd-back:first-child { margin-left: 0; }
+  @media (min-width: 640px) { .spd-back { width: 32px; height: 46px; margin-left: -20px; } }
+
+  .spd-seat {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .spd-seat-label {
+    font-size: 11px;
+    font-weight: 700;
+    padding: 2px 10px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.12);
+    color: #ecfdf5;
+    letter-spacing: 0.02em;
+  }
+  @media (min-width: 640px) { .spd-seat-label { font-size: 12px; } }
+
+  .spd-seat.spd-active .spd-seat-label {
+    background: #facc15;
+    color: #422006;
+    box-shadow: 0 0 0 3px rgba(250, 204, 21, 0.4);
+  }
+
+  .spd-trick-area {
+    position: relative;
+    width: 150px;
+    height: 150px;
+  }
+  @media (min-width: 640px) { .spd-trick-area { width: 210px; height: 210px; } }
+
+  .spd-trick-slot {
+    position: absolute;
+    width: 46px;
+    height: 66px;
+    border: 2px dashed rgba(255, 255, 255, 0.25);
+    border-radius: 6px;
+  }
+  @media (min-width: 640px) { .spd-trick-slot { width: 60px; height: 86px; } }
+
+  .spd-slot-top { top: 0; left: 50%; transform: translateX(-50%); }
+  .spd-slot-bottom { bottom: 0; left: 50%; transform: translateX(-50%); }
+  .spd-slot-left { left: 0; top: 50%; transform: translateY(-50%); }
+  .spd-slot-right { right: 0; top: 50%; transform: translateY(-50%); }
+
+  .spd-slot-top .spd-card, .spd-slot-bottom .spd-card, .spd-slot-left .spd-card, .spd-slot-right .spd-card {
+    position: absolute;
+    inset: 0;
+    margin: 0;
+  }
+
+  .spd-winner-glow {
+    box-shadow: 0 0 0 3px #facc15, 0 4px 12px rgba(0, 0, 0, 0.5) !important;
+  }
+
+  .spd-bid-btn {
+    width: 44px;
+    height: 44px;
+    border-radius: 10px;
+    font-weight: 800;
+    font-size: 15px;
+  }
+</style>
+{% endblock %}
+
+{% block body_class %}bg-gradient-to-br from-slate-50 to-green-100 min-h-screen{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+  <div class="max-w-6xl mx-auto mb-6 flex items-center justify-between">
+    <a href="/" class="inline-flex items-center text-green-800 hover:text-green-950 font-semibold">
+      <svg class="w-5 h-5 mr-2" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+        <path fill-rule="evenodd" d="M12.707 15.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 111.414 1.414L7.414 9H17a1 1 0 110 2H7.414l5.293 5.293a1 1 0 010 1.414z" clip-rule="evenodd" />
+      </svg>
+      {{ translate(lang, 'common.home') }}
+    </a>
+  </div>
+
+  <div class="max-w-6xl mx-auto">
+    <header class="text-center mb-8">
+      <h1 class="text-4xl sm:text-5xl font-extrabold tracking-tight text-slate-900">{{ translate(lang, 'games.spades.title') }} ♠</h1>
+      <p class="mt-2 text-slate-600">{{ translate(lang, 'games.spades.subtitle') }}</p>
+    </header>
+
+    <!-- SETUP SCREEN -->
+    <div id="setup-screen" class="bg-white rounded-2xl shadow-xl ring-1 ring-slate-200 p-6 sm:p-8 max-w-lg mx-auto">
+      <h2 class="text-xl font-bold text-slate-900 mb-1">{{ translate(lang, 'games.spades.setup_heading') }}</h2>
+      <p class="text-sm text-slate-500 mb-6">{{ translate(lang, 'games.spades.setup_subheading') }}</p>
+
+      <input id="name-input" type="text" maxlength="16" placeholder="{{ translate(lang, 'games.spades.name_placeholder') }}"
+        class="w-full border border-slate-300 rounded-lg px-4 py-3 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-green-500 mb-4">
+
+      <p class="text-xs text-slate-500 mb-6">{{ translate(lang, 'games.spades.teams_note') }}</p>
+
+      <button id="start-game" type="button" class="w-full rounded-xl bg-green-700 hover:bg-green-800 text-white font-bold px-8 py-3 text-lg shadow-lg transition-colors">
+        {{ translate(lang, 'games.spades.start_game') }} 🂡
+      </button>
+    </div>
+
+    <!-- GAME SCREEN -->
+    <div id="game-screen" class="hidden grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div class="lg:col-span-2">
+        <div class="felt rounded-2xl shadow-xl ring-1 ring-slate-900/20 p-4 sm:p-6 flex flex-col items-center gap-3">
+          <div id="seat-N" class="spd-seat">
+            <div class="spd-seat-label"></div>
+            <div id="hand-N" class="spd-hand"></div>
+          </div>
+
+          <div class="flex items-center justify-center gap-3 sm:gap-6 w-full">
+            <div id="seat-W" class="spd-seat">
+              <div class="spd-seat-label"></div>
+              <div id="hand-W" class="spd-hand"></div>
+            </div>
+
+            <div id="trick-area" class="spd-trick-area">
+              <div class="spd-trick-slot spd-slot-top" id="trick-slot-N"></div>
+              <div class="spd-trick-slot spd-slot-left" id="trick-slot-W"></div>
+              <div class="spd-trick-slot spd-slot-right" id="trick-slot-E"></div>
+              <div class="spd-trick-slot spd-slot-bottom" id="trick-slot-S"></div>
+            </div>
+
+            <div id="seat-E" class="spd-seat">
+              <div class="spd-seat-label"></div>
+              <div id="hand-E" class="spd-hand"></div>
+            </div>
+          </div>
+
+          <div id="seat-S" class="spd-seat">
+            <div class="spd-seat-label"></div>
+            <div id="hand-S" class="spd-hand"></div>
+          </div>
+        </div>
+
+        <div class="mt-4 bg-white rounded-2xl shadow-xl ring-1 ring-slate-200 p-4">
+          <div id="message" class="text-sm font-semibold text-slate-800 min-h-[20px]"></div>
+          <div id="log" class="mt-2 h-24 overflow-y-auto text-xs text-slate-500 space-y-0.5"></div>
+        </div>
+      </div>
+
+      <div class="lg:col-span-1 flex flex-col gap-4">
+        <div class="bg-white rounded-2xl shadow-xl ring-1 ring-slate-200 p-5">
+          <h3 class="text-sm font-bold text-slate-700 uppercase tracking-wide mb-3">{{ translate(lang, 'games.spades.score_label') }}</h3>
+          <div class="space-y-3">
+            <div class="rounded-xl bg-green-50 ring-1 ring-green-100 p-3">
+              <div class="flex items-center justify-between">
+                <span class="text-sm font-bold text-green-800">{{ translate(lang, 'games.spades.your_team') }}</span>
+                <span id="score-a" class="text-2xl font-extrabold text-green-900">0</span>
+              </div>
+              <div class="text-xs text-green-700 mt-1"><span id="bags-a">0</span> {{ translate(lang, 'games.spades.bags_label') }}</div>
+            </div>
+            <div class="rounded-xl bg-slate-50 ring-1 ring-slate-200 p-3">
+              <div class="flex items-center justify-between">
+                <span class="text-sm font-bold text-slate-700">{{ translate(lang, 'games.spades.opp_team') }}</span>
+                <span id="score-b" class="text-2xl font-extrabold text-slate-900">0</span>
+              </div>
+              <div class="text-xs text-slate-500 mt-1"><span id="bags-b">0</span> {{ translate(lang, 'games.spades.bags_label') }}</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="bg-white rounded-2xl shadow-xl ring-1 ring-slate-200 p-5">
+          <h3 class="text-sm font-bold text-slate-700 mb-2">{{ translate(lang, 'common.rules') }}</h3>
+          <ul class="text-sm text-slate-600 space-y-1">
+            <li>• Bid how many tricks you'll win each round.</li>
+            <li>• You must follow the suit that was led if you can.</li>
+            <li>• Spades are always trump and win the trick unless out-trumped.</li>
+            <li>• Spades can't be led until they've been "broken" (played on another suit).</li>
+            <li>• Bid Nil to score +100 by winning zero tricks — but −100 if you win any.</li>
+            <li>• Overtricks pile up as "bags" — every 10 bags costs your team 100 points.</li>
+          </ul>
+        </div>
+
+        <div class="bg-white rounded-2xl shadow-xl ring-1 ring-slate-200 p-5 flex gap-2">
+          <button id="change-name-btn" type="button" class="flex-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 font-semibold px-4 py-2 text-sm transition-colors">{{ translate(lang, 'games.spades.change_players') }}</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- BID MODAL -->
+<div id="bid-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4">
+  <div class="bg-white rounded-2xl shadow-2xl p-6 sm:p-8 max-w-sm w-full text-center">
+    <h2 class="text-xl font-extrabold text-slate-900 mb-1">{{ translate(lang, 'games.spades.bid_heading') }}</h2>
+    <p class="text-sm text-slate-500 mb-4">{{ translate(lang, 'games.spades.bid_prompt') }}</p>
+    <div id="bid-grid" class="grid grid-cols-5 gap-2 justify-items-center"></div>
+  </div>
+</div>
+
+<!-- ROUND SUMMARY MODAL -->
+<div id="round-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4">
+  <div class="bg-white rounded-2xl shadow-2xl p-6 sm:p-8 max-w-md w-full">
+    <h2 class="text-xl font-extrabold text-slate-900 mb-4 text-center">{{ translate(lang, 'games.spades.round_summary') }}</h2>
+    <div id="round-details" class="space-y-1 text-sm text-slate-700 mb-4"></div>
+    <div id="round-scores" class="grid grid-cols-2 gap-3 mb-6"></div>
+    <button id="continue-round" type="button" class="w-full rounded-lg bg-green-700 hover:bg-green-800 text-white font-bold px-4 py-3 transition-colors">{{ translate(lang, 'games.spades.continue_round') }}</button>
+  </div>
+</div>
+
+<!-- GAME OVER MODAL -->
+<div id="gameover-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4">
+  <div class="bg-white rounded-2xl shadow-2xl p-8 max-w-sm w-full text-center">
+    <h2 id="gameover-title" class="text-2xl font-extrabold text-slate-900 mb-2"></h2>
+    <p id="gameover-score" class="text-slate-600 mb-6"></p>
+    <div class="flex gap-3">
+      <button id="gameover-play-again" type="button" class="flex-1 rounded-lg bg-green-700 hover:bg-green-800 text-white font-bold px-4 py-2 transition-colors">{{ translate(lang, 'games.spades.play_again') }}</button>
+      <button id="gameover-change" type="button" class="flex-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold px-4 py-2 transition-colors">{{ translate(lang, 'games.spades.change_players') }}</button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+(function () {
+  const I18N = {{ spades_i18n | tojson }};
+
+  function fmt(str, vars) {
+    return String(str).replace(/\{(\w+)\}/g, (_, key) => (key in vars ? vars[key] : `{${key}}`));
+  }
+
+  function escapeHtml(str) {
+    return String(str).replace(/[&<>"']/g, (c) => ({
+      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+    }[c]));
+  }
+
+  function sleep(ms) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+  }
+
+  const SUITS = ['S', 'H', 'D', 'C'];
+  const SUIT_SYMBOL = { S: '♠', H: '♥', D: '♦', C: '♣' };
+  const SUIT_CLASS = { S: 'spd-black', C: 'spd-black', H: 'spd-red', D: 'spd-red' };
+  const RANK_LABEL = { 11: 'J', 12: 'Q', 13: 'K', 14: 'A' };
+  const HAND_ORDER = ['S', 'H', 'C', 'D'];
+
+  const TARGET_SCORE = 500;
+  const LOSE_SCORE = -200;
+
+  function rankLabel(rank) { return RANK_LABEL[rank] || String(rank); }
+  function cardId(card) { return card.rank + card.suit; }
+  function sameCard(a, b) { return a.rank === b.rank && a.suit === b.suit; }
+
+  function buildDeck() {
+    const deck = [];
+    SUITS.forEach((suit) => {
+      for (let rank = 2; rank <= 14; rank++) deck.push({ suit, rank });
+    });
+    return deck;
+  }
+
+  function shuffle(arr) {
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
+  }
+
+  function sortHand(hand) {
+    hand.sort((a, b) => {
+      const sa = HAND_ORDER.indexOf(a.suit), sb = HAND_ORDER.indexOf(b.suit);
+      if (sa !== sb) return sa - sb;
+      return a.rank - b.rank;
+    });
+    return hand;
+  }
+
+  // seats/players are stored in clockwise order: 0=South(human), 1=West, 2=North(partner), 3=East
+  const SEAT_KEYS = ['S', 'W', 'N', 'E'];
+  const TEAM_A = [0, 2]; // you + partner (North)
+  const TEAM_B = [1, 3]; // west + east
+
+  let players = [];
+  let roundNumber = 0;
+  let leaderSeat = 0;
+  let turnPos = 0;
+  let bidsCount = 0;
+  let currentTrick = []; // [{seat, card}]
+  let tricksPlayedCount = 0;
+  let spadesBroken = false;
+  let teamScores = { A: 0, B: 0 };
+  let teamBags = { A: 0, B: 0 };
+  let awaitingHumanPlay = false;
+  let gameActive = false;
+  let logEntries = [];
+
+  const setupScreen = document.getElementById('setup-screen');
+  const gameScreen = document.getElementById('game-screen');
+  const nameInput = document.getElementById('name-input');
+  const startGameBtn = document.getElementById('start-game');
+  const changeNameBtn = document.getElementById('change-name-btn');
+
+  const messageEl = document.getElementById('message');
+  const logEl = document.getElementById('log');
+  const scoreAEl = document.getElementById('score-a');
+  const scoreBEl = document.getElementById('score-b');
+  const bagsAEl = document.getElementById('bags-a');
+  const bagsBEl = document.getElementById('bags-b');
+
+  const bidModal = document.getElementById('bid-modal');
+  const bidGrid = document.getElementById('bid-grid');
+
+  const roundModal = document.getElementById('round-modal');
+  const roundDetails = document.getElementById('round-details');
+  const roundScores = document.getElementById('round-scores');
+  const continueRoundBtn = document.getElementById('continue-round');
+
+  const gameoverModal = document.getElementById('gameover-modal');
+  const gameoverTitle = document.getElementById('gameover-title');
+  const gameoverScore = document.getElementById('gameover-score');
+  const gameoverPlayAgain = document.getElementById('gameover-play-again');
+  const gameoverChange = document.getElementById('gameover-change');
+
+  // ---------- Rendering ----------
+
+  function createCardEl(card, { faceDown, playable, extraClass } = {}) {
+    if (faceDown) {
+      const back = document.createElement('div');
+      back.className = 'spd-back';
+      return back;
+    }
+    const el = document.createElement('div');
+    el.className = `spd-card ${SUIT_CLASS[card.suit]}${playable ? ' spd-playable' : ''}${extraClass ? ' ' + extraClass : ''}`;
+    el.dataset.cardid = cardId(card);
+    el.innerHTML = `
+      <div class="spd-rank">${rankLabel(card.rank)}<span class="spd-suit-mini">${SUIT_SYMBOL[card.suit]}</span></div>
+      <div class="spd-suit-big">${SUIT_SYMBOL[card.suit]}</div>
+      <div class="spd-rank" style="align-self:flex-end;transform:rotate(180deg);">${rankLabel(card.rank)}<span class="spd-suit-mini">${SUIT_SYMBOL[card.suit]}</span></div>
+    `;
+    return el;
+  }
+
+  function seatLabel(idx) {
+    const p = players[idx];
+    const key = SEAT_KEYS[idx].toLowerCase();
+    const posName = I18N[{ S: 'south', W: 'west', N: 'north', E: 'east' }[SEAT_KEYS[idx]]];
+    let text = idx === 0 ? p.name : posName;
+    if (p.bid !== null) {
+      const bidText = p.isNil ? I18N.bid_nil : String(p.bid);
+      text += ` — ${bidText}`;
+      if (currentPhase === 'playing' || currentPhase === 'roundEnd') {
+        text += ` (${p.tricksWon})`;
+      }
+    }
+    return text;
+  }
+
+  let currentPhase = 'bidding';
+
+  function renderSeats() {
+    SEAT_KEYS.forEach((key, idx) => {
+      const seatEl = document.getElementById(`seat-${key}`);
+      const labelEl = seatEl.querySelector('.spd-seat-label');
+      labelEl.textContent = seatLabel(idx);
+      seatEl.classList.toggle('spd-active', turnPos === idx && gameActive && currentPhase === 'playing');
+    });
+  }
+
+  function legalPlays(hand, trick, broken) {
+    if (trick.length === 0) {
+      if (!broken && hand.some((c) => c.suit !== 'S')) {
+        return hand.filter((c) => c.suit !== 'S');
+      }
+      return hand.slice();
+    }
+    const ledSuit = trick[0].card.suit;
+    const sameSuit = hand.filter((c) => c.suit === ledSuit);
+    return sameSuit.length > 0 ? sameSuit : hand.slice();
+  }
+
+  function renderHand(idx) {
+    const el = document.getElementById(`hand-${SEAT_KEYS[idx]}`);
+    el.innerHTML = '';
+    const player = players[idx];
+    if (idx !== 0) {
+      player.hand.forEach(() => el.appendChild(createCardEl(null, { faceDown: true })));
+      return;
+    }
+    const legal = (awaitingHumanPlay && turnPos === 0) ? legalPlays(player.hand, currentTrick, spadesBroken) : [];
+    player.hand.forEach((card) => {
+      const isLegal = legal.some((c) => sameCard(c, card));
+      const cardEl = createCardEl(card, {
+        playable: isLegal,
+        extraClass: (awaitingHumanPlay && turnPos === 0 && !isLegal) ? 'spd-dim' : '',
+      });
+      if (isLegal) {
+        cardEl.addEventListener('click', () => onHumanCardClick(card));
+      }
+      el.appendChild(cardEl);
+    });
+  }
+
+  function renderHands() {
+    for (let i = 0; i < 4; i++) renderHand(i);
+  }
+
+  function renderTrick() {
+    SEAT_KEYS.forEach((key) => {
+      const slot = document.getElementById(`trick-slot-${key}`);
+      slot.innerHTML = '';
+      slot.classList.remove('spd-winner-glow');
+    });
+    currentTrick.forEach(({ seat, card }) => {
+      const slot = document.getElementById(`trick-slot-${SEAT_KEYS[seat]}`);
+      slot.appendChild(createCardEl(card));
+    });
+  }
+
+  function renderScoreboard() {
+    scoreAEl.textContent = teamScores.A;
+    scoreBEl.textContent = teamScores.B;
+    bagsAEl.textContent = teamBags.A;
+    bagsBEl.textContent = teamBags.B;
+  }
+
+  function renderAll() {
+    renderSeats();
+    renderHands();
+    renderTrick();
+    renderScoreboard();
+  }
+
+  function log(msg) {
+    logEntries.push(msg);
+    if (logEntries.length > 40) logEntries.shift();
+    logEl.innerHTML = logEntries.map((m) => `<div>${escapeHtml(m)}</div>`).join('');
+    logEl.scrollTop = logEl.scrollHeight;
+  }
+
+  function setMessage(msg) {
+    messageEl.textContent = msg;
+    log(msg);
+  }
+
+  // ---------- Setup ----------
+
+  function newPlayers(humanName) {
+    return [
+      { id: 0, name: humanName, isHuman: true, hand: [], bid: null, isNil: false, tricksWon: 0 },
+      { id: 1, name: I18N.west, isHuman: false, hand: [], bid: null, isNil: false, tricksWon: 0 },
+      { id: 2, name: I18N.north, isHuman: false, hand: [], bid: null, isNil: false, tricksWon: 0 },
+      { id: 3, name: I18N.east, isHuman: false, hand: [], bid: null, isNil: false, tricksWon: 0 },
+    ];
+  }
+
+  startGameBtn.addEventListener('click', () => {
+    const name = nameInput.value.trim() || I18N.south;
+    players = newPlayers(name);
+    roundNumber = 0;
+    teamScores = { A: 0, B: 0 };
+    teamBags = { A: 0, B: 0 };
+    logEntries = [];
+    gameActive = true;
+    setupScreen.classList.add('hidden');
+    gameScreen.classList.remove('hidden');
+    startRound();
+  });
+
+  changeNameBtn.addEventListener('click', backToSetup);
+  gameoverChange.addEventListener('click', backToSetup);
+
+  function backToSetup() {
+    gameActive = false;
+    bidModal.classList.add('hidden');
+    roundModal.classList.add('hidden');
+    gameoverModal.classList.add('hidden');
+    gameScreen.classList.add('hidden');
+    setupScreen.classList.remove('hidden');
+  }
+
+  // ---------- Round setup ----------
+
+  function dealCards() {
+    const deck = shuffle(buildDeck());
+    for (let i = 0; i < 4; i++) players[i].hand = [];
+    for (let i = 0; i < 52; i++) {
+      players[i % 4].hand.push(deck[i]);
+    }
+    players.forEach((p) => sortHand(p.hand));
+  }
+
+  function startRound() {
+    roundNumber += 1;
+    leaderSeat = (roundNumber - 1) % 4;
+    dealCards();
+    players.forEach((p) => { p.bid = null; p.isNil = false; p.tricksWon = 0; });
+    spadesBroken = false;
+    currentTrick = [];
+    tricksPlayedCount = 0;
+    bidsCount = 0;
+    turnPos = leaderSeat;
+    currentPhase = 'bidding';
+    setMessage(`— Round ${roundNumber} —`);
+    renderAll();
+    biddingLoop();
+  }
+
+  // ---------- Bidding ----------
+
+  function aiBid(hand) {
+    const suits = { S: [], H: [], D: [], C: [] };
+    hand.forEach((c) => suits[c.suit].push(c));
+    let est = 0;
+
+    ['H', 'D', 'C'].forEach((s) => {
+      const cards = suits[s].slice().sort((a, b) => b.rank - a.rank);
+      if (cards.length === 0) return;
+      if (cards[0].rank === 14) est += 1;
+      if (cards.length >= 2 && cards[1].rank === 13) est += 0.75;
+      if (cards.length >= 3 && cards[2].rank === 12) est += 0.5;
+    });
+
+    const spades = suits.S;
+    const highSpades = spades.filter((c) => c.rank >= 12).length;
+    est += highSpades;
+    if (spades.length >= 4) est += (spades.length - 3) * 0.7;
+
+    ['H', 'D', 'C'].forEach((s) => {
+      if (suits[s].length === 0) est += 1;
+      else if (suits[s].length === 1) est += 0.5;
+    });
+
+    const topCards = hand.filter((c) => c.rank >= 13).length;
+    if (est < 1.3 && topCards === 0 && spades.length <= 2) {
+      return { bid: 0, nil: true };
+    }
+
+    let bid = Math.round(est);
+    bid = Math.max(1, Math.min(11, bid));
+    return { bid, nil: false };
+  }
+
+  function setBid(idx, bid, nil) {
+    players[idx].bid = bid;
+    players[idx].isNil = nil;
+    const msg = nil
+      ? fmt(I18N.player_bid_nil, { name: players[idx].name })
+      : fmt(I18N.player_bid, { name: players[idx].name, bid });
+    setMessage(msg);
+  }
+
+  function biddingLoop() {
+    if (bidsCount >= 4) {
+      currentPhase = 'playing';
+      renderAll();
+      sleep(400).then(() => playTrickLoop());
+      return;
+    }
+    const idx = turnPos;
+    const player = players[idx];
+    if (player.isHuman) {
+      showBidModal();
+      return;
+    }
+    sleep(500).then(() => {
+      const { bid, nil } = aiBid(player.hand);
+      setBid(idx, bid, nil);
+      bidsCount += 1;
+      turnPos = (turnPos + 1) % 4;
+      renderAll();
+      sleep(350).then(() => biddingLoop());
+    });
+  }
+
+  function showBidModal() {
+    bidGrid.innerHTML = '';
+    const nilBtn = document.createElement('button');
+    nilBtn.type = 'button';
+    nilBtn.className = 'spd-bid-btn bg-red-100 hover:bg-red-200 text-red-800 col-span-5';
+    nilBtn.textContent = I18N.bid_nil;
+    nilBtn.addEventListener('click', () => submitHumanBid(0, true));
+    bidGrid.appendChild(nilBtn);
+
+    for (let n = 1; n <= 13; n++) {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'spd-bid-btn bg-green-100 hover:bg-green-200 text-green-900';
+      btn.textContent = String(n);
+      btn.addEventListener('click', () => submitHumanBid(n, false));
+      bidGrid.appendChild(btn);
+    }
+    bidModal.classList.remove('hidden');
+  }
+
+  function submitHumanBid(bid, nil) {
+    bidModal.classList.add('hidden');
+    setBid(0, bid, nil);
+    bidsCount += 1;
+    turnPos = (turnPos + 1) % 4;
+    renderAll();
+    sleep(300).then(() => biddingLoop());
+  }
+
+  // ---------- Trick play ----------
+
+  function trickWinnerSeat(trick) {
+    const ledSuit = trick[0].card.suit;
+    const spadesInTrick = trick.filter((t) => t.card.suit === 'S');
+    const pool = spadesInTrick.length > 0 ? spadesInTrick : trick.filter((t) => t.card.suit === ledSuit);
+    let best = pool[0];
+    pool.forEach((t) => { if (t.card.rank > best.card.rank) best = t; });
+    return best.seat;
+  }
+
+  function wouldWinIfPlayed(trick, card) {
+    const hypothetical = trick.concat([{ seat: -1, card }]);
+    return trickWinnerSeat(hypothetical) === -1;
+  }
+
+  function aiChooseLead(hand, broken, isNilBidder) {
+    const legal = legalPlays(hand, [], broken);
+    if (isNilBidder) {
+      return legal.reduce((low, c) => (c.rank < low.rank ? c : low), legal[0]);
+    }
+    const aces = legal.filter((c) => c.rank === 14 && c.suit !== 'S');
+    if (aces.length) return aces[0];
+    const bySuit = {};
+    legal.forEach((c) => { (bySuit[c.suit] = bySuit[c.suit] || []).push(c); });
+    let bestSuit = null;
+    Object.keys(bySuit).forEach((s) => {
+      if (s === 'S' && Object.keys(bySuit).length > 1) return;
+      if (!bestSuit || bySuit[s].length > bySuit[bestSuit].length) bestSuit = s;
+    });
+    if (!bestSuit) bestSuit = Object.keys(bySuit)[0];
+    return bySuit[bestSuit].reduce((low, c) => (c.rank < low.rank ? c : low), bySuit[bestSuit][0]);
+  }
+
+  function aiChoosePlay(player, trick, broken) {
+    const legal = legalPlays(player.hand, trick, broken);
+    if (trick.length === 0) {
+      return aiChooseLead(player.hand, broken, player.isNil);
+    }
+
+    if (player.isNil) {
+      const losing = legal.filter((c) => !wouldWinIfPlayed(trick, c));
+      if (losing.length) return losing.reduce((hi, c) => (c.rank > hi.rank ? c : hi), losing[0]);
+      return legal.reduce((low, c) => (c.rank < low.rank ? c : low), legal[0]);
+    }
+
+    const currentWinnerSeat = trickWinnerSeat(trick);
+    const partnerSeat = (player.id + 2) % 4;
+    const partnerWinning = currentWinnerSeat === partnerSeat;
+
+    if (partnerWinning) {
+      return legal.reduce((low, c) => (c.rank < low.rank ? c : low), legal[0]);
+    }
+
+    const winners = legal.filter((c) => wouldWinIfPlayed(trick, c));
+    if (winners.length) {
+      return winners.reduce((low, c) => (c.rank < low.rank ? c : low), winners[0]);
+    }
+    return legal.reduce((low, c) => (c.rank < low.rank ? c : low), legal[0]);
+  }
+
+  function playCard(seatIdx, card) {
+    const player = players[seatIdx];
+    player.hand = player.hand.filter((c) => !sameCard(c, card));
+    currentTrick.push({ seat: seatIdx, card });
+    if (card.suit === 'S') spadesBroken = true;
+
+    if (currentTrick.length === 1) {
+      setMessage(fmt(I18N.trick_lead, { name: player.name, card: rankLabel(card.rank) + SUIT_SYMBOL[card.suit] }));
+    }
+    renderAll();
+  }
+
+  function playTrickLoop() {
+    if (currentTrick.length >= 4) {
+      finishTrick();
+      return;
+    }
+    const seatIdx = turnPos;
+    const player = players[seatIdx];
+    if (player.isHuman) {
+      awaitingHumanPlay = true;
+      renderAll();
+      return;
+    }
+    sleep(650).then(() => {
+      const card = aiChoosePlay(player, currentTrick, spadesBroken);
+      playCard(seatIdx, card);
+      turnPos = (turnPos + 1) % 4;
+      sleep(350).then(() => playTrickLoop());
+    });
+  }
+
+  function onHumanCardClick(card) {
+    if (!awaitingHumanPlay || turnPos !== 0) return;
+    const legal = legalPlays(players[0].hand, currentTrick, spadesBroken);
+    if (!legal.some((c) => sameCard(c, card))) return;
+    awaitingHumanPlay = false;
+    playCard(0, card);
+    turnPos = (turnPos + 1) % 4;
+    sleep(300).then(() => playTrickLoop());
+  }
+
+  function finishTrick() {
+    const winnerSeat = trickWinnerSeat(currentTrick);
+    const winnerPlayer = players[winnerSeat];
+    winnerPlayer.tricksWon += 1;
+    const winningCard = currentTrick.find((t) => t.seat === winnerSeat).card;
+    document.getElementById(`trick-slot-${SEAT_KEYS[winnerSeat]}`).classList.add('spd-winner-glow');
+
+    const cardText = rankLabel(winningCard.rank) + SUIT_SYMBOL[winningCard.suit];
+    setMessage(winnerSeat === 0
+      ? fmt(I18N.you_win_trick, { card: cardText })
+      : fmt(I18N.player_wins_trick, { name: winnerPlayer.name, card: cardText }));
+
+    tricksPlayedCount += 1;
+    turnPos = winnerSeat;
+    renderAll();
+
+    sleep(1100).then(() => {
+      currentTrick = [];
+      renderTrick();
+      if (tricksPlayedCount >= 13) {
+        endRound();
+      } else {
+        playTrickLoop();
+      }
+    });
+  }
+
+  // ---------- Scoring ----------
+
+  function computeRoundScore() {
+    const results = { A: {}, B: {} };
+    [['A', TEAM_A], ['B', TEAM_B]].forEach(([teamKey, members]) => {
+      let bidSum = 0;
+      let tricksSum = 0;
+      let nilBonus = 0;
+      members.forEach((idx) => {
+        const p = players[idx];
+        tricksSum += p.tricksWon;
+        if (p.isNil) {
+          nilBonus += p.tricksWon === 0 ? 100 : -100;
+        } else {
+          bidSum += p.bid;
+        }
+      });
+      const made = tricksSum >= bidSum;
+      const baseDelta = made ? bidSum * 10 + (tricksSum - bidSum) : -bidSum * 10;
+      const bagsAdded = made ? (tricksSum - bidSum) : 0;
+      let newBags = teamBags[teamKey] + bagsAdded;
+      let bagPenalty = 0;
+      while (newBags >= 10) {
+        newBags -= 10;
+        bagPenalty += 100;
+      }
+      teamBags[teamKey] = newBags;
+      const delta = baseDelta + nilBonus - bagPenalty;
+      teamScores[teamKey] += delta;
+      results[teamKey] = { bidSum, tricksSum, made, delta, bagPenalty };
+    });
+    return results;
+  }
+
+  function endRound() {
+    currentPhase = 'roundEnd';
+    const results = computeRoundScore();
+    renderScoreboard();
+
+    roundDetails.innerHTML = players.map((p) => {
+      let msg;
+      if (p.isNil) {
+        msg = p.tricksWon === 0
+          ? fmt(I18N.nil_made, { name: p.name })
+          : fmt(I18N.nil_broken, { name: p.name });
+      } else {
+        msg = p.tricksWon >= p.bid
+          ? fmt(I18N.made_bid, { name: p.name, bid: p.bid, tricks: p.tricksWon })
+          : fmt(I18N.missed_bid, { name: p.name, bid: p.bid, tricks: p.tricksWon });
+      }
+      return `<div>${escapeHtml(msg)}</div>`;
+    }).join('');
+
+    roundScores.innerHTML = `
+      <div class="rounded-xl bg-green-50 ring-1 ring-green-100 p-3 text-center">
+        <div class="text-xs font-semibold text-green-700">${escapeHtml(I18N.your_team)}</div>
+        <div class="text-xl font-extrabold text-green-900">${results.A.delta >= 0 ? '+' : ''}${results.A.delta}</div>
+        <div class="text-xs text-green-700 mt-1">${teamScores.A} ${escapeHtml(I18N.score_label)}</div>
+      </div>
+      <div class="rounded-xl bg-slate-50 ring-1 ring-slate-200 p-3 text-center">
+        <div class="text-xs font-semibold text-slate-600">${escapeHtml(I18N.opp_team)}</div>
+        <div class="text-xl font-extrabold text-slate-900">${results.B.delta >= 0 ? '+' : ''}${results.B.delta}</div>
+        <div class="text-xs text-slate-500 mt-1">${teamScores.B} ${escapeHtml(I18N.score_label)}</div>
+      </div>
+    `;
+
+    roundModal.classList.remove('hidden');
+  }
+
+  continueRoundBtn.addEventListener('click', () => {
+    roundModal.classList.add('hidden');
+    if (teamScores.A >= TARGET_SCORE || teamScores.B >= TARGET_SCORE ||
+        teamScores.A <= LOSE_SCORE || teamScores.B <= LOSE_SCORE) {
+      handleGameOver();
+    } else {
+      startRound();
+    }
+  });
+
+  function handleGameOver() {
+    gameActive = false;
+    currentPhase = 'gameEnd';
+    const youWin = teamScores.A > teamScores.B;
+    gameoverTitle.textContent = youWin ? I18N.win_title : I18N.lose_title;
+    gameoverScore.textContent = fmt(I18N.final_score, { us: teamScores.A, them: teamScores.B });
+    gameoverModal.classList.remove('hidden');
+  }
+
+  gameoverPlayAgain.addEventListener('click', () => {
+    gameoverModal.classList.add('hidden');
+    roundNumber = 0;
+    teamScores = { A: 0, B: 0 };
+    teamBags = { A: 0, B: 0 };
+    logEntries = [];
+    gameActive = true;
+    startRound();
+  });
+})();
+</script>
+{% endblock %}

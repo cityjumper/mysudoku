@@ -1,0 +1,974 @@
+{% extends "base.html" %}
+
+{% block title %}{{ translate(lang, 'games.tetris_3d.title') }}{% endblock %}
+
+{% block extra_head %}
+<style>
+  .game-shell {
+    max-width: 1120px;
+    margin: 0 auto;
+  }
+
+  .scene-wrap {
+    position: relative;
+    border-radius: 1rem;
+    overflow: hidden;
+    background: radial-gradient(circle at 20% 20%, #1f2a44 0%, #0b1020 50%, #05070f 100%);
+    min-height: 420px;
+    height: clamp(420px, 62vh, 700px);
+    touch-action: none;
+    box-shadow: 0 30px 60px rgba(5, 7, 15, 0.4);
+  }
+
+  .hud-overlay {
+    position: absolute;
+    left: 12px;
+    right: 12px;
+    top: 12px;
+    display: flex;
+    justify-content: space-between;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    pointer-events: none;
+    z-index: 2;
+  }
+
+  .hud-pill {
+    background: rgba(15, 23, 42, 0.68);
+    color: #e2e8f0;
+    border: 1px solid rgba(148, 163, 184, 0.35);
+    border-radius: 9999px;
+    padding: 0.35rem 0.7rem;
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    -webkit-backdrop-filter: blur(4px);
+    backdrop-filter: blur(4px);
+  }
+
+  .btn-row {
+    display: flex;
+    gap: 0.6rem;
+    flex-wrap: wrap;
+  }
+
+  .btn-solid {
+    border: 0;
+    border-radius: 0.7rem;
+    font-weight: 700;
+    font-size: 0.95rem;
+    padding: 0.6rem 0.95rem;
+    min-height: 44px;
+    cursor: pointer;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .btn-primary {
+    background: #a21caf;
+    color: #ffffff;
+  }
+
+  .btn-primary:hover { background: #86198f; }
+
+  .btn-muted {
+    background: #e2e8f0;
+    color: #1e293b;
+  }
+
+  .btn-muted:hover { background: #cbd5e1; }
+
+  .dpad {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    grid-template-rows: repeat(3, 44px);
+    grid-template-areas:
+      ".    fwd   ."
+      "left drop  right"
+      ".    back  .";
+    gap: 0.4rem;
+    max-width: 220px;
+    margin: 0 auto;
+  }
+
+  .dpad button {
+    border: 0;
+    border-radius: 0.6rem;
+    background: #e2e8f0;
+    color: #1e293b;
+    font-weight: 700;
+    font-size: 1rem;
+    cursor: pointer;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .dpad button:hover { background: #cbd5e1; }
+
+  .dpad-fwd { grid-area: fwd; }
+  .dpad-left { grid-area: left; }
+  .dpad-drop { grid-area: drop; background: #a21caf; color: #fff; }
+  .dpad-drop:hover { background: #86198f; }
+  .dpad-right { grid-area: right; }
+  .dpad-back { grid-area: back; }
+
+  .next-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    grid-template-rows: repeat(4, 1fr);
+    gap: 3px;
+    width: 88px;
+    height: 88px;
+  }
+
+  .next-cell {
+    border-radius: 3px;
+    background: #e2e8f0;
+  }
+
+  .rotate-row {
+    justify-content: center;
+  }
+
+  @media (max-width: 640px) {
+    .scene-wrap {
+      min-height: 380px;
+      height: 56vh;
+    }
+
+    .hud-pill {
+      font-size: 0.7rem;
+      padding: 0.28rem 0.55rem;
+    }
+
+    .btn-row .btn-solid {
+      flex: 1 1 calc(50% - 0.3rem);
+    }
+  }
+</style>
+{% endblock %}
+
+{% block body_class %}bg-gradient-to-br from-slate-100 to-fuchsia-100 min-h-screen{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+  <div class="game-shell">
+    <div class="mb-5 flex items-center justify-between gap-3">
+      <a href="/" class="inline-flex items-center text-fuchsia-800 hover:text-fuchsia-950 font-semibold">
+        <svg class="w-5 h-5 mr-2" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+          <path fill-rule="evenodd" d="M12.707 15.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 111.414 1.414L7.414 9H17a1 1 0 110 2H7.414l5.293 5.293a1 1 0 010 1.414z" clip-rule="evenodd" />
+        </svg>
+        {{ translate(lang, 'common.home') }}
+      </a>
+      <div class="text-xs sm:text-sm text-slate-600 font-semibold">5×5×14</div>
+    </div>
+
+    <header class="text-center mb-6">
+      <h1 class="text-3xl sm:text-5xl font-extrabold tracking-tight text-slate-900">{{ translate(lang, 'games.tetris_3d.title') }}</h1>
+      <p class="mt-2 text-slate-600 text-sm sm:text-base">{{ translate(lang, 'games.tetris_3d.subtitle') }}</p>
+    </header>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div class="lg:col-span-2">
+        <div class="scene-wrap" id="scene-wrap" aria-label="3D Tetris well">
+          <div class="hud-overlay">
+            <div class="hud-pill" id="score-pill"></div>
+            <div class="hud-pill" id="hint-pill">{{ translate(lang, 'games.tetris_3d.hint_drag_tap') }}</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="lg:col-span-1">
+        <div class="bg-white rounded-2xl shadow-xl ring-1 ring-slate-200 p-5 sm:p-6">
+          <h2 class="text-xl font-bold text-slate-900">{{ translate(lang, 'games.tetris_3d.status') }}</h2>
+          <div id="status" class="mt-2 text-lg font-bold text-slate-800">{{ translate(lang, 'games.tetris_3d.playing') }}</div>
+          <div id="substatus" class="mt-1 text-sm text-slate-600">{{ translate(lang, 'games.tetris_3d.controls_hint') }}</div>
+
+          <div class="mt-5 btn-row">
+            <button type="button" id="new-game" class="btn-solid btn-primary">{{ translate(lang, 'games.tetris_3d.new_game') }}</button>
+            <button type="button" id="pause-toggle" class="btn-solid btn-muted">{{ translate(lang, 'games.tetris_3d.pause') }}</button>
+          </div>
+
+          <div class="mt-6 flex items-center gap-4">
+            <div class="next-grid" id="next-grid" aria-label="Next piece"></div>
+            <div>
+              <div class="text-xs font-semibold uppercase tracking-wide text-slate-500">{{ translate(lang, 'games.tetris_3d.next_label') }}</div>
+            </div>
+          </div>
+
+          <div class="mt-6 grid grid-cols-2 gap-3">
+            <div class="rounded-xl bg-fuchsia-50 ring-1 ring-fuchsia-100 p-4">
+              <div class="text-xs font-semibold uppercase tracking-wide text-fuchsia-700">{{ translate(lang, 'games.tetris_3d.score_label') }}</div>
+              <div id="score-value" class="mt-1 text-3xl font-extrabold text-fuchsia-900">0</div>
+            </div>
+            <div class="rounded-xl bg-violet-50 ring-1 ring-violet-100 p-4">
+              <div class="text-xs font-semibold uppercase tracking-wide text-violet-700">{{ translate(lang, 'games.tetris_3d.high_score_label') }}</div>
+              <div id="high-score-value" class="mt-1 text-3xl font-extrabold text-violet-900">0</div>
+            </div>
+            <div class="rounded-xl bg-slate-50 ring-1 ring-slate-200 p-4">
+              <div class="text-xs font-semibold uppercase tracking-wide text-slate-600">{{ translate(lang, 'games.tetris_3d.level_label') }}</div>
+              <div id="level-value" class="mt-1 text-3xl font-extrabold text-slate-900">1</div>
+            </div>
+            <div class="rounded-xl bg-slate-50 ring-1 ring-slate-200 p-4">
+              <div class="text-xs font-semibold uppercase tracking-wide text-slate-600">{{ translate(lang, 'games.tetris_3d.lines_label') }}</div>
+              <div id="lines-value" class="mt-1 text-3xl font-extrabold text-slate-900">0</div>
+            </div>
+          </div>
+
+          <div class="mt-6">
+            <div class="dpad">
+              <button type="button" class="dpad-fwd" id="btn-fwd" title="{{ translate(lang, 'games.tetris_3d.move_forward') }}">▲</button>
+              <button type="button" class="dpad-left" id="btn-left" title="{{ translate(lang, 'games.tetris_3d.move_left') }}">◀</button>
+              <button type="button" class="dpad-drop" id="btn-drop" title="{{ translate(lang, 'games.tetris_3d.hard_drop') }}">⤓</button>
+              <button type="button" class="dpad-right" id="btn-right" title="{{ translate(lang, 'games.tetris_3d.move_right') }}">▶</button>
+              <button type="button" class="dpad-back" id="btn-back" title="{{ translate(lang, 'games.tetris_3d.move_back') }}">▼</button>
+            </div>
+            <div class="mt-3 btn-row rotate-row">
+              <button type="button" id="btn-rotate-ccw" class="btn-solid btn-muted">{{ translate(lang, 'games.tetris_3d.rotate_ccw') }}</button>
+              <button type="button" id="btn-rotate-cw" class="btn-solid btn-muted">{{ translate(lang, 'games.tetris_3d.rotate_cw') }}</button>
+            </div>
+            <div class="mt-2 btn-row rotate-row">
+              <button type="button" id="btn-tilt-up" class="btn-solid btn-muted">{{ translate(lang, 'games.tetris_3d.tilt_up') }}</button>
+              <button type="button" id="btn-tilt-down" class="btn-solid btn-muted">{{ translate(lang, 'games.tetris_3d.tilt_down') }}</button>
+            </div>
+          </div>
+
+          <div class="mt-4 btn-row">
+            <button type="button" id="roll-left" class="btn-solid btn-muted">{{ translate(lang, 'games.tetris_3d.roll_left') }}</button>
+            <button type="button" id="roll-right" class="btn-solid btn-muted">{{ translate(lang, 'games.tetris_3d.roll_right') }}</button>
+            <button type="button" id="reset-view" class="btn-solid btn-muted">{{ translate(lang, 'games.tetris_3d.reset_view') }}</button>
+          </div>
+
+          <div class="mt-6">
+            <h3 class="text-sm font-bold text-slate-700 mb-2">{{ translate(lang, 'games.tetris_3d.how_to_play') }}</h3>
+            <ul class="text-sm text-slate-600 space-y-1">
+              <li>• {{ translate(lang, 'games.tetris_3d.rule_1') }}</li>
+              <li>• {{ translate(lang, 'games.tetris_3d.rule_2') }}</li>
+              <li>• {{ translate(lang, 'games.tetris_3d.rule_3') }}</li>
+              <li>• {{ translate(lang, 'games.tetris_3d.rule_4') }}</li>
+              <li>• {{ translate(lang, 'games.tetris_3d.rule_5') }}</li>
+              <li>• {{ translate(lang, 'games.tetris_3d.rule_6') }}</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(() => {
+  const t = {
+    lib_failed: "{{ translate(lang, 'games.tetris_3d.lib_failed') }}",
+    lib_refresh: "{{ translate(lang, 'games.tetris_3d.lib_refresh') }}",
+    playing: "{{ translate(lang, 'games.tetris_3d.playing') }}",
+    paused: "{{ translate(lang, 'games.tetris_3d.paused') }}",
+    game_over: "{{ translate(lang, 'games.tetris_3d.game_over') }}",
+    controls_hint: "{{ translate(lang, 'games.tetris_3d.controls_hint') }}",
+    paused_hint: "{{ translate(lang, 'games.tetris_3d.paused_hint') }}",
+    game_over_hint: "{{ translate(lang, 'games.tetris_3d.game_over_hint') }}",
+    pause: "{{ translate(lang, 'games.tetris_3d.pause') }}",
+    resume: "{{ translate(lang, 'games.tetris_3d.resume') }}",
+    score_label: "{{ translate(lang, 'games.tetris_3d.score_label') }}"
+  };
+
+  const W = 5;
+  const D = 5;
+  const HEIGHT = 14;
+  const SPACING = 1.05;
+  const CUBE = 0.92;
+  const HIGH_SCORE_KEY = 'tetris-3d:high-score:v1';
+  const DEFAULT_VIEW = { x: -0.28, y: 0.55, z: 0 };
+
+  const wrapEl = document.getElementById('scene-wrap');
+  const scorePillEl = document.getElementById('score-pill');
+  const statusEl = document.getElementById('status');
+  const substatusEl = document.getElementById('substatus');
+  const scoreValueEl = document.getElementById('score-value');
+  const highScoreValueEl = document.getElementById('high-score-value');
+  const levelValueEl = document.getElementById('level-value');
+  const linesValueEl = document.getElementById('lines-value');
+  const nextGridEl = document.getElementById('next-grid');
+  const pauseToggleEl = document.getElementById('pause-toggle');
+
+  if (!window.THREE) {
+    statusEl.textContent = t.lib_failed;
+    substatusEl.textContent = t.lib_refresh;
+    return;
+  }
+
+  // Each piece is a flat tetromino embedded in a 4x4x4 box (y=0 at spawn).
+  // Rotating around Y spins it flat within the well; rotating around X
+  // tumbles it end-over-end so it can stand on edge across several layers.
+  const BOX = 4;
+  const BASE_OFFSETS = {
+    I: [[0, 0, 1], [1, 0, 1], [2, 0, 1], [3, 0, 1]],
+    O: [[1, 0, 1], [2, 0, 1], [1, 0, 2], [2, 0, 2]],
+    T: [[1, 0, 0], [0, 0, 1], [1, 0, 1], [2, 0, 1]],
+    S: [[1, 0, 0], [2, 0, 0], [0, 0, 1], [1, 0, 1]],
+    Z: [[0, 0, 0], [1, 0, 0], [1, 0, 1], [2, 0, 1]],
+    J: [[0, 0, 0], [0, 0, 1], [1, 0, 1], [2, 0, 1]],
+    L: [[2, 0, 0], [0, 0, 1], [1, 0, 1], [2, 0, 1]],
+  };
+
+  function rotateOffsetY([x, y, z], dir) {
+    return dir > 0 ? [z, y, BOX - 1 - x] : [BOX - 1 - z, y, x];
+  }
+
+  function rotateOffsetX([x, y, z], dir) {
+    return dir > 0 ? [x, z, BOX - 1 - y] : [x, BOX - 1 - z, y];
+  }
+
+  const PIECE_TYPES = ['I', 'O', 'T', 'S', 'Z', 'J', 'L'];
+  const PIECE_COLOR_ID = { I: 1, O: 2, T: 3, S: 4, Z: 5, J: 6, L: 7 };
+  const COLOR_HEX = {
+    1: 0x22d3ee,
+    2: 0xfacc15,
+    3: 0xa855f7,
+    4: 0x4ade80,
+    5: 0xef4444,
+    6: 0x3b82f6,
+    7: 0xf97316,
+  };
+
+  let board = createBoard();
+  let currentPiece = null;
+  let bag = [];
+  let upcomingType = null;
+  let score = 0;
+  let highScore = loadHighScore();
+  let level = 1;
+  let linesTotal = 0;
+  let dropInterval = 900;
+  let paused = false;
+  let gameOver = false;
+  let started = false;
+
+  const scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x0b1222);
+
+  const camera = new THREE.PerspectiveCamera(50, 1, 0.1, 100);
+  camera.position.set(0, 0.6, 19);
+  camera.lookAt(0, 0, 0);
+
+  const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+  renderer.outputEncoding = THREE.sRGBEncoding;
+  renderer.domElement.style.display = 'block';
+  renderer.domElement.style.width = '100%';
+  renderer.domElement.style.height = '100%';
+  wrapEl.appendChild(renderer.domElement);
+
+  const ambient = new THREE.AmbientLight(0xffffff, 0.7);
+  scene.add(ambient);
+  const keyLight = new THREE.DirectionalLight(0xffffff, 1.0);
+  keyLight.position.set(6, 10, 8);
+  scene.add(keyLight);
+  const fillLight = new THREE.DirectionalLight(0x88aaff, 0.45);
+  fillLight.position.set(-7, -3, -6);
+  scene.add(fillLight);
+
+  const gameRoot = new THREE.Group();
+  gameRoot.rotation.x = DEFAULT_VIEW.x;
+  gameRoot.rotation.y = DEFAULT_VIEW.y;
+  gameRoot.rotation.z = DEFAULT_VIEW.z;
+  scene.add(gameRoot);
+
+  const boardGroup = new THREE.Group();
+  gameRoot.add(boardGroup);
+
+  const lockedGroup = new THREE.Group();
+  gameRoot.add(lockedGroup);
+
+  const fallingGroup = new THREE.Group();
+  gameRoot.add(fallingGroup);
+
+  const ghostGroup = new THREE.Group();
+  gameRoot.add(ghostGroup);
+
+  const lockedMap = new Map();
+
+  buildWellCage();
+
+  const nextCells = [];
+  for (let i = 0; i < 16; i += 1) {
+    const cell = document.createElement('div');
+    cell.className = 'next-cell';
+    nextGridEl.appendChild(cell);
+    nextCells.push(cell);
+  }
+
+  function createBoard() {
+    return Array.from({ length: HEIGHT }, () =>
+      Array.from({ length: D }, () => Array(W).fill(0))
+    );
+  }
+
+  function gridToWorld(x, y, z) {
+    const offsetX = (W - 1) / 2;
+    const offsetY = (HEIGHT - 1) / 2;
+    const offsetZ = (D - 1) / 2;
+    return {
+      x: (x - offsetX) * SPACING,
+      y: (y - offsetY) * SPACING,
+      z: (z - offsetZ) * SPACING,
+    };
+  }
+
+  function keyFor(x, y, z) {
+    return `${x},${y},${z}`;
+  }
+
+  function buildWellCage() {
+    const halfW = (W * SPACING) / 2;
+    const halfD = (D * SPACING) / 2;
+    const halfH = (HEIGHT * SPACING) / 2;
+    const positions = [];
+
+    for (let gx = 0; gx <= W; gx += 1) {
+      const wx = (gx - W / 2) * SPACING;
+      for (let gz = 0; gz <= D; gz += 1) {
+        const wz = (gz - D / 2) * SPACING;
+        positions.push(wx, -halfH, wz, wx, halfH, wz);
+      }
+    }
+
+    const corners = [
+      [-halfW, -halfD],
+      [halfW, -halfD],
+      [halfW, halfD],
+      [-halfW, halfD],
+    ];
+    [-halfH, halfH].forEach((y) => {
+      for (let i = 0; i < 4; i += 1) {
+        const a = corners[i];
+        const b = corners[(i + 1) % 4];
+        positions.push(a[0], y, a[1], b[0], y, b[1]);
+      }
+    });
+
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+    const mat = new THREE.LineBasicMaterial({ color: 0x93c5fd, transparent: true, opacity: 0.35 });
+    boardGroup.add(new THREE.LineSegments(geo, mat));
+
+    const floorGeo = new THREE.PlaneGeometry(W * SPACING + 0.4, D * SPACING + 0.4);
+    const floorMat = new THREE.MeshPhongMaterial({ color: 0x0f172a, emissive: 0x0b1222, shininess: 40, side: THREE.DoubleSide });
+    const floor = new THREE.Mesh(floorGeo, floorMat);
+    floor.rotation.x = -Math.PI / 2;
+    floor.position.y = -halfH - 0.02;
+    boardGroup.add(floor);
+  }
+
+  function makeCubeMesh(colorId, opacity) {
+    const geo = new THREE.BoxGeometry(CUBE, CUBE, CUBE);
+    const mat = new THREE.MeshPhongMaterial({
+      color: COLOR_HEX[colorId],
+      emissive: 0x111111,
+      shininess: 70,
+      transparent: opacity !== undefined,
+      opacity: opacity !== undefined ? opacity : 1,
+    });
+    const mesh = new THREE.Mesh(geo, mat);
+    const edges = new THREE.LineSegments(
+      new THREE.EdgesGeometry(geo),
+      new THREE.LineBasicMaterial({ color: 0x0f172a, transparent: true, opacity: 0.5 })
+    );
+    mesh.add(edges);
+    return mesh;
+  }
+
+  function makeGhostMesh(colorId) {
+    const geo = new THREE.BoxGeometry(CUBE * 0.96, CUBE * 0.96, CUBE * 0.96);
+    const edges = new THREE.EdgesGeometry(geo);
+    const mat = new THREE.LineBasicMaterial({ color: COLOR_HEX[colorId], transparent: true, opacity: 0.55 });
+    return new THREE.LineSegments(edges, mat);
+  }
+
+  function shuffle(arr) {
+    for (let i = arr.length - 1; i > 0; i -= 1) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
+  }
+
+  function nextType() {
+    if (bag.length === 0) {
+      bag = shuffle(PIECE_TYPES.slice());
+    }
+    return bag.shift();
+  }
+
+  function pieceCells(piece) {
+    return piece.offsets.map(([ox, oy, oz]) => ({
+      x: piece.anchor.x + ox,
+      y: piece.anchor.y + oy,
+      z: piece.anchor.z + oz,
+    }));
+  }
+
+  function canPlace(offsets, anchor) {
+    for (const [ox, oy, oz] of offsets) {
+      const x = anchor.x + ox;
+      const y = anchor.y + oy;
+      const z = anchor.z + oz;
+      if (x < 0 || x >= W || z < 0 || z >= D || y < 0 || y >= HEIGHT) return false;
+      if (board[y][z][x] !== 0) return false;
+    }
+    return true;
+  }
+
+  function spawnPiece(type) {
+    const anchor = {
+      x: Math.floor((W - BOX) / 2),
+      y: HEIGHT - BOX,
+      z: Math.floor((D - BOX) / 2),
+    };
+    const offsets = BASE_OFFSETS[type].map((o) => o.slice());
+    if (!canPlace(offsets, anchor)) {
+      triggerGameOver();
+      return;
+    }
+    currentPiece = { type, anchor, offsets };
+    updateFallingMesh();
+    updateGhost();
+  }
+
+  function spawnNext() {
+    const type = upcomingType;
+    upcomingType = nextType();
+    renderNextPreview();
+    spawnPiece(type);
+  }
+
+  function tryMove(dx, dz) {
+    if (!currentPiece || paused || gameOver) return;
+    const anchor = currentPiece.anchor;
+    const test = { x: anchor.x + dx, y: anchor.y, z: anchor.z + dz };
+    if (canPlace(currentPiece.offsets, test)) {
+      currentPiece.anchor = test;
+      updateFallingMesh();
+      updateGhost();
+    }
+  }
+
+  const ROTATE_KICKS = [
+    [0, 0, 0],
+    [1, 0, 0], [-1, 0, 0], [0, 0, 1], [0, 0, -1],
+    [2, 0, 0], [-2, 0, 0], [0, 0, 2], [0, 0, -2],
+    [0, -1, 0], [1, -1, 0], [-1, -1, 0], [0, -1, 1], [0, -1, -1],
+    [0, -2, 0], [0, -3, 0],
+  ];
+
+  function tryRotate(axis, dir) {
+    if (!currentPiece || paused || gameOver) return;
+    const rotateFn = axis === 'x' ? rotateOffsetX : rotateOffsetY;
+    const newOffsets = currentPiece.offsets.map((o) => rotateFn(o, dir));
+    const anchor = currentPiece.anchor;
+    for (const [kx, ky, kz] of ROTATE_KICKS) {
+      const test = { x: anchor.x + kx, y: anchor.y + ky, z: anchor.z + kz };
+      if (canPlace(newOffsets, test)) {
+        currentPiece.offsets = newOffsets;
+        currentPiece.anchor = test;
+        updateFallingMesh();
+        updateGhost();
+        return;
+      }
+    }
+  }
+
+  function softTick() {
+    if (!currentPiece || paused || gameOver) return;
+    const anchor = currentPiece.anchor;
+    const test = { x: anchor.x, y: anchor.y - 1, z: anchor.z };
+    if (canPlace(currentPiece.offsets, test)) {
+      currentPiece.anchor = test;
+      updateFallingMesh();
+      updateGhost();
+    } else {
+      lockPiece();
+    }
+  }
+
+  function hardDrop() {
+    if (!currentPiece || paused || gameOver) return;
+    let dropDist = 0;
+    while (true) {
+      const anchor = currentPiece.anchor;
+      const test = { x: anchor.x, y: anchor.y - 1, z: anchor.z };
+      if (!canPlace(currentPiece.offsets, test)) break;
+      currentPiece.anchor = test;
+      dropDist += 1;
+    }
+    score += dropDist * 2;
+    lockPiece();
+  }
+
+  function lockPiece() {
+    const cells = pieceCells(currentPiece);
+    const colorId = PIECE_COLOR_ID[currentPiece.type];
+    for (const cell of cells) {
+      board[cell.y][cell.z][cell.x] = colorId;
+    }
+    currentPiece = null;
+    fallingGroup.clear();
+    ghostGroup.clear();
+
+    const cleared = clearFullLayers();
+    if (cleared > 0) {
+      linesTotal += cleared;
+      score += cleared * 200 * level;
+      level = Math.floor(linesTotal / 5) + 1;
+      dropInterval = Math.max(150, 900 - (level - 1) * 70);
+    }
+
+    if (score > highScore) {
+      highScore = score;
+      saveHighScore(highScore);
+    }
+
+    updateLockedBlocks();
+    updateHud();
+
+    if (!gameOver) {
+      spawnNext();
+    }
+  }
+
+  function isLayerFull(y) {
+    for (let z = 0; z < D; z += 1) {
+      for (let x = 0; x < W; x += 1) {
+        if (board[y][z][x] === 0) return false;
+      }
+    }
+    return true;
+  }
+
+  function removeLayer(y) {
+    for (let yy = y; yy < HEIGHT - 1; yy += 1) {
+      board[yy] = board[yy + 1];
+    }
+    board[HEIGHT - 1] = Array.from({ length: D }, () => Array(W).fill(0));
+  }
+
+  function clearFullLayers() {
+    let cleared = 0;
+    for (let y = 0; y < HEIGHT; y += 1) {
+      if (isLayerFull(y)) {
+        removeLayer(y);
+        cleared += 1;
+        y -= 1;
+      }
+    }
+    return cleared;
+  }
+
+  function updateLockedBlocks() {
+    const present = new Set();
+    for (let y = 0; y < HEIGHT; y += 1) {
+      for (let z = 0; z < D; z += 1) {
+        for (let x = 0; x < W; x += 1) {
+          const val = board[y][z][x];
+          if (!val) continue;
+          const key = keyFor(x, y, z);
+          present.add(key);
+          if (!lockedMap.has(key)) {
+            const mesh = makeCubeMesh(val);
+            const pos = gridToWorld(x, y, z);
+            mesh.position.set(pos.x, pos.y, pos.z);
+            lockedGroup.add(mesh);
+            lockedMap.set(key, mesh);
+          }
+        }
+      }
+    }
+
+    for (const [key, mesh] of lockedMap.entries()) {
+      if (!present.has(key)) {
+        lockedGroup.remove(mesh);
+        mesh.geometry.dispose();
+        mesh.material.dispose();
+        lockedMap.delete(key);
+      }
+    }
+  }
+
+  function updateFallingMesh() {
+    fallingGroup.clear();
+    if (!currentPiece) return;
+    const colorId = PIECE_COLOR_ID[currentPiece.type];
+    for (const cell of pieceCells(currentPiece)) {
+      const mesh = makeCubeMesh(colorId);
+      const pos = gridToWorld(cell.x, cell.y, cell.z);
+      mesh.position.set(pos.x, pos.y, pos.z);
+      fallingGroup.add(mesh);
+    }
+  }
+
+  function updateGhost() {
+    ghostGroup.clear();
+    if (!currentPiece) return;
+    let ghostAnchor = currentPiece.anchor;
+    while (true) {
+      const test = { x: ghostAnchor.x, y: ghostAnchor.y - 1, z: ghostAnchor.z };
+      if (!canPlace(currentPiece.offsets, test)) break;
+      ghostAnchor = test;
+    }
+    if (ghostAnchor.y === currentPiece.anchor.y) return;
+    const colorId = PIECE_COLOR_ID[currentPiece.type];
+    for (const [ox, oy, oz] of currentPiece.offsets) {
+      const mesh = makeGhostMesh(colorId);
+      const pos = gridToWorld(ghostAnchor.x + ox, ghostAnchor.y + oy, ghostAnchor.z + oz);
+      mesh.position.set(pos.x, pos.y, pos.z);
+      ghostGroup.add(mesh);
+    }
+  }
+
+  function renderNextPreview() {
+    const filled = new Set(BASE_OFFSETS[upcomingType].map(([x, , z]) => `${x},${z}`));
+    const colorId = PIECE_COLOR_ID[upcomingType];
+    const hex = `#${COLOR_HEX[colorId].toString(16).padStart(6, '0')}`;
+    for (let row = 0; row < 4; row += 1) {
+      for (let col = 0; col < 4; col += 1) {
+        const idx = row * 4 + col;
+        const isFilled = filled.has(`${col},${row}`);
+        nextCells[idx].style.background = isFilled ? hex : '#e2e8f0';
+      }
+    }
+  }
+
+  function loadHighScore() {
+    try {
+      const raw = localStorage.getItem(HIGH_SCORE_KEY);
+      return raw ? Number(raw) || 0 : 0;
+    } catch {
+      return 0;
+    }
+  }
+
+  function saveHighScore(value) {
+    try {
+      localStorage.setItem(HIGH_SCORE_KEY, String(value));
+    } catch {
+      // Ignore storage failures (e.g. private browsing).
+    }
+  }
+
+  function updateHud() {
+    scoreValueEl.textContent = String(score);
+    highScoreValueEl.textContent = String(highScore);
+    levelValueEl.textContent = String(level);
+    linesValueEl.textContent = String(linesTotal);
+    scorePillEl.textContent = `${t.score_label}: ${score}`;
+    updateStatus();
+  }
+
+  function updateStatus() {
+    if (gameOver) {
+      statusEl.textContent = t.game_over;
+      substatusEl.textContent = t.game_over_hint;
+      return;
+    }
+    if (paused) {
+      statusEl.textContent = t.paused;
+      substatusEl.textContent = t.paused_hint;
+      return;
+    }
+    statusEl.textContent = t.playing;
+    substatusEl.textContent = t.controls_hint;
+  }
+
+  function triggerGameOver() {
+    gameOver = true;
+    paused = false;
+    fallingGroup.clear();
+    ghostGroup.clear();
+    updateStatus();
+  }
+
+  function startNewGame() {
+    board = createBoard();
+    lockedGroup.clear();
+    lockedMap.clear();
+    fallingGroup.clear();
+    ghostGroup.clear();
+    score = 0;
+    level = 1;
+    linesTotal = 0;
+    dropInterval = 900;
+    paused = false;
+    gameOver = false;
+    started = true;
+    bag = [];
+    upcomingType = nextType();
+    pauseToggleEl.textContent = t.pause;
+    updateHud();
+    spawnNext();
+  }
+
+  function togglePause() {
+    if (gameOver || !started) return;
+    paused = !paused;
+    pauseToggleEl.textContent = paused ? t.resume : t.pause;
+    updateStatus();
+  }
+
+  document.getElementById('new-game').addEventListener('click', startNewGame);
+  pauseToggleEl.addEventListener('click', togglePause);
+
+  document.getElementById('btn-left').addEventListener('click', () => tryMove(-1, 0));
+  document.getElementById('btn-right').addEventListener('click', () => tryMove(1, 0));
+  document.getElementById('btn-fwd').addEventListener('click', () => tryMove(0, -1));
+  document.getElementById('btn-back').addEventListener('click', () => tryMove(0, 1));
+  document.getElementById('btn-drop').addEventListener('click', hardDrop);
+  document.getElementById('btn-rotate-ccw').addEventListener('click', () => tryRotate('y', -1));
+  document.getElementById('btn-rotate-cw').addEventListener('click', () => tryRotate('y', 1));
+  document.getElementById('btn-tilt-up').addEventListener('click', () => tryRotate('x', 1));
+  document.getElementById('btn-tilt-down').addEventListener('click', () => tryRotate('x', -1));
+
+  function rotateRoll(delta) {
+    gameRoot.rotation.z += delta;
+  }
+
+  function resetView() {
+    gameRoot.rotation.x = DEFAULT_VIEW.x;
+    gameRoot.rotation.y = DEFAULT_VIEW.y;
+    gameRoot.rotation.z = DEFAULT_VIEW.z;
+  }
+
+  document.getElementById('roll-left').addEventListener('click', () => rotateRoll(-0.22));
+  document.getElementById('roll-right').addEventListener('click', () => rotateRoll(0.22));
+  document.getElementById('reset-view').addEventListener('click', resetView);
+
+  const MOVE_KEYS = new Set(['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', ' ', 'Spacebar']);
+
+  window.addEventListener('keydown', (event) => {
+    if (MOVE_KEYS.has(event.key)) event.preventDefault();
+
+    if (event.key === 'ArrowLeft') tryMove(-1, 0);
+    else if (event.key === 'ArrowRight') tryMove(1, 0);
+    else if (event.key === 'ArrowUp') tryMove(0, -1);
+    else if (event.key === 'ArrowDown') tryMove(0, 1);
+    else if (event.key === 'q' || event.key === 'Q') tryRotate('y', -1);
+    else if (event.key === 'e' || event.key === 'E') tryRotate('y', 1);
+    else if (event.key === 'w' || event.key === 'W') tryRotate('x', 1);
+    else if (event.key === 's' || event.key === 'S') tryRotate('x', -1);
+    else if (event.key === ' ' || event.key === 'Spacebar') hardDrop();
+    else if (event.key === 'p' || event.key === 'P') togglePause();
+    else if (event.key === 'r' || event.key === 'R') resetView();
+  });
+
+  // Camera orbit via drag, independent from piece controls.
+  let pointerDownPos = null;
+  let activePointerId = null;
+  let dragMoved = false;
+  let startRotX = gameRoot.rotation.x;
+  let startRotY = gameRoot.rotation.y;
+  let startRotZ = gameRoot.rotation.z;
+
+  function beginDrag(id, clientX, clientY) {
+    activePointerId = id;
+    dragMoved = false;
+    pointerDownPos = { x: clientX, y: clientY };
+    startRotX = gameRoot.rotation.x;
+    startRotY = gameRoot.rotation.y;
+    startRotZ = gameRoot.rotation.z;
+  }
+
+  function moveDrag(id, clientX, clientY, shiftKey) {
+    if (activePointerId !== id || !pointerDownPos) return;
+    const dx = clientX - pointerDownPos.x;
+    const dy = clientY - pointerDownPos.y;
+    if ((dx * dx + dy * dy) > 64) dragMoved = true;
+    if (shiftKey) {
+      gameRoot.rotation.z = startRotZ + dx * 0.008;
+    } else {
+      gameRoot.rotation.y = startRotY + dx * 0.008;
+      gameRoot.rotation.x = Math.max(-1.2, Math.min(0.8, startRotX + dy * 0.006));
+    }
+  }
+
+  function endDrag(id) {
+    if (activePointerId !== id) return;
+    activePointerId = null;
+    pointerDownPos = null;
+  }
+
+  if (window.PointerEvent) {
+    renderer.domElement.addEventListener('pointerdown', (event) => {
+      beginDrag(event.pointerId, event.clientX, event.clientY);
+      try {
+        renderer.domElement.setPointerCapture(event.pointerId);
+      } catch (_) {
+        // Pointer capture may not be supported on all browsers.
+      }
+    }, { passive: true });
+
+    renderer.domElement.addEventListener('pointermove', (event) => {
+      moveDrag(event.pointerId, event.clientX, event.clientY, event.shiftKey);
+    }, { passive: true });
+
+    renderer.domElement.addEventListener('pointerup', (event) => {
+      try {
+        renderer.domElement.releasePointerCapture(event.pointerId);
+      } catch (_) {
+        // Safe no-op fallback.
+      }
+      endDrag(event.pointerId);
+    }, { passive: true });
+
+    renderer.domElement.addEventListener('pointercancel', () => {
+      activePointerId = null;
+      pointerDownPos = null;
+    }, { passive: true });
+  } else {
+    renderer.domElement.addEventListener('mousedown', (event) => {
+      beginDrag('mouse', event.clientX, event.clientY);
+    });
+    window.addEventListener('mousemove', (event) => {
+      moveDrag('mouse', event.clientX, event.clientY, event.shiftKey);
+    });
+    window.addEventListener('mouseup', () => endDrag('mouse'));
+  }
+
+  window.addEventListener('resize', resizeRenderer);
+  resizeRenderer();
+
+  function resizeRenderer() {
+    const rect = wrapEl.getBoundingClientRect();
+    const width = Math.max(320, rect.width);
+    const height = Math.max(300, rect.height);
+    renderer.setSize(width, height, true);
+    camera.aspect = width / height;
+    camera.updateProjectionMatrix();
+  }
+
+  let lastFrameTime = null;
+  let accumulator = 0;
+
+  function animate(now) {
+    requestAnimationFrame(animate);
+    if (lastFrameTime === null) lastFrameTime = now;
+    const dt = now - lastFrameTime;
+    lastFrameTime = now;
+
+    if (started && !paused && !gameOver && currentPiece) {
+      accumulator += dt;
+      if (accumulator >= dropInterval) {
+        accumulator = 0;
+        softTick();
+      }
+    }
+
+    renderer.render(scene, camera);
+  }
+
+  requestAnimationFrame(animate);
+  startNewGame();
+})();
+</script>
+{% endblock %}

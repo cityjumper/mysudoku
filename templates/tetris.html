@@ -1,0 +1,562 @@
+{% extends "base.html" %}
+
+{% block title %}{{ translate(lang, 'games.tetris.title') }}{% endblock %}
+
+{% block extra_head %}
+<style>
+  #board-wrap {
+    background: #0f172a;
+    touch-action: none;
+  }
+  #board-canvas { display: block; width: 100%; height: auto; }
+  #next-canvas, #hold-canvas { display: block; width: 100%; height: auto; background: #0f172a; border-radius: 0.5rem; }
+
+  .tet-btn {
+    -webkit-user-select: none;
+    user-select: none;
+    touch-action: manipulation;
+  }
+  .tet-btn:active { transform: scale(0.94); }
+
+  #pause-overlay, #gameover-overlay {
+    position: absolute;
+    inset: 0;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    background: rgba(15, 23, 42, 0.82);
+    color: white;
+    border-radius: inherit;
+  }
+  #pause-overlay:not(.hidden), #gameover-overlay:not(.hidden) {
+    display: flex;
+  }
+</style>
+{% endblock %}
+
+{% block body_class %}bg-gradient-to-br from-slate-50 to-indigo-100 min-h-screen{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+  <div class="max-w-5xl mx-auto mb-6 flex items-center justify-between">
+    <a href="/" class="inline-flex items-center text-indigo-800 hover:text-indigo-950 font-semibold">
+      <svg class="w-5 h-5 mr-2" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+        <path fill-rule="evenodd" d="M12.707 15.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 111.414 1.414L7.414 9H17a1 1 0 110 2H7.414l5.293 5.293a1 1 0 010 1.414z" clip-rule="evenodd" />
+      </svg>
+      {{ translate(lang, 'common.home') }}
+    </a>
+  </div>
+
+  <div class="max-w-5xl mx-auto">
+    <header class="text-center mb-8">
+      <h1 class="text-4xl sm:text-5xl font-extrabold tracking-tight text-slate-900">{{ translate(lang, 'games.tetris.title') }}</h1>
+      <p class="mt-2 text-slate-600">{{ translate(lang, 'games.tetris.subtitle') }}</p>
+    </header>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div class="lg:col-span-2">
+        <div class="bg-white rounded-2xl shadow-xl ring-1 ring-slate-200 p-4 sm:p-6">
+          <div id="board-wrap" class="relative w-full rounded-xl overflow-hidden ring-1 ring-slate-800 select-none">
+            <canvas id="board-canvas"></canvas>
+            <div id="pause-overlay" class="hidden">
+              <p class="text-2xl font-extrabold mb-3">Paused</p>
+              <button id="resume-btn" type="button" class="rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-5 py-2">Resume</button>
+            </div>
+            <div id="gameover-overlay" class="hidden">
+              <p class="text-2xl font-extrabold mb-1">Game Over</p>
+              <p id="final-score-line" class="text-slate-200 mb-4"></p>
+              <button id="gameover-restart-btn" type="button" class="rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-5 py-2">Play Again</button>
+            </div>
+          </div>
+
+          <!-- Touch controls (mobile) -->
+          <div class="mt-4 grid grid-cols-4 gap-2 lg:hidden">
+            <button id="btn-left" type="button" class="tet-btn col-span-1 rounded-xl bg-slate-100 hover:bg-slate-200 font-bold text-slate-800 py-3 text-xl">◀</button>
+            <button id="btn-rotate" type="button" class="tet-btn col-span-1 rounded-xl bg-slate-100 hover:bg-slate-200 font-bold text-slate-800 py-3 text-xl">⟳</button>
+            <button id="btn-right" type="button" class="tet-btn col-span-1 rounded-xl bg-slate-100 hover:bg-slate-200 font-bold text-slate-800 py-3 text-xl">▶</button>
+            <button id="btn-drop" type="button" class="tet-btn col-span-1 rounded-xl bg-indigo-100 hover:bg-indigo-200 font-bold text-indigo-800 py-3 text-xl">⤓</button>
+            <button id="btn-down" type="button" class="tet-btn col-span-3 rounded-xl bg-slate-100 hover:bg-slate-200 font-bold text-slate-800 py-3 text-xl">▼</button>
+            <button id="btn-hold" type="button" class="tet-btn col-span-1 rounded-xl bg-amber-100 hover:bg-amber-200 font-bold text-amber-800 py-3 text-sm">HOLD</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="lg:col-span-1 flex flex-col gap-4">
+        <div class="bg-white rounded-2xl shadow-xl ring-1 ring-slate-200 p-5 grid grid-cols-3 gap-3 text-center">
+          <div>
+            <div class="text-xs font-bold text-slate-500 uppercase tracking-wide">Score</div>
+            <div id="score-val" class="text-xl font-extrabold text-slate-900">0</div>
+          </div>
+          <div>
+            <div class="text-xs font-bold text-slate-500 uppercase tracking-wide">Level</div>
+            <div id="level-val" class="text-xl font-extrabold text-slate-900">1</div>
+          </div>
+          <div>
+            <div class="text-xs font-bold text-slate-500 uppercase tracking-wide">Lines</div>
+            <div id="lines-val" class="text-xl font-extrabold text-slate-900">0</div>
+          </div>
+        </div>
+
+        <div class="bg-white rounded-2xl shadow-xl ring-1 ring-slate-200 p-5">
+          <div class="text-xs font-bold text-slate-500 uppercase tracking-wide mb-2">Best</div>
+          <div id="best-val" class="text-lg font-extrabold text-indigo-700">0</div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-4">
+          <div class="bg-white rounded-2xl shadow-xl ring-1 ring-slate-200 p-4">
+            <div class="text-xs font-bold text-slate-500 uppercase tracking-wide mb-2 text-center">Next</div>
+            <canvas id="next-canvas"></canvas>
+          </div>
+          <div class="bg-white rounded-2xl shadow-xl ring-1 ring-slate-200 p-4">
+            <div class="text-xs font-bold text-slate-500 uppercase tracking-wide mb-2 text-center">Hold</div>
+            <canvas id="hold-canvas"></canvas>
+          </div>
+        </div>
+
+        <div class="bg-white rounded-2xl shadow-xl ring-1 ring-slate-200 p-5 flex gap-2">
+          <button id="pause-btn" type="button" class="flex-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 font-semibold px-4 py-2 text-sm transition-colors">Pause</button>
+          <button id="restart-btn" type="button" class="flex-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 font-semibold px-4 py-2 text-sm transition-colors">New Game</button>
+        </div>
+
+        <div class="bg-white rounded-2xl shadow-xl ring-1 ring-slate-200 p-5 hidden lg:block">
+          <h3 class="text-sm font-bold text-slate-700 mb-2">Controls</h3>
+          <ul class="text-sm text-slate-600 space-y-1">
+            <li>• ← → move, ↓ soft drop, ↑ rotate</li>
+            <li>• Space: hard drop</li>
+            <li>• C: hold piece</li>
+            <li>• P: pause</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+(function () {
+  const COLS = 10;
+  const ROWS = 20;
+  const STORAGE_KEY = 'tetris-best-score';
+
+  const COLORS = {
+    1: '#22d3ee', // I
+    2: '#3b82f6', // J
+    3: '#f97316', // L
+    4: '#eab308', // O
+    5: '#22c55e', // S
+    6: '#a855f7', // T
+    7: '#ef4444', // Z
+  };
+  const TYPE_INDEX = { I: 1, J: 2, L: 3, O: 4, S: 5, T: 6, Z: 7 };
+
+  function createMatrix(type) {
+    switch (type) {
+      case 'I': return [[0,1,0,0],[0,1,0,0],[0,1,0,0],[0,1,0,0]];
+      case 'J': return [[0,2,0],[0,2,0],[2,2,0]];
+      case 'L': return [[0,3,0],[0,3,0],[0,3,3]];
+      case 'O': return [[4,4],[4,4]];
+      case 'S': return [[0,5,5],[5,5,0],[0,0,0]];
+      case 'T': return [[0,6,0],[6,6,6],[0,0,0]];
+      case 'Z': return [[7,7,0],[0,7,7],[0,0,0]];
+    }
+  }
+
+  function rotateMatrix(matrix, dir) {
+    const m = matrix.map((row) => row.slice());
+    for (let y = 0; y < m.length; y++) {
+      for (let x = 0; x < y; x++) {
+        [m[x][y], m[y][x]] = [m[y][x], m[x][y]];
+      }
+    }
+    if (dir > 0) m.forEach((row) => row.reverse());
+    else m.reverse();
+    return m;
+  }
+
+  function createEmptyArena() {
+    return Array.from({ length: ROWS }, () => new Array(COLS).fill(0));
+  }
+
+  function bag() {
+    const types = ['I', 'J', 'L', 'O', 'S', 'T', 'Z'];
+    for (let i = types.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [types[i], types[j]] = [types[j], types[i]];
+    }
+    return types;
+  }
+
+  // ---------- DOM ----------
+  const boardCanvas = document.getElementById('board-canvas');
+  const boardCtx = boardCanvas.getContext('2d');
+  const nextCanvas = document.getElementById('next-canvas');
+  const nextCtx = nextCanvas.getContext('2d');
+  const holdCanvas = document.getElementById('hold-canvas');
+  const holdCtx = holdCanvas.getContext('2d');
+  const boardWrap = document.getElementById('board-wrap');
+
+  const scoreVal = document.getElementById('score-val');
+  const levelVal = document.getElementById('level-val');
+  const linesVal = document.getElementById('lines-val');
+  const bestVal = document.getElementById('best-val');
+
+  const pauseOverlay = document.getElementById('pause-overlay');
+  const gameoverOverlay = document.getElementById('gameover-overlay');
+  const finalScoreLine = document.getElementById('final-score-line');
+
+  const pauseBtn = document.getElementById('pause-btn');
+  const resumeBtn = document.getElementById('resume-btn');
+  const restartBtn = document.getElementById('restart-btn');
+  const gameoverRestartBtn = document.getElementById('gameover-restart-btn');
+
+  let cellPx = 30;
+
+  function resizeCanvases() {
+    const width = boardWrap.clientWidth;
+    cellPx = Math.max(12, Math.floor(width / COLS));
+    boardCanvas.width = cellPx * COLS;
+    boardCanvas.height = cellPx * ROWS;
+
+    const previewCell = Math.max(10, Math.floor(nextCanvas.parentElement.clientWidth / 5));
+    [nextCanvas, holdCanvas].forEach((c) => {
+      c.width = previewCell * 4;
+      c.height = previewCell * 4;
+    });
+    draw();
+  }
+
+  // ---------- Game state ----------
+  let arena = createEmptyArena();
+  let queue = [];
+  let holdType = null;
+  let holdUsed = false;
+  let score = 0;
+  let level = 1;
+  let lines = 0;
+  let best = Number(localStorage.getItem(STORAGE_KEY) || 0);
+  bestVal.textContent = best;
+
+  const player = {
+    pos: { x: 0, y: 0 },
+    matrix: null,
+    type: null,
+  };
+
+  let dropCounter = 0;
+  let dropInterval = 800;
+  let lastTime = 0;
+  let paused = false;
+  let gameOver = false;
+  let rafId = null;
+
+  function nextFromQueue() {
+    if (queue.length < 8) queue = queue.concat(bag());
+    return queue.shift();
+  }
+
+  function spawnPiece(type) {
+    player.type = type;
+    player.matrix = createMatrix(type);
+    player.pos.y = 0;
+    player.pos.x = Math.floor((COLS - player.matrix[0].length) / 2);
+    holdUsed = false;
+    if (collide(arena, player)) {
+      triggerGameOver();
+    }
+  }
+
+  function collide(arena, p) {
+    const m = p.matrix;
+    for (let y = 0; y < m.length; y++) {
+      for (let x = 0; x < m[y].length; x++) {
+        if (m[y][x] === 0) continue;
+        const ay = y + p.pos.y;
+        const ax = x + p.pos.x;
+        if (ax < 0 || ax >= COLS || ay >= ROWS) return true;
+        if (ay >= 0 && arena[ay][ax] !== 0) return true;
+      }
+    }
+    return false;
+  }
+
+  function merge(arena, p) {
+    p.matrix.forEach((row, y) => {
+      row.forEach((val, x) => {
+        if (val !== 0) {
+          const ay = y + p.pos.y;
+          const ax = x + p.pos.x;
+          if (ay >= 0) arena[ay][ax] = val;
+        }
+      });
+    });
+  }
+
+  function sweep() {
+    let cleared = 0;
+    outer: for (let y = ROWS - 1; y >= 0; y--) {
+      for (let x = 0; x < COLS; x++) {
+        if (arena[y][x] === 0) continue outer;
+      }
+      arena.splice(y, 1);
+      arena.unshift(new Array(COLS).fill(0));
+      cleared++;
+      y++;
+    }
+    if (cleared > 0) {
+      const points = [0, 100, 300, 500, 800][cleared] || 800;
+      score += points * level;
+      lines += cleared;
+      const newLevel = Math.floor(lines / 10) + 1;
+      if (newLevel !== level) {
+        level = newLevel;
+        dropInterval = Math.max(90, 800 - (level - 1) * 65);
+      }
+      updateStats();
+    }
+  }
+
+  function updateStats() {
+    scoreVal.textContent = score;
+    levelVal.textContent = level;
+    linesVal.textContent = lines;
+    if (score > best) {
+      best = score;
+      bestVal.textContent = best;
+      localStorage.setItem(STORAGE_KEY, String(best));
+    }
+  }
+
+  function playerMove(dir) {
+    if (paused || gameOver) return;
+    player.pos.x += dir;
+    if (collide(arena, player)) player.pos.x -= dir;
+    else draw();
+  }
+
+  function playerRotate(dir) {
+    if (paused || gameOver) return;
+    const original = player.matrix;
+    player.matrix = rotateMatrix(player.matrix, dir);
+    const originalX = player.pos.x;
+    let offset = 1;
+    while (collide(arena, player)) {
+      player.pos.x += offset;
+      offset = -(offset + (offset > 0 ? 1 : -1));
+      if (Math.abs(offset) > player.matrix[0].length + 1) {
+        player.matrix = original;
+        player.pos.x = originalX;
+        return;
+      }
+    }
+    draw();
+  }
+
+  function lockPiece() {
+    merge(arena, player);
+    sweep();
+    spawnPiece(nextFromQueue());
+    draw();
+  }
+
+  function playerDrop(isSoft) {
+    if (paused || gameOver) return;
+    player.pos.y++;
+    if (collide(arena, player)) {
+      player.pos.y--;
+      lockPiece();
+    } else if (isSoft) {
+      score += 1;
+      updateStats();
+    }
+    dropCounter = 0;
+    draw();
+  }
+
+  function hardDrop() {
+    if (paused || gameOver) return;
+    let dist = 0;
+    while (!collide(arena, player)) {
+      player.pos.y++;
+      dist++;
+    }
+    player.pos.y--;
+    dist--;
+    score += Math.max(0, dist) * 2;
+    updateStats();
+    lockPiece();
+    dropCounter = 0;
+  }
+
+  function holdPiece() {
+    if (paused || gameOver || holdUsed) return;
+    holdUsed = true;
+    const currentType = player.type;
+    if (holdType === null) {
+      holdType = currentType;
+      spawnPiece(nextFromQueue());
+    } else {
+      const swap = holdType;
+      holdType = currentType;
+      spawnPiece(swap);
+    }
+    holdUsed = true;
+    draw();
+  }
+
+  function ghostPosition() {
+    const ghost = { pos: { x: player.pos.x, y: player.pos.y }, matrix: player.matrix };
+    while (!collide(arena, ghost)) ghost.pos.y++;
+    ghost.pos.y--;
+    return ghost.pos;
+  }
+
+  // ---------- Drawing ----------
+  function drawCell(ctx, x, y, size, color) {
+    ctx.fillStyle = color;
+    ctx.fillRect(x * size, y * size, size, size);
+    ctx.strokeStyle = 'rgba(255,255,255,0.15)';
+    ctx.lineWidth = Math.max(1, size * 0.04);
+    ctx.strokeRect(x * size + 0.5, y * size + 0.5, size - 1, size - 1);
+    ctx.fillStyle = 'rgba(255,255,255,0.25)';
+    ctx.fillRect(x * size, y * size, size, size * 0.16);
+  }
+
+  function draw() {
+    boardCtx.fillStyle = '#0f172a';
+    boardCtx.fillRect(0, 0, boardCanvas.width, boardCanvas.height);
+
+    for (let y = 0; y < ROWS; y++) {
+      for (let x = 0; x < COLS; x++) {
+        const val = arena[y][x];
+        if (val !== 0) drawCell(boardCtx, x, y, cellPx, COLORS[val]);
+      }
+    }
+
+    if (player.matrix && !gameOver) {
+      const ghostPos = ghostPosition();
+      player.matrix.forEach((row, y) => {
+        row.forEach((val, x) => {
+          if (val === 0) return;
+          const gx = x + ghostPos.x;
+          const gy = y + ghostPos.y;
+          if (gy >= 0) {
+            boardCtx.strokeStyle = COLORS[val];
+            boardCtx.lineWidth = 2;
+            boardCtx.strokeRect(gx * cellPx + 1, gy * cellPx + 1, cellPx - 2, cellPx - 2);
+          }
+        });
+      });
+
+      player.matrix.forEach((row, y) => {
+        row.forEach((val, x) => {
+          if (val === 0) return;
+          const px = x + player.pos.x;
+          const py = y + player.pos.y;
+          if (py >= 0) drawCell(boardCtx, px, py, cellPx, COLORS[val]);
+        });
+      });
+    }
+
+    drawPreview(nextCtx, nextCanvas, queue[0]);
+    drawPreview(holdCtx, holdCanvas, holdType);
+  }
+
+  function drawPreview(ctx, canvas, type) {
+    ctx.fillStyle = '#0f172a';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    if (!type) return;
+    const matrix = createMatrix(type);
+    const size = canvas.width / 4;
+    const w = matrix[0].length;
+    const h = matrix.length;
+    const offsetX = (4 - w) / 2;
+    const offsetY = (4 - h) / 2;
+    matrix.forEach((row, y) => {
+      row.forEach((val, x) => {
+        if (val !== 0) drawCell(ctx, x + offsetX, y + offsetY, size, COLORS[val]);
+      });
+    });
+  }
+
+  // ---------- Loop ----------
+  function update(time = 0) {
+    const dt = time - lastTime;
+    lastTime = time;
+    if (!paused && !gameOver) {
+      dropCounter += dt;
+      if (dropCounter > dropInterval) {
+        playerDrop(false);
+      }
+    }
+    rafId = requestAnimationFrame(update);
+  }
+
+  function triggerGameOver() {
+    gameOver = true;
+    finalScoreLine.textContent = `Score: ${score} · Level: ${level} · Lines: ${lines}`;
+    gameoverOverlay.classList.remove('hidden');
+    draw();
+  }
+
+  function togglePause() {
+    if (gameOver) return;
+    paused = !paused;
+    pauseOverlay.classList.toggle('hidden', !paused);
+    if (!paused) lastTime = performance.now();
+  }
+
+  function newGame() {
+    arena = createEmptyArena();
+    queue = bag().concat(bag());
+    holdType = null;
+    holdUsed = false;
+    score = 0;
+    level = 1;
+    lines = 0;
+    dropInterval = 800;
+    dropCounter = 0;
+    paused = false;
+    gameOver = false;
+    pauseOverlay.classList.add('hidden');
+    gameoverOverlay.classList.add('hidden');
+    updateStats();
+    spawnPiece(nextFromQueue());
+    draw();
+  }
+
+  // ---------- Input ----------
+  document.addEventListener('keydown', (e) => {
+    if (gameOver && e.key !== 'Enter') return;
+    switch (e.key) {
+      case 'ArrowLeft': e.preventDefault(); playerMove(-1); break;
+      case 'ArrowRight': e.preventDefault(); playerMove(1); break;
+      case 'ArrowDown': e.preventDefault(); playerDrop(true); break;
+      case 'ArrowUp': e.preventDefault(); playerRotate(1); break;
+      case ' ': e.preventDefault(); hardDrop(); break;
+      case 'c': case 'C': holdPiece(); break;
+      case 'p': case 'P': case 'Escape': togglePause(); break;
+    }
+  });
+
+  document.getElementById('btn-left').addEventListener('click', () => playerMove(-1));
+  document.getElementById('btn-right').addEventListener('click', () => playerMove(1));
+  document.getElementById('btn-down').addEventListener('click', () => playerDrop(true));
+  document.getElementById('btn-rotate').addEventListener('click', () => playerRotate(1));
+  document.getElementById('btn-drop').addEventListener('click', () => hardDrop());
+  document.getElementById('btn-hold').addEventListener('click', () => holdPiece());
+
+  pauseBtn.addEventListener('click', togglePause);
+  resumeBtn.addEventListener('click', togglePause);
+  restartBtn.addEventListener('click', newGame);
+  gameoverRestartBtn.addEventListener('click', newGame);
+
+  window.addEventListener('resize', resizeCanvases);
+
+  newGame();
+  resizeCanvases();
+  update();
+})();
+</script>
+{% endblock %}

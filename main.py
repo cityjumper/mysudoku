@@ -163,6 +163,13 @@ async def connect_four_3d(request: Request):
     return templates.TemplateResponse("connect_four_3d.html", {"request": request, "lang": lang})
 
 
+@app.get("/tetris-3d", response_class=HTMLResponse)
+async def tetris_3d(request: Request):
+    """3D Tetris page endpoint."""
+    lang = get_current_lang(request)
+    return templates.TemplateResponse("tetris_3d.html", {"request": request, "lang": lang})
+
+
 @app.get("/kenken", response_class=HTMLResponse)
 async def kenken(request: Request):
     """KenKen page endpoint."""
@@ -269,6 +276,13 @@ async def backgammon(request: Request):
     return templates.TemplateResponse("backgammon.html", {"request": request, "lang": lang})
 
 
+@app.get("/reversi", response_class=HTMLResponse)
+async def reversi(request: Request):
+    """Reversi (Othello) page endpoint."""
+    lang = get_current_lang(request)
+    return templates.TemplateResponse("reversi.html", {"request": request, "lang": lang})
+
+
 TRB_I18N_KEYS = [
     'player_placeholder', 'start_game', 'players_heading', 'play_again', 'change_players',
     'roll_dice', 'turn_banner', 'choose_peg', 'msg_exit', 'msg_moved', 'msg_bump',
@@ -285,6 +299,83 @@ async def trouble(request: Request):
         "trouble.html",
         {"request": request, "lang": lang, "trb_i18n": trb_i18n},
     )
+
+
+SPADES_I18N_KEYS = [
+    'setup_heading', 'setup_subheading', 'name_placeholder', 'start_game', 'teams_note',
+    'bid_heading', 'bid_nil', 'bid_prompt', 'bid_confirm', 'player_bid', 'player_bid_nil',
+    'trick_lead', 'you_win_trick', 'player_wins_trick', 'spades_broken',
+    'round_summary', 'made_bid', 'missed_bid', 'nil_made', 'nil_broken',
+    'your_team', 'opp_team', 'bags_label', 'score_label', 'continue_round',
+    'win_title', 'lose_title', 'final_score', 'play_again', 'change_players',
+    'north', 'south', 'east', 'west',
+]
+
+
+@app.get("/spades", response_class=HTMLResponse)
+async def spades(request: Request):
+    """Spades card game page endpoint."""
+    lang = get_current_lang(request)
+    spades_i18n = {key: get_translation(lang, f'games.spades.{key}') for key in SPADES_I18N_KEYS}
+    return templates.TemplateResponse(
+        "spades.html",
+        {"request": request, "lang": lang, "spades_i18n": spades_i18n},
+    )
+
+
+MATCHSTICK_I18N_KEYS = [
+    'title', 'subtitle', 'difficulty', 'easy', 'medium', 'hard',
+    'new_game', 'give_up', 'reset', 'undo', 'instruction', 'pick_hint',
+    'moves_used', 'moves_target', 'reads_as', 'reads_incomplete',
+    'win_title', 'win_message', 'wrong_count_message', 'gave_up_title',
+    'solved_heading', 'solved_count', 'current_streak', 'best_streak',
+    'legend_heading', 'rule_1', 'rule_2', 'rule_3', 'rule_4',
+]
+
+
+@app.get("/matchstick-puzzles", response_class=HTMLResponse)
+async def matchstick_puzzles(request: Request):
+    """Matchstick Puzzles page endpoint."""
+    lang = get_current_lang(request)
+    ms_i18n = {key: get_translation(lang, f'games.matchstick_puzzles.{key}') for key in MATCHSTICK_I18N_KEYS}
+    return templates.TemplateResponse(
+        "matchstick_puzzles.html",
+        {"request": request, "lang": lang, "ms_i18n": ms_i18n},
+    )
+
+
+HEARTS_I18N_KEYS = [
+    'you', 'west', 'north', 'east', 'new_game', 'next_hand', 'pass_button',
+    'selected_count', 'select_three', 'pass_left', 'pass_right', 'pass_across', 'pass_none',
+    'waiting_pass', 'your_turn', 'ai_thinking', 'leads_two_clubs', 'trick_winner',
+    'hearts_broken', 'hand_complete', 'moon_shot', 'round_summary', 'game_over', 'you_win',
+    'final_scores', 'scoreboard', 'hand_points', 'total_points',
+]
+
+
+@app.get("/hearts", response_class=HTMLResponse)
+async def hearts(request: Request):
+    """Hearts card game page endpoint."""
+    lang = get_current_lang(request)
+    hearts_i18n = {key: get_translation(lang, f'games.hearts.{key}') for key in HEARTS_I18N_KEYS}
+    return templates.TemplateResponse(
+        "hearts.html",
+        {"request": request, "lang": lang, "hearts_i18n": hearts_i18n},
+    )
+
+
+@app.get("/eight-queens", response_class=HTMLResponse)
+async def eight_queens(request: Request):
+    """Eight Queens puzzle page endpoint."""
+    lang = get_current_lang(request)
+    return templates.TemplateResponse("eight_queens.html", {"request": request, "lang": lang})
+
+
+@app.get("/tetris", response_class=HTMLResponse)
+async def tetris(request: Request):
+    """Tetris page endpoint."""
+    lang = get_current_lang(request)
+    return templates.TemplateResponse("tetris.html", {"request": request, "lang": lang})
 
 
 @app.get("/api")

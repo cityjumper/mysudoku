@@ -1,0 +1,751 @@
+{% extends "base.html" %}
+
+{% block title %}{{ translate(lang, 'games.matchstick_puzzles.title') }}{% endblock %}
+
+{% block extra_head %}
+<style>
+  :root {
+    --ms-w: 54px;
+    --ms-h: 96px;
+    --ms-t: 10px;
+  }
+
+  .ms-cell {
+    position: relative;
+    width: var(--ms-w);
+    height: var(--ms-h);
+    flex-shrink: 0;
+  }
+
+  .ms-number {
+    display: flex;
+    gap: 4px;
+  }
+
+  .ms-equation-row {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    overflow-x: auto;
+    padding: 18px 10px;
+  }
+
+  .ms-equals {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: calc(var(--ms-w) * 0.7);
+    height: var(--ms-h);
+    font-size: 2.25rem;
+    font-weight: 800;
+    color: #57534e;
+    flex-shrink: 0;
+  }
+
+  .ms-seg {
+    position: absolute;
+    border: none;
+    padding: 0;
+    margin: 0;
+    cursor: pointer;
+    border-radius: calc(var(--ms-t) / 2);
+    background: transparent;
+  }
+
+  .ms-seg.slot {
+    background: rgba(120, 113, 108, 0.08);
+    border: 2px dashed #d6d3d1;
+    box-sizing: border-box;
+  }
+
+  .ms-seg.stick.ms-h {
+    background: linear-gradient(90deg, #78350f, #d97706);
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.2), 0 1px 3px rgba(0, 0, 0, 0.35);
+  }
+
+  .ms-seg.stick.ms-v {
+    background: linear-gradient(180deg, #78350f, #d97706);
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.2), 0 1px 3px rgba(0, 0, 0, 0.35);
+  }
+
+  .ms-seg.stick.ms-h::before,
+  .ms-seg.stick.ms-v::before {
+    content: '';
+    position: absolute;
+    width: calc(var(--ms-t) + 7px);
+    height: calc(var(--ms-t) + 7px);
+    border-radius: 50%;
+    background: radial-gradient(circle at 30% 30%, #f87171, #991b1b);
+    box-shadow: 0 0 5px rgba(239, 68, 68, 0.65);
+  }
+
+  .ms-seg.stick.ms-h::before {
+    left: -4px;
+    top: 50%;
+    transform: translateY(-50%);
+  }
+
+  .ms-seg.stick.ms-v::before {
+    top: -4px;
+    left: 50%;
+    transform: translateX(-50%);
+  }
+
+  .ms-seg:disabled {
+    cursor: default;
+  }
+
+  .ms-seg.held {
+    outline: 3px solid #fbbf24;
+    box-shadow: 0 0 0 3px rgba(251, 191, 36, 0.35), 0 0 12px 3px rgba(251, 191, 36, 0.65);
+    transform: scale(1.08);
+    z-index: 5;
+  }
+
+  .ms-seg.targetable.slot {
+    border-color: #22c55e;
+    background: rgba(34, 197, 94, 0.16);
+  }
+
+  .ms-seg-top { left: var(--ms-t); right: var(--ms-t); top: 0; height: var(--ms-t); }
+  .ms-seg-bottom { left: var(--ms-t); right: var(--ms-t); bottom: 0; height: var(--ms-t); }
+  .ms-seg-mid { left: var(--ms-t); right: var(--ms-t); top: calc(50% - var(--ms-t) / 2); height: var(--ms-t); }
+  .ms-seg-tl { left: 0; width: var(--ms-t); top: var(--ms-t); bottom: 50%; }
+  .ms-seg-bl { left: 0; width: var(--ms-t); top: 50%; bottom: var(--ms-t); }
+  .ms-seg-tr { right: 0; width: var(--ms-t); top: var(--ms-t); bottom: 50%; }
+  .ms-seg-br { right: 0; width: var(--ms-t); top: 50%; bottom: var(--ms-t); }
+
+  .ms-seg-horiz { left: calc(var(--ms-t) * 0.5); right: calc(var(--ms-t) * 0.5); top: calc(50% - var(--ms-t) / 2); height: var(--ms-t); }
+  .ms-seg-vert-top { left: calc(50% - var(--ms-t) / 2); width: var(--ms-t); top: var(--ms-t); bottom: calc(50% + var(--ms-t) / 2); }
+  .ms-seg-vert-bottom { left: calc(50% - var(--ms-t) / 2); width: var(--ms-t); top: calc(50% + var(--ms-t) / 2); bottom: var(--ms-t); }
+  .ms-seg.no-tip.stick::before { content: none; }
+
+  @media (max-width: 480px) {
+    :root {
+      --ms-w: 40px;
+      --ms-h: 74px;
+      --ms-t: 8px;
+    }
+
+    .ms-equals {
+      font-size: 1.5rem;
+    }
+  }
+</style>
+{% endblock %}
+
+{% block body_class %}bg-gradient-to-br from-orange-50 via-white to-amber-100 min-h-screen{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+  <div class="max-w-6xl mx-auto mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+    <a href="/" class="inline-flex items-center text-orange-800 hover:text-orange-950 font-semibold">
+      <svg class="w-5 h-5 mr-2" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+        <path fill-rule="evenodd" d="M12.707 15.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 111.414 1.414L7.414 9H17a1 1 0 110 2H7.414l5.293 5.293a1 1 0 010 1.414z" clip-rule="evenodd" />
+      </svg>
+      {{ translate(lang, 'common.home') }}
+    </a>
+    <div class="flex flex-wrap items-center gap-4 text-sm font-semibold">
+      <a href="/mastermind" class="text-teal-700 hover:text-teal-900">{{ translate(lang, 'games.mastermind.name') }}</a>
+      <a href="/eight-queens" class="text-purple-700 hover:text-purple-900">{{ translate(lang, 'games.eight_queens.name') }}</a>
+      <a href="/kenken" class="text-indigo-700 hover:text-indigo-900">{{ translate(lang, 'games.kenken.name') }}</a>
+    </div>
+  </div>
+
+  <div class="max-w-6xl mx-auto">
+    <header class="text-center mb-8">
+      <h1 class="text-4xl sm:text-5xl font-extrabold tracking-tight text-slate-900">{{ translate(lang, 'games.matchstick_puzzles.title') }}</h1>
+      <p class="mt-2 text-slate-600 max-w-2xl mx-auto">{{ translate(lang, 'games.matchstick_puzzles.subtitle') }}</p>
+    </header>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div class="lg:col-span-2">
+        <div class="bg-white rounded-3xl shadow-xl ring-1 ring-slate-200 p-5 sm:p-8">
+          <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between mb-4">
+            <div>
+              <div class="text-sm font-semibold uppercase tracking-wide text-orange-700">{{ translate(lang, 'common.status') }}</div>
+              <div id="status" class="mt-1 text-xl sm:text-2xl font-bold text-slate-900"></div>
+              <div id="substatus" class="mt-1 text-slate-600"></div>
+            </div>
+            <div class="flex flex-wrap gap-2">
+              <label class="inline-flex items-center gap-2 text-sm font-semibold text-slate-700">
+                {{ translate(lang, 'games.matchstick_puzzles.difficulty') }}
+                <select id="difficulty" class="rounded-lg border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-orange-500">
+                  <option value="easy">{{ translate(lang, 'games.matchstick_puzzles.easy') }}</option>
+                  <option value="medium" selected>{{ translate(lang, 'games.matchstick_puzzles.medium') }}</option>
+                  <option value="hard">{{ translate(lang, 'games.matchstick_puzzles.hard') }}</option>
+                </select>
+              </label>
+              <button id="new-game" type="button" class="rounded-lg bg-orange-600 hover:bg-orange-700 text-white font-semibold px-4 py-2">{{ translate(lang, 'games.matchstick_puzzles.new_game') }}</button>
+            </div>
+          </div>
+
+          <div class="ms-equation-row bg-amber-50/60 rounded-2xl ring-1 ring-amber-100" id="equation-row"></div>
+
+          <div id="live-read" class="mt-3 text-center font-semibold text-slate-600 min-h-[1.5rem]"></div>
+
+          <div class="mt-5 flex flex-wrap items-center justify-center gap-2">
+            <button id="undo-btn" type="button" class="rounded-lg bg-slate-100 hover:bg-slate-200 disabled:opacity-40 disabled:cursor-not-allowed text-slate-800 font-semibold px-4 py-2">{{ translate(lang, 'games.matchstick_puzzles.undo') }}</button>
+            <button id="reset-btn" type="button" class="rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 font-semibold px-4 py-2">{{ translate(lang, 'games.matchstick_puzzles.reset') }}</button>
+            <button id="give-up-btn" type="button" class="rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 font-semibold px-4 py-2">{{ translate(lang, 'games.matchstick_puzzles.give_up') }}</button>
+          </div>
+
+          <div id="reveal-panel" class="hidden mt-5 rounded-2xl bg-slate-50 ring-1 ring-slate-200 p-4 text-center">
+            <div class="text-xs font-semibold uppercase tracking-wide text-slate-500 mb-1">{{ translate(lang, 'games.matchstick_puzzles.solved_heading') }}</div>
+            <div id="solution-text" class="text-2xl font-bold text-slate-900"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="space-y-6">
+        <div class="bg-white rounded-3xl shadow-xl ring-1 ring-slate-200 p-6">
+          <h2 class="text-xl font-bold text-slate-900 mb-4">{{ translate(lang, 'games.matchstick_puzzles.moves_used') }}</h2>
+          <div class="grid grid-cols-2 gap-3">
+            <div class="rounded-2xl bg-orange-50 ring-1 ring-orange-100 p-4 text-center">
+              <div class="text-xs font-semibold uppercase tracking-wide text-orange-700">{{ translate(lang, 'games.matchstick_puzzles.moves_used') }}</div>
+              <div id="moves-used" class="mt-2 text-3xl font-extrabold text-orange-950">0</div>
+            </div>
+            <div class="rounded-2xl bg-amber-50 ring-1 ring-amber-100 p-4 text-center">
+              <div class="text-xs font-semibold uppercase tracking-wide text-amber-700">{{ translate(lang, 'games.matchstick_puzzles.moves_target') }}</div>
+              <div id="moves-target" class="mt-2 text-3xl font-extrabold text-amber-950">0</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="bg-white rounded-3xl shadow-xl ring-1 ring-slate-200 p-6">
+          <h2 class="text-xl font-bold text-slate-900 mb-4">{{ translate(lang, 'common.scoreboard') }}</h2>
+          <div class="grid grid-cols-1 gap-3">
+            <div class="rounded-2xl bg-emerald-50 ring-1 ring-emerald-100 p-4 flex items-center justify-between">
+              <span class="text-sm font-semibold text-emerald-800">{{ translate(lang, 'games.matchstick_puzzles.solved_count') }}</span>
+              <span id="solved-count" class="text-2xl font-extrabold text-emerald-950">0</span>
+            </div>
+            <div class="rounded-2xl bg-sky-50 ring-1 ring-sky-100 p-4 flex items-center justify-between">
+              <span class="text-sm font-semibold text-sky-800">{{ translate(lang, 'games.matchstick_puzzles.current_streak') }}</span>
+              <span id="current-streak" class="text-2xl font-extrabold text-sky-950">0</span>
+            </div>
+            <div class="rounded-2xl bg-purple-50 ring-1 ring-purple-100 p-4 flex items-center justify-between">
+              <span class="text-sm font-semibold text-purple-800">{{ translate(lang, 'games.matchstick_puzzles.best_streak') }}</span>
+              <span id="best-streak" class="text-2xl font-extrabold text-purple-950">0</span>
+            </div>
+          </div>
+          <button id="reset-stats" type="button" class="mt-3 w-full rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 font-semibold px-4 py-2 text-sm">{{ translate(lang, 'common.reset_scores') }}</button>
+        </div>
+
+        <div class="bg-white rounded-3xl shadow-xl ring-1 ring-slate-200 p-6">
+          <h2 class="text-xl font-bold text-slate-900 mb-4">{{ translate(lang, 'games.matchstick_puzzles.legend_heading') }}</h2>
+          <ul class="space-y-2 text-sm text-slate-600">
+            <li>• {{ translate(lang, 'games.matchstick_puzzles.rule_1') }}</li>
+            <li>• {{ translate(lang, 'games.matchstick_puzzles.rule_2') }}</li>
+            <li>• {{ translate(lang, 'games.matchstick_puzzles.rule_3') }}</li>
+            <li>• {{ translate(lang, 'games.matchstick_puzzles.rule_4') }}</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  const I18N = {{ ms_i18n | tojson }};
+
+  function fmt(str, vars) {
+    return str.replace(/\{(\w+)\}/g, (_, key) => (key in vars ? vars[key] : `{${key}}`));
+  }
+
+  const DIGIT_SEG_KEYS = ['top', 'tl', 'tr', 'mid', 'bl', 'br', 'bottom'];
+  const OP_SEG_KEYS = ['horiz', 'vert'];
+
+  const DIGIT_PATTERNS = {
+    0: ['top', 'tl', 'tr', 'bl', 'br', 'bottom'],
+    1: ['tr', 'br'],
+    2: ['top', 'tr', 'mid', 'bl', 'bottom'],
+    3: ['top', 'tr', 'mid', 'br', 'bottom'],
+    4: ['tl', 'tr', 'mid', 'br'],
+    5: ['top', 'tl', 'mid', 'br', 'bottom'],
+    6: ['top', 'tl', 'mid', 'bl', 'br', 'bottom'],
+    7: ['top', 'tr', 'br'],
+    8: ['top', 'tl', 'tr', 'mid', 'bl', 'br', 'bottom'],
+    9: ['top', 'tl', 'tr', 'mid', 'br', 'bottom'],
+  };
+  const OP_PATTERNS = { '-': ['horiz'], '+': ['horiz', 'vert'] };
+
+  const DIGIT_LOOKUP = {};
+  Object.entries(DIGIT_PATTERNS).forEach(([d, segs]) => {
+    DIGIT_LOOKUP[[...segs].sort().join(',')] = Number(d);
+  });
+  const OP_LOOKUP = {};
+  Object.entries(OP_PATTERNS).forEach(([o, segs]) => {
+    OP_LOOKUP[[...segs].sort().join(',')] = o;
+  });
+
+  function segKeysForCell(cell) {
+    return cell.type === 'digit' ? DIGIT_SEG_KEYS : OP_SEG_KEYS;
+  }
+
+  function decodeDigitCell(cell) {
+    const key = [...cell.lit].sort().join(',');
+    return key in DIGIT_LOOKUP ? DIGIT_LOOKUP[key] : null;
+  }
+
+  function decodeOpCell(cell) {
+    const key = [...cell.lit].sort().join(',');
+    return key in OP_LOOKUP ? OP_LOOKUP[key] : null;
+  }
+
+  function decodeNumber(cells, idxs) {
+    let val = 0;
+    for (const idx of idxs) {
+      const d = decodeDigitCell(cells[idx]);
+      if (d === null) return null;
+      val = val * 10 + d;
+    }
+    return val;
+  }
+
+  function isTrueBoard(board, cells) {
+    const a = decodeNumber(cells, board.groupA);
+    const b = decodeNumber(cells, board.groupB);
+    const c = decodeNumber(cells, board.groupC);
+    const op = decodeOpCell(cells[board.opIdx]);
+    if (a === null || b === null || c === null || op === null) return false;
+    return op === '+' ? a + b === c : a - b === c;
+  }
+
+  function numberDisplayString(cells, idxs) {
+    return idxs.map((idx) => {
+      const d = decodeDigitCell(cells[idx]);
+      return d === null ? '?' : String(d);
+    }).join('');
+  }
+
+  function equationDisplayString(board, cells) {
+    const parts = [];
+    board.layout.forEach((g) => {
+      if (g.kind === 'number') {
+        parts.push(numberDisplayString(cells, g.idxs));
+      } else if (g.kind === 'op') {
+        const o = decodeOpCell(cells[g.idx]);
+        parts.push(o === null ? '?' : (o === '-' ? '−' : o));
+      } else {
+        parts.push('=');
+      }
+    });
+    return parts.join(' ');
+  }
+
+  function cloneCells(cells) {
+    return cells.map((c) => ({ type: c.type, lit: new Set(c.lit) }));
+  }
+
+  function digitsOf(n) {
+    return n >= 10 ? [Math.floor(n / 10), n % 10] : [n];
+  }
+
+  function buildBoard(a, op, b, c) {
+    const cells = [];
+    const layout = [];
+
+    function pushNumber(n) {
+      const idxs = digitsOf(n).map((d) => {
+        cells.push({ type: 'digit', lit: new Set(DIGIT_PATTERNS[d]) });
+        return cells.length - 1;
+      });
+      layout.push({ kind: 'number', idxs });
+      return idxs;
+    }
+
+    const groupA = pushNumber(a);
+    cells.push({ type: 'op', lit: new Set(OP_PATTERNS[op]) });
+    const opIdx = cells.length - 1;
+    layout.push({ kind: 'op', idx: opIdx });
+    const groupB = pushNumber(b);
+    layout.push({ kind: 'equals' });
+    const groupC = pushNumber(c);
+
+    return { cells, layout, opIdx, groupA, groupB, groupC };
+  }
+
+  function allPositions(cells) {
+    const positions = [];
+    cells.forEach((cell, idx) => {
+      segKeysForCell(cell).forEach((seg) => positions.push({ idx, seg }));
+    });
+    return positions;
+  }
+
+  function* combinations(arr, k) {
+    const n = arr.length;
+    if (k > n || k <= 0) return;
+    const idxs = Array.from({ length: k }, (_, i) => i);
+    while (true) {
+      yield idxs.map((i) => arr[i]);
+      let i = k - 1;
+      while (i >= 0 && idxs[i] === n - k + i) i -= 1;
+      if (i < 0) return;
+      idxs[i] += 1;
+      for (let j = i + 1; j < k; j += 1) idxs[j] = idxs[j - 1] + 1;
+    }
+  }
+
+  function bruteForceSolutions(board, cells, maxK, maxExamples) {
+    const positions = allPositions(cells);
+    for (let K = 1; K <= maxK; K += 1) {
+      const litPos = positions.filter((p) => cells[p.idx].lit.has(p.seg));
+      const unlitPos = positions.filter((p) => !cells[p.idx].lit.has(p.seg));
+      const examples = [];
+      outer:
+      for (const removeCombo of combinations(litPos, K)) {
+        for (const addCombo of combinations(unlitPos, K)) {
+          const clone = cloneCells(cells);
+          removeCombo.forEach((p) => clone[p.idx].lit.delete(p.seg));
+          addCombo.forEach((p) => clone[p.idx].lit.add(p.seg));
+          if (isTrueBoard(board, clone)) {
+            examples.push(clone);
+            if (examples.length >= maxExamples) break outer;
+          }
+        }
+      }
+      if (examples.length > 0) return { minMoves: K, examples };
+    }
+    return { minMoves: null, examples: [] };
+  }
+
+  function scrambleCells(solvedCells, moves) {
+    const cells = cloneCells(solvedCells);
+    for (let m = 0; m < moves; m += 1) {
+      const positions = allPositions(cells);
+      const litPos = positions.filter((p) => cells[p.idx].lit.has(p.seg));
+      const unlitPos = positions.filter((p) => !cells[p.idx].lit.has(p.seg));
+      if (litPos.length === 0 || unlitPos.length === 0) return null;
+      const from = litPos[Math.floor(Math.random() * litPos.length)];
+      const to = unlitPos[Math.floor(Math.random() * unlitPos.length)];
+      cells[from.idx].lit.delete(from.seg);
+      cells[to.idx].lit.add(to.seg);
+    }
+    return cells;
+  }
+
+  function randInt(maxInclusive) {
+    return Math.floor(Math.random() * (maxInclusive + 1));
+  }
+
+  function sampleEquation(difficulty) {
+    const aMax = difficulty === 'hard' ? 18 : 9;
+    const bMax = 9;
+    for (let attempt = 0; attempt < 200; attempt += 1) {
+      const op = Math.random() < 0.5 ? '+' : '-';
+      const a = randInt(aMax);
+      const b = randInt(bMax);
+      let c;
+      if (op === '+') {
+        c = a + b;
+        if (difficulty !== 'hard' && c > 9) continue;
+        if (c > 18) continue;
+      } else {
+        if (a < b) continue;
+        c = a - b;
+      }
+      return { a, op, b, c };
+    }
+    return { a: 9, op: '-', b: 0, c: 9 };
+  }
+
+  function generatePuzzle(difficulty) {
+    const wantMin = difficulty === 'easy' ? 1 : 2;
+    let fallback = null;
+    for (let attempt = 0; attempt < 80; attempt += 1) {
+      const { a, op, b, c } = sampleEquation(difficulty);
+      const board = buildBoard(a, op, b, c);
+      const scrambled = scrambleCells(board.cells, wantMin);
+      if (!scrambled) continue;
+      if (isTrueBoard(board, scrambled)) continue;
+      const result = bruteForceSolutions(board, scrambled, 2, 5);
+      if (result.minMoves === null) continue;
+      if (!fallback) fallback = { board, cells: scrambled, targetMoves: result.minMoves, examples: result.examples };
+      if (result.minMoves === wantMin) {
+        return { board, cells: scrambled, targetMoves: result.minMoves, examples: result.examples };
+      }
+    }
+    return fallback;
+  }
+
+  const equationRowEl = document.getElementById('equation-row');
+  const liveReadEl = document.getElementById('live-read');
+  const statusEl = document.getElementById('status');
+  const substatusEl = document.getElementById('substatus');
+  const difficultyEl = document.getElementById('difficulty');
+  const movesUsedEl = document.getElementById('moves-used');
+  const movesTargetEl = document.getElementById('moves-target');
+  const undoBtn = document.getElementById('undo-btn');
+  const resetBtn = document.getElementById('reset-btn');
+  const giveUpBtn = document.getElementById('give-up-btn');
+  const revealPanelEl = document.getElementById('reveal-panel');
+  const solutionTextEl = document.getElementById('solution-text');
+  const solvedCountEl = document.getElementById('solved-count');
+  const currentStreakEl = document.getElementById('current-streak');
+  const bestStreakEl = document.getElementById('best-streak');
+
+  const STATS_KEY = 'matchstickPuzzles:stats:v1';
+
+  let puzzle = null;
+  let cells = null;
+  let movesUsed = 0;
+  let moveHistory = [];
+  let held = null;
+  let gameActive = true;
+
+  function currentDifficulty() {
+    return difficultyEl.value;
+  }
+
+  function loadStats() {
+    try {
+      const raw = localStorage.getItem(STATS_KEY);
+      return raw ? JSON.parse(raw) : {};
+    } catch {
+      return {};
+    }
+  }
+
+  function saveStats(stats) {
+    localStorage.setItem(STATS_KEY, JSON.stringify(stats));
+  }
+
+  function renderStats() {
+    const stats = loadStats()[currentDifficulty()] || { solved: 0, currentStreak: 0, bestStreak: 0 };
+    solvedCountEl.textContent = String(stats.solved || 0);
+    currentStreakEl.textContent = String(stats.currentStreak || 0);
+    bestStreakEl.textContent = String(stats.bestStreak || 0);
+  }
+
+  function recordWin() {
+    const stats = loadStats();
+    const cur = stats[currentDifficulty()] || { solved: 0, currentStreak: 0, bestStreak: 0 };
+    cur.solved += 1;
+    cur.currentStreak += 1;
+    cur.bestStreak = Math.max(cur.bestStreak, cur.currentStreak);
+    stats[currentDifficulty()] = cur;
+    saveStats(stats);
+    renderStats();
+  }
+
+  function recordGiveUp() {
+    const stats = loadStats();
+    const cur = stats[currentDifficulty()] || { solved: 0, currentStreak: 0, bestStreak: 0 };
+    cur.currentStreak = 0;
+    stats[currentDifficulty()] = cur;
+    saveStats(stats);
+    renderStats();
+  }
+
+  function setStatus(title, sub) {
+    statusEl.textContent = title;
+    substatusEl.textContent = sub;
+  }
+
+  function setPlayingStatus() {
+    setStatus(fmt(I18N.instruction, { count: puzzle.targetMoves }), I18N.pick_hint);
+  }
+
+  function updateLiveRead() {
+    const text = equationDisplayString(puzzle.board, cells);
+    if (isTrueBoard(puzzle.board, cells)) {
+      liveReadEl.textContent = fmt(I18N.reads_as, { equation: text });
+      liveReadEl.className = 'mt-3 text-center font-semibold text-emerald-700 min-h-[1.5rem]';
+    } else {
+      liveReadEl.textContent = fmt(I18N.reads_incomplete, { equation: text });
+      liveReadEl.className = 'mt-3 text-center font-semibold text-slate-500 min-h-[1.5rem]';
+    }
+  }
+
+  function makeSegButton(cellIdx, seg, orientation, options = {}) {
+    const positionClass = options.positionClass || `ms-seg-${seg}`;
+    const labelSuffix = options.labelSuffix || seg;
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    const isLit = cells[cellIdx].lit.has(seg);
+    btn.className = `ms-seg ${positionClass} ${orientation} ${isLit ? 'stick' : 'slot'}`;
+    if (options.noTip) {
+      btn.classList.add('no-tip');
+    }
+    if (held && held.idx === cellIdx && held.seg === seg) {
+      btn.classList.add('held');
+    }
+    if (held && !isLit) {
+      btn.classList.add('targetable');
+    }
+    btn.disabled = !gameActive;
+    btn.setAttribute('aria-label', `${cellIdx}-${labelSuffix}`);
+    btn.addEventListener('click', () => handleSegClick(cellIdx, seg));
+    return btn;
+  }
+
+  function renderEquation() {
+    equationRowEl.innerHTML = '';
+    puzzle.board.layout.forEach((group) => {
+      if (group.kind === 'equals') {
+        const el = document.createElement('div');
+        el.className = 'ms-equals';
+        el.textContent = '=';
+        equationRowEl.appendChild(el);
+        return;
+      }
+
+      if (group.kind === 'op') {
+        const cellEl = document.createElement('div');
+        cellEl.className = 'ms-cell';
+        cellEl.appendChild(makeSegButton(group.idx, 'horiz', 'ms-h'));
+        cellEl.appendChild(makeSegButton(group.idx, 'vert', 'ms-v', { positionClass: 'ms-seg-vert-top', labelSuffix: 'vert-top' }));
+        cellEl.appendChild(makeSegButton(group.idx, 'vert', 'ms-v', { positionClass: 'ms-seg-vert-bottom', labelSuffix: 'vert-bottom', noTip: true }));
+        equationRowEl.appendChild(cellEl);
+        return;
+      }
+
+      const numberEl = document.createElement('div');
+      numberEl.className = 'ms-number';
+      group.idxs.forEach((idx) => {
+        const cellEl = document.createElement('div');
+        cellEl.className = 'ms-cell';
+        cellEl.appendChild(makeSegButton(idx, 'top', 'ms-h'));
+        cellEl.appendChild(makeSegButton(idx, 'tl', 'ms-v'));
+        cellEl.appendChild(makeSegButton(idx, 'tr', 'ms-v'));
+        cellEl.appendChild(makeSegButton(idx, 'mid', 'ms-h'));
+        cellEl.appendChild(makeSegButton(idx, 'bl', 'ms-v'));
+        cellEl.appendChild(makeSegButton(idx, 'br', 'ms-v'));
+        cellEl.appendChild(makeSegButton(idx, 'bottom', 'ms-h'));
+        numberEl.appendChild(cellEl);
+      });
+      equationRowEl.appendChild(numberEl);
+    });
+  }
+
+  function updateMoveButtons() {
+    undoBtn.disabled = !gameActive || moveHistory.length === 0;
+  }
+
+  function afterMove() {
+    movesUsedEl.textContent = String(movesUsed);
+    movesTargetEl.textContent = String(puzzle.targetMoves);
+    updateLiveRead();
+    updateMoveButtons();
+    renderEquation();
+    checkWin();
+  }
+
+  function checkWin() {
+    if (!gameActive) return;
+    if (movesUsed === puzzle.targetMoves) {
+      if (isTrueBoard(puzzle.board, cells)) {
+        gameActive = false;
+        held = null;
+        renderEquation();
+        updateMoveButtons();
+        setStatus(I18N.win_title, fmt(I18N.win_message, { count: movesUsed }));
+        recordWin();
+      } else {
+        setStatus(fmt(I18N.instruction, { count: puzzle.targetMoves }), fmt(I18N.wrong_count_message, { used: movesUsed, target: puzzle.targetMoves }));
+      }
+    } else {
+      setPlayingStatus();
+    }
+  }
+
+  function handleSegClick(cellIdx, seg) {
+    if (!gameActive) return;
+    const cell = cells[cellIdx];
+    const isLit = cell.lit.has(seg);
+
+    if (held) {
+      if (held.idx === cellIdx && held.seg === seg) {
+        held = null;
+        renderEquation();
+        return;
+      }
+      if (isLit) {
+        held = { idx: cellIdx, seg };
+        renderEquation();
+        return;
+      }
+      cell.lit.add(seg);
+      cells[held.idx].lit.delete(held.seg);
+      moveHistory.push({ offIdx: held.idx, offSeg: held.seg, onIdx: cellIdx, onSeg: seg });
+      movesUsed += 1;
+      held = null;
+      afterMove();
+      return;
+    }
+
+    if (isLit) {
+      held = { idx: cellIdx, seg };
+      renderEquation();
+    }
+  }
+
+  function undoMove() {
+    if (!gameActive || moveHistory.length === 0) return;
+    const last = moveHistory.pop();
+    cells[last.onIdx].lit.delete(last.onSeg);
+    cells[last.offIdx].lit.add(last.offSeg);
+    movesUsed -= 1;
+    held = null;
+    afterMove();
+  }
+
+  function resetPuzzle() {
+    if (!puzzle) return;
+    cells = cloneCells(puzzle.initialCells);
+    movesUsed = 0;
+    moveHistory = [];
+    held = null;
+    gameActive = true;
+    revealPanelEl.classList.add('hidden');
+    setPlayingStatus();
+    afterMove();
+  }
+
+  function giveUp() {
+    if (!gameActive) return;
+    gameActive = false;
+    held = null;
+    const example = puzzle.examples[0];
+    if (example) {
+      solutionTextEl.textContent = equationDisplayString(puzzle.board, example);
+      revealPanelEl.classList.remove('hidden');
+    }
+    setStatus(I18N.gave_up_title, '');
+    renderEquation();
+    updateMoveButtons();
+    recordGiveUp();
+  }
+
+  function newPuzzle() {
+    const generated = generatePuzzle(currentDifficulty());
+    puzzle = { ...generated, initialCells: cloneCells(generated.cells) };
+    cells = cloneCells(puzzle.initialCells);
+    movesUsed = 0;
+    moveHistory = [];
+    held = null;
+    gameActive = true;
+    revealPanelEl.classList.add('hidden');
+    renderStats();
+    setPlayingStatus();
+    afterMove();
+  }
+
+  undoBtn.addEventListener('click', undoMove);
+  resetBtn.addEventListener('click', resetPuzzle);
+  giveUpBtn.addEventListener('click', giveUp);
+  document.getElementById('new-game').addEventListener('click', newPuzzle);
+  difficultyEl.addEventListener('change', newPuzzle);
+  document.getElementById('reset-stats').addEventListener('click', () => {
+    const stats = loadStats();
+    delete stats[currentDifficulty()];
+    saveStats(stats);
+    renderStats();
+  });
+
+  newPuzzle();
+</script>
+{% endblock %}

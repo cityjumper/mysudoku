@@ -1,0 +1,682 @@
+{% extends "base.html" %}
+
+{% block title %}{{ translate(lang, 'games.hearts.title') }}{% endblock %}
+
+{% block extra_head %}
+<style>
+  .htable {
+    background: radial-gradient(ellipse at center, #15803d 0%, #14532d 70%, #0f3d22 100%);
+    box-shadow: inset 0 0 40px rgba(0, 0, 0, 0.4);
+  }
+
+  .hcard {
+    width: 42px;
+    height: 60px;
+    border-radius: 7px;
+    background: #fff;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    font-size: 13px;
+    line-height: 1.1;
+    border: 1px solid rgba(0, 0, 0, 0.15);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+    user-select: none;
+    -webkit-user-select: none;
+    transition: transform 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease;
+    flex-shrink: 0;
+  }
+  .hcard-suit { font-size: 17px; }
+  .hcard-red { color: #dc2626; }
+  .hcard-black { color: #0f172a; }
+  .hcard.selectable { cursor: pointer; }
+  .hcard.selectable:hover { transform: translateY(-10px); box-shadow: 0 8px 14px rgba(0, 0, 0, 0.35); }
+  .hcard.selected { transform: translateY(-16px); box-shadow: 0 0 0 3px #0ea5e9, 0 8px 14px rgba(0, 0, 0, 0.35); }
+  .hcard.disabled { opacity: 0.4; cursor: not-allowed; }
+
+  .hand-row { display: flex; align-items: flex-end; }
+  .hand-row .hcard:not(:first-child) { margin-left: -18px; }
+
+  .hcard-mini {
+    width: 20px;
+    height: 30px;
+    border-radius: 4px;
+    background: repeating-linear-gradient(135deg, #1d4ed8, #1d4ed8 3px, #1e40af 3px, #1e40af 6px);
+    border: 1px solid rgba(255, 255, 255, 0.35);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+    flex-shrink: 0;
+  }
+  .mini-row { display: flex; justify-content: center; }
+  .mini-row .hcard-mini:not(:first-child) { margin-left: -13px; }
+
+  .trick-box { position: relative; width: 190px; height: 190px; margin: 0 auto; }
+  .trick-slot {
+    position: absolute;
+    width: 46px;
+    height: 66px;
+    border: 2px dashed rgba(255, 255, 255, 0.25);
+    border-radius: 8px;
+  }
+  .trick-slot .hcard { width: 100%; height: 100%; margin: 0; cursor: default; }
+  .trick-slot.pos-north { top: 0; left: 50%; transform: translateX(-50%); }
+  .trick-slot.pos-south { bottom: 0; left: 50%; transform: translateX(-50%); }
+  .trick-slot.pos-west { left: 0; top: 50%; transform: translateY(-50%); }
+  .trick-slot.pos-east { right: 0; top: 50%; transform: translateY(-50%); }
+
+  @media (min-width: 640px) {
+    .hcard { width: 52px; height: 74px; font-size: 15px; }
+    .hcard-suit { font-size: 20px; }
+    .hand-row .hcard:not(:first-child) { margin-left: -20px; }
+    .trick-box { width: 220px; height: 220px; }
+    .trick-slot { width: 54px; height: 76px; }
+  }
+</style>
+{% endblock %}
+
+{% block body_class %}bg-gradient-to-br from-emerald-50 via-green-50 to-teal-100 min-h-screen{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+  <div class="max-w-5xl mx-auto mb-6 flex items-center justify-between">
+    <a href="/" class="inline-flex items-center text-emerald-800 hover:text-emerald-950 font-semibold">
+      <svg class="w-5 h-5 mr-2" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+        <path fill-rule="evenodd" d="M12.707 15.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 111.414 1.414L7.414 9H17a1 1 0 110 2H7.414l5.293 5.293a1 1 0 010 1.414z" clip-rule="evenodd" />
+      </svg>
+      {{ translate(lang, 'common.home') }}
+    </a>
+    <div class="flex items-center gap-4">
+      <a href="/trouble" class="text-sm font-semibold text-red-700 hover:text-red-900">{{ translate(lang, 'games.trouble.name') }}</a>
+      <a href="/checkers" class="text-sm font-semibold text-rose-700 hover:text-rose-900">{{ translate(lang, 'games.checkers.name') }}</a>
+      <a href="/backgammon" class="text-sm font-semibold text-teal-700 hover:text-teal-900">{{ translate(lang, 'games.backgammon.name') }}</a>
+    </div>
+  </div>
+
+  <div class="max-w-5xl mx-auto">
+    <header class="text-center mb-8">
+      <h1 class="text-4xl sm:text-5xl font-extrabold tracking-tight text-slate-900">{{ translate(lang, 'games.hearts.title') }}</h1>
+      <p class="mt-2 text-slate-600">{{ translate(lang, 'games.hearts.subtitle') }}</p>
+    </header>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div class="lg:col-span-2">
+        <div class="bg-white rounded-2xl shadow-xl ring-1 ring-slate-200 p-4 sm:p-6">
+          <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-4">
+            <div>
+              <div id="status" class="text-xl sm:text-2xl font-bold text-slate-900">&nbsp;</div>
+              <div id="substatus" class="mt-1 text-sm text-slate-600">&nbsp;</div>
+            </div>
+            <button id="new-game" class="rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-4 py-2 whitespace-nowrap">{{ translate(lang, 'games.hearts.new_game') }}</button>
+          </div>
+
+          <div class="htable rounded-2xl p-3 sm:p-5">
+            <div class="text-center">
+              <div class="text-xs font-bold uppercase tracking-wide text-emerald-100 mb-1">{{ translate(lang, 'games.hearts.north') }}</div>
+              <div id="mini-north" class="mini-row"></div>
+            </div>
+
+            <div class="flex items-center justify-between mt-3">
+              <div class="text-center">
+                <div class="text-xs font-bold uppercase tracking-wide text-emerald-100 mb-1">{{ translate(lang, 'games.hearts.west') }}</div>
+                <div id="mini-west" class="mini-row"></div>
+              </div>
+
+              <div class="trick-box">
+                <div class="trick-slot pos-north" id="trick-north"></div>
+                <div class="trick-slot pos-south" id="trick-south"></div>
+                <div class="trick-slot pos-west" id="trick-west"></div>
+                <div class="trick-slot pos-east" id="trick-east"></div>
+              </div>
+
+              <div class="text-center">
+                <div class="text-xs font-bold uppercase tracking-wide text-emerald-100 mb-1">{{ translate(lang, 'games.hearts.east') }}</div>
+                <div id="mini-east" class="mini-row"></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="mt-5">
+            <div class="text-xs font-semibold uppercase tracking-wide text-slate-500 mb-2">{{ translate(lang, 'games.hearts.you') }}</div>
+            <div id="south-hand" class="hand-row overflow-x-auto pb-2 min-h-[74px] sm:min-h-[90px]"></div>
+            <div id="pass-controls" class="hidden mt-3 flex flex-wrap items-center gap-3">
+              <span id="selected-count" class="text-sm font-semibold text-slate-700"></span>
+              <button id="pass-btn" disabled class="rounded-lg bg-sky-600 hover:bg-sky-700 disabled:bg-slate-300 disabled:cursor-not-allowed text-white font-semibold px-4 py-2">{{ translate(lang, 'games.hearts.pass_button') }}</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="lg:col-span-1">
+        <div class="bg-white rounded-2xl shadow-xl ring-1 ring-slate-200 p-6 sticky top-8">
+          <h2 class="text-xl font-bold text-slate-900 mb-4">{{ translate(lang, 'games.hearts.scoreboard') }}</h2>
+          <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+              <thead>
+                <tr class="text-left text-slate-500">
+                  <th class="pb-2 font-semibold"></th>
+                  <th class="pb-2 font-semibold text-right">{{ translate(lang, 'games.hearts.hand_points') }}</th>
+                  <th class="pb-2 font-semibold text-right">{{ translate(lang, 'games.hearts.total_points') }}</th>
+                </tr>
+              </thead>
+              <tbody id="scoreboard-body"></tbody>
+            </table>
+          </div>
+
+          <div class="mt-6">
+            <h3 class="text-sm font-bold text-slate-700 mb-2">{{ translate(lang, 'games.hearts.title') }}</h3>
+            <ul class="text-sm text-slate-600 space-y-1">
+              <li>• {{ translate(lang, 'games.hearts.rule_1') }}</li>
+              <li>• {{ translate(lang, 'games.hearts.rule_2') }}</li>
+              <li>• {{ translate(lang, 'games.hearts.rule_3') }}</li>
+              <li>• {{ translate(lang, 'games.hearts.rule_4') }}</li>
+              <li>• {{ translate(lang, 'games.hearts.rule_5') }}</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="modal-overlay" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4">
+  <div class="bg-white rounded-2xl shadow-2xl p-6 sm:p-8 max-w-sm w-full text-center">
+    <h2 id="modal-title" class="text-2xl font-extrabold text-slate-900 mb-2"></h2>
+    <p id="modal-note" class="text-slate-600 mb-4"></p>
+    <div id="modal-table" class="text-left mb-6 space-y-1"></div>
+    <button id="modal-action" type="button" class="w-full rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-4 py-2 transition-colors"></button>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+(function () {
+  const I18N = {{ hearts_i18n | tojson }};
+
+  function fmt(str, vars) {
+    return String(str).replace(/\{(\w+)\}/g, (_, key) => (key in vars ? vars[key] : `{${key}}`));
+  }
+
+  const SUITS = ['clubs', 'diamonds', 'spades', 'hearts'];
+  const SUIT_SYMBOL = { clubs: '♣', diamonds: '♦', spades: '♠', hearts: '♥' };
+  const RED_SUITS = new Set(['diamonds', 'hearts']);
+  const RANKS = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14];
+  const RANK_LABEL = { 11: 'J', 12: 'Q', 13: 'K', 14: 'A' };
+  const DISPLAY_SUIT_ORDER = ['spades', 'hearts', 'clubs', 'diamonds'];
+
+  const SEATS = ['south', 'west', 'north', 'east'];
+  const NEXT = { south: 'west', west: 'north', north: 'east', east: 'south' };
+  const PASS_TARGET = {
+    left: { south: 'west', west: 'north', north: 'east', east: 'south' },
+    right: { south: 'east', east: 'north', north: 'west', west: 'south' },
+    across: { south: 'north', north: 'south', west: 'east', east: 'west' },
+  };
+
+  function rankLabel(r) { return RANK_LABEL[r] || String(r); }
+  function seatName(seat) { return seat === 'south' ? I18N.you : I18N[seat]; }
+
+  function makeDeck() {
+    const deck = [];
+    for (const suit of SUITS) {
+      for (const rank of RANKS) deck.push({ suit, rank, id: `${suit}-${rank}` });
+    }
+    return deck;
+  }
+
+  function shuffle(arr) {
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
+  }
+
+  function sortHand(hand) {
+    hand.sort((a, b) => {
+      const sa = DISPLAY_SUIT_ORDER.indexOf(a.suit), sb = DISPLAY_SUIT_ORDER.indexOf(b.suit);
+      if (sa !== sb) return sa - sb;
+      return a.rank - b.rank;
+    });
+  }
+
+  const G = {
+    hands: { south: [], west: [], north: [], east: [] },
+    passDir: 'left',
+    handNumber: 0,
+    scores: { south: 0, west: 0, north: 0, east: 0 },
+    roundPoints: { south: 0, west: 0, north: 0, east: 0 },
+    phase: 'passing',
+    selectedForPass: [],
+    trick: [],
+    trickNumber: 0,
+    leader: 'south',
+    turnSeat: 'south',
+    heartsBroken: false,
+    isFirstTrick: true,
+  };
+
+  const statusEl = document.getElementById('status');
+  const substatusEl = document.getElementById('substatus');
+  const southHandEl = document.getElementById('south-hand');
+  const passControlsEl = document.getElementById('pass-controls');
+  const selectedCountEl = document.getElementById('selected-count');
+  const passBtn = document.getElementById('pass-btn');
+  const scoreboardBody = document.getElementById('scoreboard-body');
+  const modalOverlay = document.getElementById('modal-overlay');
+  const modalTitle = document.getElementById('modal-title');
+  const modalNote = document.getElementById('modal-note');
+  const modalTable = document.getElementById('modal-table');
+  const modalAction = document.getElementById('modal-action');
+
+  function setStatus(text) { statusEl.textContent = text; }
+  function setSubStatus(text) { substatusEl.textContent = text; }
+
+  function cardEl(card, opts) {
+    opts = opts || {};
+    const div = document.createElement('div');
+    const red = RED_SUITS.has(card.suit);
+    div.className = 'hcard ' + (red ? 'hcard-red' : 'hcard-black');
+    if (opts.selectable) div.classList.add('selectable');
+    if (opts.selected) div.classList.add('selected');
+    if (opts.disabled) div.classList.add('disabled');
+    div.innerHTML = `<span>${rankLabel(card.rank)}</span><span class="hcard-suit">${SUIT_SYMBOL[card.suit]}</span>`;
+    if (opts.onClick) div.addEventListener('click', opts.onClick);
+    return div;
+  }
+
+  function legalMoves(seat) {
+    const hand = G.hands[seat];
+    if (G.trick.length === 0) {
+      if (G.isFirstTrick) return hand.filter((c) => c.suit === 'clubs' && c.rank === 2);
+      if (!G.heartsBroken) {
+        const nonHearts = hand.filter((c) => c.suit !== 'hearts');
+        return nonHearts.length ? nonHearts : hand.slice();
+      }
+      return hand.slice();
+    }
+    const ledSuit = G.trick[0].card.suit;
+    const followers = hand.filter((c) => c.suit === ledSuit);
+    if (followers.length) return followers;
+    if (G.isFirstTrick) {
+      const safe = hand.filter((c) => !(c.suit === 'hearts' || (c.suit === 'spades' && c.rank === 12)));
+      return safe.length ? safe : hand.slice();
+    }
+    return hand.slice();
+  }
+
+  function cardBadness(c) {
+    if (c.suit === 'spades' && c.rank === 12) return 1000;
+    if (c.suit === 'spades' && c.rank >= 13) return 900 - (14 - c.rank) * 5;
+    if (c.suit === 'hearts') return 500 + c.rank * 5;
+    if (c.suit === 'spades') return 100 + c.rank;
+    return c.rank;
+  }
+
+  function aiChoosePass(hand) {
+    const scored = hand.map((c) => ({ c, b: cardBadness(c) }));
+    scored.sort((a, b) => b.b - a.b);
+    return scored.slice(0, 3).map((s) => s.c);
+  }
+
+  function chooseAiCard(seat, legal) {
+    if (G.trick.length === 0) {
+      if (legal.length === 1) return legal[0];
+      const bySuit = {};
+      legal.forEach((c) => { (bySuit[c.suit] = bySuit[c.suit] || []).push(c); });
+      const suits = Object.keys(bySuit);
+      const nonHeartSuits = suits.filter((s) => s !== 'hearts');
+      const pool = nonHeartSuits.length ? nonHeartSuits : suits;
+      pool.sort((a, b) => bySuit[a].length - bySuit[b].length);
+      const cards = bySuit[pool[0]].slice().sort((a, b) => a.rank - b.rank);
+      return cards[0];
+    }
+
+    const ledSuit = G.trick[0].card.suit;
+    const sameSuit = legal.filter((c) => c.suit === ledSuit);
+    const trickPoints = G.trick.reduce((sum, p) => sum + (p.card.suit === 'hearts' ? 1 : 0) + (p.card.suit === 'spades' && p.card.rank === 12 ? 13 : 0), 0);
+    let currentBest = G.trick[0];
+    for (const p of G.trick) {
+      if (p.card.suit === ledSuit && p.card.rank > currentBest.card.rank) currentBest = p;
+    }
+
+    if (sameSuit.length) {
+      const winners = sameSuit.filter((c) => c.rank > currentBest.card.rank);
+      const losers = sameSuit.filter((c) => c.rank < currentBest.card.rank);
+      const mustTake = losers.length === 0;
+      if (!mustTake && (winners.length === 0 || trickPoints > 0 || Math.random() < 0.6)) {
+        return losers.sort((a, b) => b.rank - a.rank)[0];
+      }
+      if (winners.length) {
+        const nonQS = winners.filter((c) => !(c.suit === 'spades' && c.rank === 12));
+        const sorted = (nonQS.length ? nonQS : winners).sort((a, b) => a.rank - b.rank);
+        return sorted[0];
+      }
+      return losers.sort((a, b) => b.rank - a.rank)[0];
+    }
+
+    const qs = legal.find((c) => c.suit === 'spades' && c.rank === 12);
+    if (qs) return qs;
+    const heartsInHand = legal.filter((c) => c.suit === 'hearts').sort((a, b) => b.rank - a.rank);
+    if (heartsInHand.length) return heartsInHand[0];
+    const highSpades = legal.filter((c) => c.suit === 'spades' && c.rank >= 13).sort((a, b) => b.rank - a.rank);
+    if (highSpades.length) return highSpades[0];
+    return legal.slice().sort((a, b) => b.rank - a.rank)[0];
+  }
+
+  function newGame() {
+    G.scores = { south: 0, west: 0, north: 0, east: 0 };
+    G.handNumber = 0;
+    startHand();
+  }
+
+  function startHand() {
+    const deck = shuffle(makeDeck());
+    G.hands = { south: [], west: [], north: [], east: [] };
+    SEATS.forEach((seat, i) => {
+      G.hands[seat] = deck.slice(i * 13, (i + 1) * 13);
+      sortHand(G.hands[seat]);
+    });
+    G.passDir = ['left', 'right', 'across', 'none'][G.handNumber % 4];
+    G.roundPoints = { south: 0, west: 0, north: 0, east: 0 };
+    G.heartsBroken = false;
+    G.trick = [];
+    G.trickNumber = 0;
+    G.isFirstTrick = true;
+    G.selectedForPass = [];
+
+    if (G.passDir === 'none') {
+      G.phase = 'playing';
+      setSubStatus(I18N.pass_none);
+      beginPlayingPhase();
+    } else {
+      G.phase = 'passing';
+      const dirLabel = G.passDir === 'left' ? I18N.pass_left : (G.passDir === 'right' ? I18N.pass_right : I18N.pass_across);
+      setStatus(dirLabel);
+      setSubStatus(I18N.select_three);
+      render();
+    }
+  }
+
+  function togglePassSelect(card) {
+    const idx = G.selectedForPass.findIndex((c) => c.id === card.id);
+    if (idx >= 0) {
+      G.selectedForPass.splice(idx, 1);
+    } else if (G.selectedForPass.length < 3) {
+      G.selectedForPass.push(card);
+    }
+    render();
+  }
+
+  function confirmPass() {
+    if (G.selectedForPass.length !== 3) return;
+    const passes = { south: G.selectedForPass.slice() };
+    SEATS.filter((s) => s !== 'south').forEach((seat) => {
+      passes[seat] = aiChoosePass(G.hands[seat]);
+    });
+
+    const incoming = { south: [], west: [], north: [], east: [] };
+    SEATS.forEach((seat) => {
+      const ids = new Set(passes[seat].map((c) => c.id));
+      G.hands[seat] = G.hands[seat].filter((c) => !ids.has(c.id));
+      const target = PASS_TARGET[G.passDir][seat];
+      incoming[target].push(...passes[seat]);
+    });
+    SEATS.forEach((seat) => {
+      G.hands[seat].push(...incoming[seat]);
+      sortHand(G.hands[seat]);
+    });
+
+    G.phase = 'playing';
+    beginPlayingPhase();
+  }
+
+  function findTwoOfClubsHolder() {
+    return SEATS.find((seat) => G.hands[seat].some((c) => c.suit === 'clubs' && c.rank === 2));
+  }
+
+  function beginPlayingPhase() {
+    G.leader = findTwoOfClubsHolder();
+    G.trick = [];
+    G.trickNumber = 0;
+    G.turnSeat = G.leader;
+    G.isFirstTrick = true;
+    setSubStatus(fmt(I18N.leads_two_clubs, { name: seatName(G.leader) }));
+    render();
+    advanceTurn();
+  }
+
+  function advanceTurn() {
+    if (G.phase !== 'playing') return;
+    if (G.turnSeat === 'south') {
+      setStatus(I18N.your_turn);
+      render();
+      return;
+    }
+    setStatus(fmt(I18N.ai_thinking, { name: seatName(G.turnSeat) }));
+    render();
+    setTimeout(() => aiPlay(G.turnSeat), 650 + Math.random() * 500);
+  }
+
+  function aiPlay(seat) {
+    if (G.phase !== 'playing' || G.turnSeat !== seat) return;
+    const legal = legalMoves(seat);
+    const card = chooseAiCard(seat, legal);
+    playCard(seat, card);
+  }
+
+  function onSouthPlay(card) {
+    if (G.phase !== 'playing' || G.turnSeat !== 'south') return;
+    const legal = legalMoves('south');
+    if (!legal.some((c) => c.id === card.id)) return;
+    playCard('south', card);
+  }
+
+  function playCard(seat, card) {
+    G.hands[seat] = G.hands[seat].filter((c) => c.id !== card.id);
+    G.trick.push({ seat, card });
+    if (card.suit === 'hearts' && !G.heartsBroken) {
+      G.heartsBroken = true;
+      setSubStatus(I18N.hearts_broken);
+    }
+    render();
+
+    if (G.trick.length < 4) {
+      G.turnSeat = NEXT[seat];
+      advanceTurn();
+    } else {
+      G.phase = 'trick-done';
+      setTimeout(finishTrick, 1000);
+    }
+  }
+
+  function finishTrick() {
+    const ledSuit = G.trick[0].card.suit;
+    let best = G.trick[0];
+    for (const play of G.trick) {
+      if (play.card.suit === ledSuit && play.card.rank > best.card.rank) best = play;
+    }
+    const winner = best.seat;
+    let points = 0;
+    for (const play of G.trick) {
+      if (play.card.suit === 'hearts') points += 1;
+      if (play.card.suit === 'spades' && play.card.rank === 12) points += 13;
+    }
+    G.roundPoints[winner] += points;
+    setSubStatus(fmt(I18N.trick_winner, { name: seatName(winner) }));
+
+    G.trick = [];
+    G.trickNumber++;
+    G.isFirstTrick = false;
+    G.leader = winner;
+    G.turnSeat = winner;
+    G.phase = 'playing';
+    render();
+
+    if (G.trickNumber === 13) {
+      setStatus(I18N.hand_complete);
+      setTimeout(finishHand, 1000);
+    } else {
+      setTimeout(advanceTurn, 500);
+    }
+  }
+
+  function finishHand() {
+    const roundSnapshot = { ...G.roundPoints };
+    const completedHand = G.handNumber + 1;
+    let moonSeat = null;
+    SEATS.forEach((seat) => { if (G.roundPoints[seat] === 26) moonSeat = seat; });
+
+    if (moonSeat) {
+      SEATS.forEach((seat) => { G.scores[seat] += (seat === moonSeat ? 0 : 26); });
+    } else {
+      SEATS.forEach((seat) => { G.scores[seat] += G.roundPoints[seat]; });
+    }
+    G.handNumber++;
+    render();
+
+    if (Object.values(G.scores).some((v) => v >= 100)) {
+      G.phase = 'game-done';
+      showGameOverModal();
+    } else {
+      G.phase = 'hand-done';
+      showHandSummaryModal(completedHand, roundSnapshot, moonSeat);
+    }
+  }
+
+  function scoreRowsHtml(rows) {
+    return rows.map((r) => `
+      <div class="flex items-center justify-between rounded-lg px-3 py-2 ${r.highlight ? 'bg-emerald-50 ring-1 ring-emerald-200' : 'bg-slate-50'}">
+        <span class="font-semibold text-slate-800">${r.label}</span>
+        <span class="text-slate-600 text-sm">${r.extra || ''}</span>
+        <span class="font-bold text-slate-900">${r.total}</span>
+      </div>
+    `).join('');
+  }
+
+  function openModal({ title, note, rows, actionLabel, onAction }) {
+    modalTitle.textContent = title;
+    modalNote.textContent = note || '';
+    modalNote.classList.toggle('hidden', !note);
+    modalTable.innerHTML = scoreRowsHtml(rows);
+    modalAction.textContent = actionLabel;
+    modalAction.onclick = () => {
+      modalOverlay.classList.add('hidden');
+      onAction();
+    };
+    modalOverlay.classList.remove('hidden');
+  }
+
+  function showHandSummaryModal(handNum, roundSnapshot, moonSeat) {
+    const minScore = Math.min(...SEATS.map((s) => G.scores[s]));
+    const rows = SEATS.map((seat) => ({
+      label: seatName(seat),
+      extra: `+${roundSnapshot[seat]}`,
+      total: G.scores[seat],
+      highlight: G.scores[seat] === minScore,
+    }));
+    openModal({
+      title: fmt(I18N.round_summary, { n: handNum }),
+      note: moonSeat ? fmt(I18N.moon_shot, { name: seatName(moonSeat) }) : '',
+      rows,
+      actionLabel: I18N.next_hand,
+      onAction: startHand,
+    });
+  }
+
+  function showGameOverModal() {
+    const minScore = Math.min(...SEATS.map((s) => G.scores[s]));
+    const winner = SEATS.find((s) => G.scores[s] === minScore);
+    const rows = SEATS.map((seat) => ({
+      label: seatName(seat),
+      extra: '',
+      total: G.scores[seat],
+      highlight: seat === winner,
+    })).sort((a, b) => a.total - b.total);
+    openModal({
+      title: winner === 'south' ? I18N.you_win : fmt(I18N.game_over, { name: seatName(winner) }),
+      note: I18N.final_scores,
+      rows,
+      actionLabel: I18N.new_game,
+      onAction: newGame,
+    });
+  }
+
+  function renderSouthHand() {
+    southHandEl.innerHTML = '';
+    const canPlay = G.phase === 'playing' && G.turnSeat === 'south';
+    const legalIds = canPlay ? new Set(legalMoves('south').map((c) => c.id)) : null;
+
+    G.hands.south.forEach((card) => {
+      let opts;
+      if (G.phase === 'passing') {
+        const selected = G.selectedForPass.some((c) => c.id === card.id);
+        opts = { selectable: true, selected, onClick: () => togglePassSelect(card) };
+      } else if (canPlay) {
+        const legal = legalIds.has(card.id);
+        opts = legal
+          ? { selectable: true, onClick: () => onSouthPlay(card) }
+          : { disabled: true };
+      } else {
+        opts = {};
+      }
+      southHandEl.appendChild(cardEl(card, opts));
+    });
+  }
+
+  function renderMiniRow(seat) {
+    const el = document.getElementById(`mini-${seat}`);
+    el.innerHTML = '';
+    for (let i = 0; i < G.hands[seat].length; i++) {
+      const back = document.createElement('div');
+      back.className = 'hcard-mini';
+      el.appendChild(back);
+    }
+  }
+
+  function renderTrick() {
+    SEATS.forEach((seat) => {
+      const slot = document.getElementById(`trick-${seat}`);
+      slot.innerHTML = '';
+      const play = G.trick.find((p) => p.seat === seat);
+      if (play) slot.appendChild(cardEl(play.card, {}));
+    });
+  }
+
+  function renderScoreboard() {
+    const minScore = Math.min(...SEATS.map((s) => G.scores[s]));
+    scoreboardBody.innerHTML = SEATS.map((seat) => `
+      <tr class="border-t border-slate-100 ${G.scores[seat] === minScore ? 'bg-emerald-50' : ''}">
+        <td class="py-2 font-semibold text-slate-800">${seatName(seat)}</td>
+        <td class="py-2 text-right text-slate-600">${G.roundPoints[seat]}</td>
+        <td class="py-2 text-right font-bold text-slate-900">${G.scores[seat]}</td>
+      </tr>
+    `).join('');
+  }
+
+  function renderPassControls() {
+    const isPassing = G.phase === 'passing';
+    passControlsEl.classList.toggle('hidden', !isPassing);
+    if (isPassing) {
+      selectedCountEl.textContent = fmt(I18N.selected_count, { count: G.selectedForPass.length });
+      passBtn.disabled = G.selectedForPass.length !== 3;
+    }
+  }
+
+  function render() {
+    renderSouthHand();
+    renderMiniRow('west');
+    renderMiniRow('north');
+    renderMiniRow('east');
+    renderTrick();
+    renderScoreboard();
+    renderPassControls();
+  }
+
+  passBtn.addEventListener('click', confirmPass);
+  document.getElementById('new-game').addEventListener('click', newGame);
+
+  newGame();
+})();
+</script>
+{% endblock %}
