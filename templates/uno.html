@@ -1,0 +1,938 @@
+{% extends "base.html" %}
+
+{% block title %}{{ translate(lang, 'games.uno.title') }}{% endblock %}
+
+{% block extra_head %}
+<style>
+  .uno-felt {
+    background: radial-gradient(circle at 50% 30%, #15803d 0%, #14532d 70%, #0f3d24 100%);
+  }
+
+  .uno-card {
+    position: relative;
+    width: 46px;
+    height: 66px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.35);
+    border: 2px solid rgba(255, 255, 255, 0.55);
+    flex-shrink: 0;
+    user-select: none;
+    -webkit-user-select: none;
+    transition: transform 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease;
+  }
+  @media (min-width: 640px) {
+    .uno-card { width: 58px; height: 84px; border-radius: 10px; }
+  }
+
+  .uno-card-face {
+    width: 68%;
+    height: 68%;
+    background: rgba(255, 255, 255, 0.92);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 900;
+    font-size: 15px;
+    color: #0f172a;
+    transform: rotate(-18deg);
+  }
+  @media (min-width: 640px) { .uno-card-face { font-size: 20px; } }
+
+  .uno-red { background: #ef4444; }
+  .uno-yellow { background: #eab308; }
+  .uno-green { background: #16a34a; }
+  .uno-blue { background: #2563eb; }
+  .uno-wild {
+    background: #0f172a;
+  }
+
+  .uno-card.uno-playable { cursor: pointer; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.45), 0 0 0 3px #facc15; }
+  .uno-card.uno-playable:hover { transform: translateY(-10px); }
+  .uno-card.uno-dim { opacity: 0.4; filter: grayscale(35%); pointer-events: none; }
+
+  .uno-hand { display: flex; justify-content: center; min-height: 70px; flex-wrap: nowrap; }
+  @media (min-width: 640px) { .uno-hand { min-height: 92px; } }
+  .uno-hand .uno-card { margin-left: -20px; }
+  .uno-hand .uno-card:first-child { margin-left: 0; }
+  @media (min-width: 640px) { .uno-hand .uno-card { margin-left: -26px; } .uno-hand .uno-card:first-child { margin-left: 0; } }
+
+  #south-hand.uno-hand { overflow-x: auto; padding-bottom: 6px; justify-content: flex-start; }
+
+  .uno-back {
+    width: 30px;
+    height: 44px;
+    border-radius: 6px;
+    background: repeating-linear-gradient(45deg, #1d4ed8, #1d4ed8 4px, #1e3a8a 4px, #1e3a8a 8px);
+    border: 2px solid rgba(255, 255, 255, 0.4);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.4);
+    margin-left: -18px;
+    flex-shrink: 0;
+  }
+  .uno-back:first-child { margin-left: 0; }
+  @media (min-width: 640px) { .uno-back { width: 36px; height: 52px; margin-left: -22px; } }
+
+  .uno-back.uno-back-lg { width: 58px; height: 84px; margin-left: 0; border-radius: 10px; }
+
+  .uno-seat {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+  }
+  .uno-seat.uno-hidden-seat { display: none; }
+
+  .uno-seat-label {
+    font-size: 11px;
+    font-weight: 700;
+    padding: 3px 12px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.12);
+    color: #ecfdf5;
+    letter-spacing: 0.02em;
+    white-space: nowrap;
+  }
+  @media (min-width: 640px) { .uno-seat-label { font-size: 12px; } }
+  .uno-seat.uno-active .uno-seat-label {
+    background: #facc15;
+    color: #422006;
+    box-shadow: 0 0 0 3px rgba(250, 204, 21, 0.4);
+  }
+  .uno-seat-uno {
+    font-size: 10px;
+    font-weight: 800;
+    color: #422006;
+    background: #facc15;
+    border-radius: 999px;
+    padding: 1px 6px;
+    margin-left: 4px;
+  }
+
+  .uno-mini-row { display: flex; justify-content: center; }
+
+  .uno-center { display: flex; align-items: center; gap: 14px; }
+  .uno-drawpile { position: relative; cursor: default; }
+  .uno-drawpile.uno-draw-active { cursor: pointer; }
+  .uno-drawpile.uno-draw-active .uno-back-lg {
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.45), 0 0 0 3px #facc15;
+  }
+  .uno-draw-count {
+    position: absolute;
+    bottom: -8px;
+    right: -8px;
+    background: #0f172a;
+    color: #fff;
+    font-size: 10px;
+    font-weight: 800;
+    border-radius: 999px;
+    padding: 1px 6px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.5);
+  }
+
+  .uno-color-dot {
+    width: 14px;
+    height: 14px;
+    border-radius: 999px;
+    display: inline-block;
+    box-shadow: 0 0 0 2px rgba(255,255,255,0.6);
+  }
+
+  .opp-btn {
+    padding: 14px 8px;
+    border-radius: 12px;
+    background: #f1f5f9;
+    font-weight: 700;
+    color: #334155;
+    border: 2px solid transparent;
+    text-align: center;
+    transition: all 0.15s ease;
+  }
+  .opp-btn.selected { background: #fef9c3; border-color: #eab308; color: #854d0e; }
+
+  .color-swatch-btn {
+    width: 64px;
+    height: 64px;
+    border-radius: 14px;
+    border: 3px solid rgba(255,255,255,0.5);
+    box-shadow: 0 3px 8px rgba(0,0,0,0.3);
+  }
+  .color-swatch-btn:hover { transform: translateY(-2px); }
+</style>
+{% endblock %}
+
+{% block body_class %}bg-gradient-to-br from-red-50 via-orange-50 to-yellow-100 min-h-screen{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+  <div class="max-w-5xl mx-auto mb-6 flex items-center justify-between">
+    <a href="/" class="inline-flex items-center text-red-800 hover:text-red-950 font-semibold">
+      <svg class="w-5 h-5 mr-2" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+        <path fill-rule="evenodd" d="M12.707 15.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 111.414 1.414L7.414 9H17a1 1 0 110 2H7.414l5.293 5.293a1 1 0 010 1.414z" clip-rule="evenodd" />
+      </svg>
+      {{ translate(lang, 'common.home') }}
+    </a>
+    <div class="flex items-center gap-4">
+      <a href="/spades" class="text-sm font-semibold text-green-700 hover:text-green-900">{{ translate(lang, 'games.spades.name') }}</a>
+      <a href="/hearts" class="text-sm font-semibold text-rose-700 hover:text-rose-900">{{ translate(lang, 'games.hearts.name') }}</a>
+    </div>
+  </div>
+
+  <div class="max-w-5xl mx-auto">
+    <header class="text-center mb-8">
+      <h1 class="text-4xl sm:text-5xl font-extrabold tracking-tight text-slate-900">{{ translate(lang, 'games.uno.title') }}</h1>
+      <p class="mt-2 text-slate-600">{{ translate(lang, 'games.uno.subtitle') }}</p>
+    </header>
+
+    <!-- SETUP SCREEN -->
+    <div id="setup-screen" class="bg-white rounded-2xl shadow-xl ring-1 ring-slate-200 p-6 sm:p-8 max-w-lg mx-auto">
+      <h2 class="text-xl font-bold text-slate-900 mb-1">{{ translate(lang, 'games.uno.setup_heading') }}</h2>
+      <p class="text-sm text-slate-500 mb-6">{{ translate(lang, 'games.uno.setup_subheading') }}</p>
+
+      <input id="name-input" type="text" maxlength="16" placeholder="{{ translate(lang, 'games.uno.name_placeholder') }}"
+        class="w-full border border-slate-300 rounded-lg px-4 py-3 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-red-500 mb-6">
+
+      <div class="text-xs font-bold uppercase tracking-wide text-slate-500 mb-2">{{ translate(lang, 'games.uno.opponents_label') }}</div>
+      <div class="grid grid-cols-3 gap-3 mb-6">
+        <button type="button" class="opp-btn" data-count="1">{{ translate(lang, 'games.uno.opponents_1') }}</button>
+        <button type="button" class="opp-btn" data-count="2">{{ translate(lang, 'games.uno.opponents_2') }}</button>
+        <button type="button" class="opp-btn" data-count="3">{{ translate(lang, 'games.uno.opponents_3') }}</button>
+      </div>
+
+      <button id="start-game" type="button" class="w-full rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold px-8 py-3 text-lg shadow-lg transition-colors">
+        {{ translate(lang, 'games.uno.start_game') }} 🎴
+      </button>
+    </div>
+
+    <!-- GAME SCREEN -->
+    <div id="game-screen" class="hidden grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div class="lg:col-span-2">
+        <div class="uno-felt rounded-2xl shadow-xl ring-1 ring-slate-900/20 p-4 sm:p-6 flex flex-col items-center gap-4">
+          <div id="seat-N" class="uno-seat">
+            <div class="uno-seat-label"></div>
+            <div id="hand-N" class="uno-mini-row"></div>
+          </div>
+
+          <div class="flex items-center justify-center gap-4 sm:gap-8 w-full">
+            <div id="seat-W" class="uno-seat">
+              <div class="uno-seat-label"></div>
+              <div id="hand-W" class="uno-mini-row"></div>
+            </div>
+
+            <div class="uno-center">
+              <div id="draw-pile" class="uno-drawpile">
+                <div class="uno-back uno-back-lg"></div>
+                <div id="draw-count" class="uno-draw-count">0</div>
+              </div>
+              <div id="discard-pile"></div>
+            </div>
+
+            <div id="seat-E" class="uno-seat">
+              <div class="uno-seat-label"></div>
+              <div id="hand-E" class="uno-mini-row"></div>
+            </div>
+          </div>
+
+          <div id="seat-S" class="uno-seat">
+            <div class="uno-seat-label"></div>
+          </div>
+
+          <div class="flex items-center gap-2 text-xs font-semibold text-emerald-50">
+            <span id="color-dot" class="uno-color-dot"></span>
+            <span id="color-label"></span>
+          </div>
+        </div>
+
+        <div class="mt-4 bg-white rounded-2xl shadow-xl ring-1 ring-slate-200 p-4">
+          <div id="message" class="text-sm font-semibold text-slate-800 min-h-[20px]"></div>
+          <div id="log" class="mt-2 h-20 overflow-y-auto text-xs text-slate-500 space-y-0.5"></div>
+        </div>
+
+        <div class="mt-4 bg-white rounded-2xl shadow-xl ring-1 ring-slate-200 p-4 sm:p-6">
+          <div class="flex items-center justify-between mb-2">
+            <div class="text-xs font-semibold uppercase tracking-wide text-slate-500">{{ translate(lang, 'games.uno.you') }}</div>
+            <div class="flex items-center gap-2">
+              <button id="draw-btn" type="button" class="rounded-lg bg-slate-100 hover:bg-slate-200 disabled:opacity-40 disabled:cursor-not-allowed text-slate-800 font-semibold px-3 py-1.5 text-sm">{{ translate(lang, 'games.uno.draw_card') }}</button>
+              <button id="pass-btn" type="button" class="hidden rounded-lg bg-amber-100 hover:bg-amber-200 text-amber-900 font-semibold px-3 py-1.5 text-sm">{{ translate(lang, 'games.uno.pass_turn') }}</button>
+            </div>
+          </div>
+          <div id="south-hand" class="uno-hand"></div>
+        </div>
+      </div>
+
+      <div class="lg:col-span-1 flex flex-col gap-4">
+        <div class="bg-white rounded-2xl shadow-xl ring-1 ring-slate-200 p-5">
+          <div class="flex items-center justify-between mb-3">
+            <h3 class="text-sm font-bold text-slate-700 uppercase tracking-wide">{{ translate(lang, 'games.uno.scoreboard') }}</h3>
+            <span class="text-[10px] font-semibold uppercase tracking-wide text-slate-400">{{ translate(lang, 'games.uno.total_points') }}</span>
+          </div>
+          <div id="scoreboard" class="space-y-2"></div>
+        </div>
+
+        <div class="bg-white rounded-2xl shadow-xl ring-1 ring-slate-200 p-5">
+          <h3 class="text-sm font-bold text-slate-700 mb-2">{{ translate(lang, 'common.rules') }}</h3>
+          <ul class="text-sm text-slate-600 space-y-1">
+            <li>• {{ translate(lang, 'games.uno.rule_1') }}</li>
+            <li>• {{ translate(lang, 'games.uno.rule_2') }}</li>
+            <li>• {{ translate(lang, 'games.uno.rule_3') }}</li>
+            <li>• {{ translate(lang, 'games.uno.rule_4') }}</li>
+            <li>• {{ translate(lang, 'games.uno.rule_5') }}</li>
+          </ul>
+        </div>
+
+        <div class="bg-white rounded-2xl shadow-xl ring-1 ring-slate-200 p-5 flex gap-2">
+          <button id="change-players-btn" type="button" class="flex-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 font-semibold px-4 py-2 text-sm transition-colors">{{ translate(lang, 'games.uno.change_players') }}</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- COLOR PICK MODAL -->
+<div id="color-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4">
+  <div class="bg-white rounded-2xl shadow-2xl p-6 sm:p-8 max-w-sm w-full text-center">
+    <h2 class="text-xl font-extrabold text-slate-900 mb-6">{{ translate(lang, 'games.uno.choose_color') }}</h2>
+    <div class="grid grid-cols-2 gap-4 justify-items-center">
+      <button type="button" data-color="red" class="color-swatch-btn uno-red"></button>
+      <button type="button" data-color="yellow" class="color-swatch-btn uno-yellow"></button>
+      <button type="button" data-color="green" class="color-swatch-btn uno-green"></button>
+      <button type="button" data-color="blue" class="color-swatch-btn uno-blue"></button>
+    </div>
+  </div>
+</div>
+
+<!-- GENERIC MODAL (round summary / game over) -->
+<div id="modal-overlay" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4">
+  <div class="bg-white rounded-2xl shadow-2xl p-6 sm:p-8 max-w-sm w-full text-center">
+    <h2 id="modal-title" class="text-2xl font-extrabold text-slate-900 mb-2"></h2>
+    <p id="modal-note" class="text-slate-600 mb-4"></p>
+    <div id="modal-table" class="text-left mb-6 space-y-1"></div>
+    <button id="modal-action" type="button" class="w-full rounded-lg bg-red-600 hover:bg-red-700 text-white font-bold px-4 py-2 transition-colors"></button>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+(function () {
+  const I18N = {{ uno_i18n | tojson }};
+
+  function fmt(str, vars) {
+    return String(str).replace(/\{(\w+)\}/g, (_, key) => (key in vars ? vars[key] : `{${key}}`));
+  }
+
+  function escapeHtml(str) {
+    return String(str).replace(/[&<>"']/g, (c) => ({
+      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+    }[c]));
+  }
+
+  const COLORS = ['red', 'yellow', 'green', 'blue'];
+  const COLOR_HEX = { red: '#ef4444', yellow: '#eab308', green: '#16a34a', blue: '#2563eb' };
+  const TARGET_SCORE = 300;
+
+  function shuffle(arr) {
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
+  }
+
+  function buildDeck() {
+    const deck = [];
+    let id = 0;
+    COLORS.forEach((color) => {
+      deck.push({ id: id++, color, type: 'number', value: 0 });
+      for (let v = 1; v <= 9; v++) {
+        deck.push({ id: id++, color, type: 'number', value: v });
+        deck.push({ id: id++, color, type: 'number', value: v });
+      }
+      ['skip', 'reverse', 'draw2'].forEach((type) => {
+        deck.push({ id: id++, color, type });
+        deck.push({ id: id++, color, type });
+      });
+    });
+    for (let i = 0; i < 4; i++) deck.push({ id: id++, color: null, type: 'wild' });
+    for (let i = 0; i < 4; i++) deck.push({ id: id++, color: null, type: 'wild4' });
+    return deck;
+  }
+
+  const G = {
+    players: [],
+    turnIndex: 0,
+    direction: 1,
+    drawPile: [],
+    discardPile: [],
+    currentColor: 'red',
+    scores: {},
+    roundNumber: 0,
+    awaitingHumanPlay: false,
+    hasDrawnThisTurn: false,
+    drawnCardPlayable: false,
+  };
+
+  let logEntries = [];
+  let selectedCount = 2;
+
+  // ---------- DOM refs ----------
+  const setupScreen = document.getElementById('setup-screen');
+  const gameScreen = document.getElementById('game-screen');
+  const nameInput = document.getElementById('name-input');
+  const startGameBtn = document.getElementById('start-game');
+  const changePlayersBtn = document.getElementById('change-players-btn');
+  const oppButtons = Array.from(document.querySelectorAll('.opp-btn'));
+
+  const messageEl = document.getElementById('message');
+  const logEl = document.getElementById('log');
+  const southHandEl = document.getElementById('south-hand');
+  const drawBtn = document.getElementById('draw-btn');
+  const passBtn = document.getElementById('pass-btn');
+  const drawPileEl = document.getElementById('draw-pile');
+  const drawCountEl = document.getElementById('draw-count');
+  const discardPileEl = document.getElementById('discard-pile');
+  const colorDotEl = document.getElementById('color-dot');
+  const colorLabelEl = document.getElementById('color-label');
+  const scoreboardEl = document.getElementById('scoreboard');
+
+  const colorModal = document.getElementById('color-modal');
+  const modalOverlay = document.getElementById('modal-overlay');
+  const modalTitle = document.getElementById('modal-title');
+  const modalNote = document.getElementById('modal-note');
+  const modalTable = document.getElementById('modal-table');
+  const modalAction = document.getElementById('modal-action');
+
+  // ---------- Setup ----------
+  oppButtons.forEach((btn) => {
+    btn.addEventListener('click', () => {
+      selectedCount = parseInt(btn.dataset.count, 10);
+      oppButtons.forEach((b) => b.classList.toggle('selected', b === btn));
+    });
+  });
+  oppButtons[1].classList.add('selected'); // default to 2 opponents
+
+  function seatKeysForCount(count) {
+    if (count === 1) return ['N'];
+    if (count === 2) return ['W', 'E'];
+    return ['W', 'N', 'E'];
+  }
+
+  function buildPlayers(count, humanName) {
+    const seatKeys = seatKeysForCount(count);
+    const seatName = { W: I18N.west, N: I18N.north, E: I18N.east };
+    const players = [{ id: 0, name: humanName, isHuman: true, hand: [], seat: 'S' }];
+    seatKeys.forEach((sk, i) => {
+      players.push({ id: i + 1, name: seatName[sk], isHuman: false, hand: [], seat: sk });
+    });
+    return players;
+  }
+
+  startGameBtn.addEventListener('click', () => {
+    const name = nameInput.value.trim() || I18N.you;
+    G.players = buildPlayers(selectedCount, name);
+    G.scores = {};
+    G.players.forEach((_, i) => { G.scores[i] = 0; });
+    G.roundNumber = 0;
+    logEntries = [];
+    setupScreen.classList.add('hidden');
+    gameScreen.classList.remove('hidden');
+    ['N', 'W', 'E'].forEach((key) => {
+      const el = document.getElementById(`seat-${key}`);
+      const used = G.players.some((p) => p.seat === key);
+      el.classList.toggle('uno-hidden-seat', !used);
+    });
+    startRound();
+  });
+
+  changePlayersBtn.addEventListener('click', backToSetup);
+
+  function backToSetup() {
+    colorModal.classList.add('hidden');
+    modalOverlay.classList.add('hidden');
+    gameScreen.classList.add('hidden');
+    setupScreen.classList.remove('hidden');
+  }
+
+  // ---------- Helpers ----------
+  function nextIndex(idx) {
+    return (idx + G.direction + G.players.length) % G.players.length;
+  }
+
+  function topCard() {
+    return G.discardPile[G.discardPile.length - 1];
+  }
+
+  function refillDrawPileIfNeeded() {
+    if (G.drawPile.length === 0 && G.discardPile.length > 1) {
+      const top = G.discardPile.pop();
+      G.drawPile = shuffle(G.discardPile);
+      G.discardPile = [top];
+    }
+  }
+
+  function drawCards(idx, n) {
+    const drawn = [];
+    for (let i = 0; i < n; i++) {
+      refillDrawPileIfNeeded();
+      if (G.drawPile.length === 0) break;
+      drawn.push(G.drawPile.pop());
+    }
+    G.players[idx].hand.push(...drawn);
+    return drawn;
+  }
+
+  function isPlayable(card, top, currentColor) {
+    if (card.type === 'wild' || card.type === 'wild4') return true;
+    if (card.color === currentColor) return true;
+    if (card.type === 'number' && top.type === 'number') return card.value === top.value;
+    return card.type === top.type && card.type !== 'number';
+  }
+
+  function legalMoves(hand, top, currentColor) {
+    const hasColorMatch = hand.some((c) => c.color === currentColor);
+    return hand.filter((c) => {
+      if (c.type === 'wild4') return !hasColorMatch;
+      return isPlayable(c, top, currentColor);
+    });
+  }
+
+  function handValue(hand) {
+    return hand.reduce((sum, c) => {
+      if (c.type === 'number') return sum + c.value;
+      if (c.type === 'wild' || c.type === 'wild4') return sum + 50;
+      return sum + 20;
+    }, 0);
+  }
+
+  function log(msg) {
+    logEntries.push(msg);
+    if (logEntries.length > 40) logEntries.shift();
+    logEl.innerHTML = logEntries.map((m) => `<div>${escapeHtml(m)}</div>`).join('');
+    logEl.scrollTop = logEl.scrollHeight;
+  }
+
+  function setMessage(msg) {
+    messageEl.textContent = msg;
+    log(msg);
+  }
+
+  function seatName(idx) {
+    return G.players[idx].isHuman ? I18N.you : G.players[idx].name;
+  }
+
+  // ---------- Round setup ----------
+  function startRound() {
+    G.roundNumber += 1;
+    const deck = shuffle(buildDeck());
+    G.players.forEach((p) => { p.hand = []; });
+    for (let i = 0; i < 7; i++) {
+      G.players.forEach((p) => { p.hand.push(deck.pop()); });
+    }
+    G.drawPile = deck;
+    G.discardPile = [G.drawPile.pop()];
+    const starter = G.discardPile[0];
+
+    G.hasDrawnThisTurn = false;
+    logEntries = [];
+    log(`— Round ${G.roundNumber} —`);
+
+    const leaderIdx = (G.roundNumber - 1) % G.players.length;
+    applyStartCardEffect(leaderIdx, starter);
+
+    renderAll();
+    startTurn();
+  }
+
+  function applyStartCardEffect(leaderIdx, card) {
+    G.direction = 1;
+    G.turnIndex = leaderIdx;
+    if (card.type === 'wild' || card.type === 'wild4') {
+      G.currentColor = COLORS[Math.floor(Math.random() * COLORS.length)];
+      return;
+    }
+    G.currentColor = card.color;
+    if (card.type === 'skip') {
+      log(fmt(I18N.msg_skip, { name: seatName(leaderIdx) }));
+      G.turnIndex = nextIndex(leaderIdx);
+    } else if (card.type === 'reverse') {
+      G.direction = -1;
+      G.turnIndex = leaderIdx;
+      log(I18N.msg_reverse);
+    } else if (card.type === 'draw2') {
+      drawCards(leaderIdx, 2);
+      log(fmt(I18N.msg_draw_n, { name: seatName(leaderIdx), n: 2 }));
+      G.turnIndex = nextIndex(leaderIdx);
+    }
+  }
+
+  // ---------- Turn loop ----------
+  function startTurn() {
+    G.hasDrawnThisTurn = false;
+    G.drawnCardPlayable = false;
+    const player = G.players[G.turnIndex];
+    if (player.isHuman) {
+      G.awaitingHumanPlay = true;
+      setMessage(I18N.your_turn);
+      renderAll();
+    } else {
+      G.awaitingHumanPlay = false;
+      setMessage(fmt(I18N.ai_thinking, { name: player.name }));
+      renderAll();
+      setTimeout(() => aiTakeTurn(G.turnIndex), 700 + Math.random() * 500);
+    }
+  }
+
+  function aiChooseColor(hand) {
+    const counts = { red: 0, yellow: 0, green: 0, blue: 0 };
+    hand.forEach((c) => { if (c.color) counts[c.color] += 1; });
+    let best = COLORS[0];
+    let bestCount = -1;
+    COLORS.forEach((c) => { if (counts[c] > bestCount) { bestCount = counts[c]; best = c; } });
+    return best;
+  }
+
+  function aiChooseCard(idx, legal) {
+    const victim = nextIndex(idx);
+    const victimLow = G.players[victim].hand.length <= 2;
+    if (victimLow) {
+      const disruptive = legal.find((c) => c.type === 'wild4' || c.type === 'draw2') ||
+        legal.find((c) => c.type === 'skip' || c.type === 'reverse');
+      if (disruptive) return disruptive;
+    }
+    const nonWild = legal.filter((c) => c.type !== 'wild' && c.type !== 'wild4');
+    const pool = nonWild.length ? nonWild : legal;
+    return pool[Math.floor(Math.random() * pool.length)];
+  }
+
+  function aiTakeTurn(idx) {
+    const player = G.players[idx];
+    const top = topCard();
+    const legal = legalMoves(player.hand, top, G.currentColor);
+    if (legal.length === 0) {
+      drawCards(idx, 1);
+      log(fmt(I18N.msg_draw, { name: player.name }));
+      renderAll();
+      const newLegal = legalMoves(player.hand, top, G.currentColor);
+      const justDrawn = player.hand[player.hand.length - 1];
+      const playable = newLegal.some((c) => justDrawn && c.id === justDrawn.id);
+      setTimeout(() => {
+        if (playable) {
+          playCardFlow(idx, justDrawn);
+        } else {
+          G.turnIndex = nextIndex(G.turnIndex);
+          startTurn();
+        }
+      }, 600);
+      return;
+    }
+    const card = aiChooseCard(idx, legal);
+    setTimeout(() => playCardFlow(idx, card), 350);
+  }
+
+  function playCardFlow(idx, card) {
+    const player = G.players[idx];
+    player.hand = player.hand.filter((c) => c.id !== card.id);
+    G.discardPile.push(card);
+    setMessage(fmt(I18N.msg_play, { name: seatName(idx), card: cardLabel(card) }));
+    renderAll();
+
+    if (player.hand.length === 0) {
+      setTimeout(() => finishRound(idx), 900);
+      return;
+    }
+    if (player.hand.length === 1) {
+      log(fmt(I18N.msg_uno, { name: seatName(idx) }));
+    }
+
+    if (card.type === 'wild' || card.type === 'wild4') {
+      if (player.isHuman) {
+        showColorModal((color) => {
+          G.currentColor = color;
+          renderAll();
+          resolveEffectAndAdvance(idx, card);
+        });
+        return;
+      }
+      G.currentColor = aiChooseColor(player.hand);
+      renderAll();
+      resolveEffectAndAdvance(idx, card);
+      return;
+    }
+
+    G.currentColor = card.color;
+    resolveEffectAndAdvance(idx, card);
+  }
+
+  function resolveEffectAndAdvance(idx, card) {
+    const n = G.players.length;
+    if (card.type === 'skip') {
+      const skipped = nextIndex(idx);
+      log(fmt(I18N.msg_skip, { name: seatName(skipped) }));
+      G.turnIndex = nextIndex(skipped);
+    } else if (card.type === 'reverse') {
+      if (n === 2) {
+        log(I18N.msg_reverse);
+        G.turnIndex = idx;
+      } else {
+        G.direction *= -1;
+        log(I18N.msg_reverse);
+        G.turnIndex = nextIndex(idx);
+      }
+    } else if (card.type === 'draw2') {
+      const victim = nextIndex(idx);
+      drawCards(victim, 2);
+      log(fmt(I18N.msg_draw_n, { name: seatName(victim), n: 2 }));
+      G.turnIndex = nextIndex(victim);
+    } else if (card.type === 'wild4') {
+      const victim = nextIndex(idx);
+      drawCards(victim, 4);
+      log(fmt(I18N.msg_draw_n, { name: seatName(victim), n: 4 }));
+      G.turnIndex = nextIndex(victim);
+    } else {
+      G.turnIndex = nextIndex(idx);
+    }
+    renderAll();
+    setTimeout(startTurn, 500);
+  }
+
+  // ---------- Human interaction ----------
+  function onHumanCardClick(card) {
+    if (!G.awaitingHumanPlay) return;
+    const top = topCard();
+    const legal = legalMoves(G.players[0].hand, top, G.currentColor);
+    if (!legal.some((c) => c.id === card.id)) return;
+    G.awaitingHumanPlay = false;
+    playCardFlow(0, card);
+  }
+
+  function onDrawClick() {
+    if (!G.awaitingHumanPlay || G.hasDrawnThisTurn) return;
+    const top = topCard();
+    const legalBefore = legalMoves(G.players[0].hand, top, G.currentColor);
+    if (legalBefore.length > 0) return;
+    const drawn = drawCards(0, 1);
+    G.hasDrawnThisTurn = true;
+    log(fmt(I18N.msg_draw, { name: I18N.you }));
+    renderAll();
+    const legalAfter = legalMoves(G.players[0].hand, top, G.currentColor);
+    const playable = drawn.length && legalAfter.some((c) => c.id === drawn[0].id);
+    G.drawnCardPlayable = playable;
+    renderPassBtn();
+    if (!playable) {
+      setMessage(I18N.msg_no_moves);
+      setTimeout(() => {
+        G.awaitingHumanPlay = false;
+        G.turnIndex = nextIndex(G.turnIndex);
+        startTurn();
+      }, 900);
+    }
+  }
+
+  function onPassClick() {
+    if (!G.awaitingHumanPlay || !G.hasDrawnThisTurn) return;
+    G.awaitingHumanPlay = false;
+    G.turnIndex = nextIndex(G.turnIndex);
+    startTurn();
+  }
+
+  drawBtn.addEventListener('click', onDrawClick);
+  passBtn.addEventListener('click', onPassClick);
+  drawPileEl.addEventListener('click', onDrawClick);
+
+  // ---------- Color modal ----------
+  function showColorModal(onChoose) {
+    colorModal.classList.remove('hidden');
+    const handler = (e) => {
+      const btn = e.currentTarget;
+      colorModal.classList.add('hidden');
+      Array.from(colorModal.querySelectorAll('.color-swatch-btn')).forEach((b) => b.removeEventListener('click', handler));
+      onChoose(btn.dataset.color);
+    };
+    Array.from(colorModal.querySelectorAll('.color-swatch-btn')).forEach((b) => b.addEventListener('click', handler));
+  }
+
+  // ---------- Round / game end ----------
+  function finishRound(winnerIdx) {
+    G.awaitingHumanPlay = false;
+    let pts = 0;
+    G.players.forEach((p, i) => { if (i !== winnerIdx) pts += handValue(p.hand); });
+    G.scores[winnerIdx] = (G.scores[winnerIdx] || 0) + pts;
+    renderScoreboard();
+
+    if (G.scores[winnerIdx] >= TARGET_SCORE) {
+      showGameOverModal(winnerIdx);
+    } else {
+      showRoundSummaryModal(winnerIdx, pts);
+    }
+  }
+
+  function scoreRowsHtml(rows) {
+    return rows.map((r) => `
+      <div class="flex items-center justify-between rounded-lg px-3 py-2 ${r.highlight ? 'bg-red-50 ring-1 ring-red-200' : 'bg-slate-50'}">
+        <span class="font-semibold text-slate-800">${escapeHtml(r.label)}</span>
+        <span class="text-slate-600 text-sm">${escapeHtml(r.extra || '')}</span>
+        <span class="font-bold text-slate-900">${r.total}</span>
+      </div>
+    `).join('');
+  }
+
+  function openModal({ title, note, rows, actionLabel, onAction }) {
+    modalTitle.textContent = title;
+    modalNote.textContent = note || '';
+    modalNote.classList.toggle('hidden', !note);
+    modalTable.innerHTML = scoreRowsHtml(rows);
+    modalAction.textContent = actionLabel;
+    modalAction.onclick = () => {
+      modalOverlay.classList.add('hidden');
+      onAction();
+    };
+    modalOverlay.classList.remove('hidden');
+  }
+
+  function showRoundSummaryModal(winnerIdx, pts) {
+    const maxScore = Math.max(...G.players.map((_, i) => G.scores[i]));
+    const rows = G.players.map((p, i) => ({
+      label: seatName(i),
+      extra: i === winnerIdx ? `+${pts}` : '',
+      total: G.scores[i],
+      highlight: G.scores[i] === maxScore,
+    }));
+    openModal({
+      title: winnerIdx === 0 ? I18N.you_win_round : fmt(I18N.round_win, { name: seatName(winnerIdx) }),
+      note: I18N.round_summary,
+      rows,
+      actionLabel: I18N.next_round,
+      onAction: startRound,
+    });
+  }
+
+  function showGameOverModal(winnerIdx) {
+    const rows = G.players.map((p, i) => ({
+      label: seatName(i),
+      extra: '',
+      total: G.scores[i],
+      highlight: i === winnerIdx,
+    })).sort((a, b) => b.total - a.total);
+    openModal({
+      title: winnerIdx === 0 ? I18N.win_title : fmt(I18N.lose_title, { name: seatName(winnerIdx) }),
+      note: I18N.final_scores,
+      rows,
+      actionLabel: I18N.play_again,
+      onAction: () => {
+        G.scores = {};
+        G.players.forEach((_, i) => { G.scores[i] = 0; });
+        G.roundNumber = 0;
+        startRound();
+      },
+    });
+  }
+
+  // ---------- Rendering ----------
+  function cardLabel(card) {
+    if (card.type === 'number') return String(card.value);
+    if (card.type === 'skip') return '⦸';
+    if (card.type === 'reverse') return '⇄';
+    if (card.type === 'draw2') return '+2';
+    if (card.type === 'wild') return '★';
+    if (card.type === 'wild4') return '+4';
+    return '';
+  }
+
+  function cardColorClass(card, overrideColor) {
+    if (card.type === 'wild' || card.type === 'wild4') {
+      return overrideColor ? `uno-${overrideColor}` : 'uno-wild';
+    }
+    return `uno-${card.color}`;
+  }
+
+  function createCardEl(card, { playable, dim, overrideColor } = {}) {
+    const el = document.createElement('div');
+    el.className = `uno-card ${cardColorClass(card, overrideColor)}${playable ? ' uno-playable' : ''}${dim ? ' uno-dim' : ''}`;
+    el.innerHTML = `<div class="uno-card-face">${cardLabel(card)}</div>`;
+    return el;
+  }
+
+  function renderSouthHand() {
+    southHandEl.innerHTML = '';
+    const hand = G.players[0].hand;
+    const top = topCard();
+    const legalIds = G.awaitingHumanPlay ? new Set(legalMoves(hand, top, G.currentColor).map((c) => c.id)) : new Set();
+    hand.forEach((card) => {
+      const playable = G.awaitingHumanPlay && legalIds.has(card.id);
+      const dim = G.awaitingHumanPlay && !playable;
+      const el = createCardEl(card, { playable, dim });
+      if (playable) el.addEventListener('click', () => onHumanCardClick(card));
+      southHandEl.appendChild(el);
+    });
+  }
+
+  function renderOpponentHand(idx) {
+    const player = G.players[idx];
+    const el = document.getElementById(`hand-${player.seat}`);
+    el.innerHTML = '';
+    for (let i = 0; i < player.hand.length; i++) {
+      const back = document.createElement('div');
+      back.className = 'uno-back';
+      el.appendChild(back);
+    }
+  }
+
+  function renderSeats() {
+    G.players.forEach((p, i) => {
+      const seatEl = document.getElementById(`seat-${p.seat}`);
+      const labelEl = seatEl.querySelector('.uno-seat-label');
+      const unoFlair = p.hand.length === 1 ? `<span class="uno-seat-uno">UNO!</span>` : '';
+      labelEl.innerHTML = `${escapeHtml(p.name)} (${p.hand.length})${unoFlair}`;
+      seatEl.classList.toggle('uno-active', i === G.turnIndex);
+      if (!p.isHuman) renderOpponentHand(i);
+    });
+  }
+
+  function renderDiscard() {
+    discardPileEl.innerHTML = '';
+    const top = topCard();
+    if (!top) return;
+    discardPileEl.appendChild(createCardEl(top, { overrideColor: G.currentColor }));
+  }
+
+  function renderDrawPile() {
+    drawCountEl.textContent = String(G.drawPile.length);
+    const canDraw = G.awaitingHumanPlay && !G.hasDrawnThisTurn &&
+      legalMoves(G.players[0].hand, topCard(), G.currentColor).length === 0;
+    drawPileEl.classList.toggle('uno-draw-active', canDraw);
+    drawBtn.disabled = !canDraw;
+  }
+
+  function renderColorIndicator() {
+    colorDotEl.style.background = COLOR_HEX[G.currentColor];
+    colorLabelEl.textContent = I18N[`color_${G.currentColor}`];
+  }
+
+  function renderScoreboard() {
+    const maxScore = Math.max(0, ...G.players.map((_, i) => G.scores[i] || 0));
+    scoreboardEl.innerHTML = G.players.map((p, i) => `
+      <div class="flex items-center justify-between rounded-lg px-3 py-2 ${(G.scores[i] || 0) === maxScore && maxScore > 0 ? 'bg-red-50 ring-1 ring-red-200' : 'bg-slate-50'}">
+        <span class="font-semibold text-slate-800 text-sm">${escapeHtml(seatName(i))}</span>
+        <span class="font-bold text-slate-900">${G.scores[i] || 0}</span>
+      </div>
+    `).join('');
+  }
+
+  function renderPassBtn() {
+    passBtn.classList.toggle('hidden', !(G.awaitingHumanPlay && G.hasDrawnThisTurn && G.drawnCardPlayable));
+  }
+
+  function renderAll() {
+    renderSeats();
+    renderSouthHand();
+    renderDiscard();
+    renderDrawPile();
+    renderColorIndicator();
+    renderScoreboard();
+    renderPassBtn();
+  }
+})();
+</script>
+{% endblock %}

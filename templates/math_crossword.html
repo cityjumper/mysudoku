@@ -6,17 +6,13 @@
     <style>
         .mc-grid {
             display: grid;
-            grid-template-columns: repeat(5, 64px);
-            grid-template-rows: repeat(5, 64px);
             gap: 4px;
-        }
-        @media (min-width: 640px) {
-            .mc-grid {
-                grid-template-columns: repeat(5, 78px);
-                grid-template-rows: repeat(5, 78px);
-            }
+            --mc-cell: 78px;
+            --mc-font: 1.35rem;
         }
         .mc-cell {
+            width: var(--mc-cell);
+            height: var(--mc-cell);
             display: flex;
             align-items: center;
             justify-content: center;
@@ -27,7 +23,7 @@
         }
         .mc-op, .mc-eq {
             font-weight: 800;
-            font-size: 1.5rem;
+            font-size: var(--mc-font);
             background: #eef2ff;
             color: #4338ca;
         }
@@ -43,7 +39,7 @@
             background: white;
             text-align: center;
             font-weight: 700;
-            font-size: 1.35rem;
+            font-size: var(--mc-font);
             color: #0f172a;
         }
         .mc-number input:focus {
@@ -69,7 +65,7 @@
             background: #f1f5f9;
             color: #334155;
             font-weight: 800;
-            font-size: 1.35rem;
+            font-size: var(--mc-font);
         }
     </style>
 {% endblock %}
@@ -104,6 +100,10 @@
                             <div class="text-xs font-semibold uppercase text-slate-500">Best</div>
                             <div id="best-value" class="text-xl font-black text-purple-700">--:--</div>
                         </div>
+                        <div class="rounded-lg bg-white ring-1 ring-slate-200 px-3 py-2">
+                            <div class="text-xs font-semibold uppercase text-slate-500">Size</div>
+                            <div id="size-value" class="text-xl font-black text-slate-700">3×3</div>
+                        </div>
                     </div>
                     <div class="flex flex-wrap items-center gap-2">
                         <select id="difficulty-select" title="Difficulty" class="rounded-lg bg-white ring-1 ring-slate-300 text-slate-800 font-semibold px-3 py-2">
@@ -126,7 +126,7 @@
                 <div class="mt-5 grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm text-slate-700">
                     <div class="bg-white rounded-lg ring-1 ring-slate-200 p-3">
                         <p class="font-semibold text-slate-900">How to Play</p>
-                        <p class="mt-1">Every full row and column (skipping the black squares) reads as one equation: number, operator, number, equals sign, result. Grey squares are given — fill in the white squares so all six equations check out, and there's only one way to do it.</p>
+                        <p class="mt-1">Every full row and column (skipping the black squares) reads as one equation, worked left to right: number, operator, number, operator, ... equals sign, result. Grids aren't always square — harder difficulties bring bigger and more rectangular boards. Grey squares are given — fill in the white squares so every equation checks out, and there's only one way to do it.</p>
                     </div>
                     <div class="bg-white rounded-lg ring-1 ring-slate-200 p-3">
                         <p class="font-semibold text-slate-900">Controls</p>
@@ -140,29 +140,43 @@
 
 {% block extra_scripts %}
     <script>
-        const NUMBER_COORDS = [[0,0],[0,2],[0,4],[2,0],[2,2],[2,4],[4,0],[4,2],[4,4]];
-        const LETTER_COORDS = { A: [0,0], B: [0,2], C: [0,4], D: [2,0], E: [2,2], F: [2,4], G: [4,0], H: [4,2], I: [4,4] };
-        const ROOT_KEYS = ['A', 'B', 'D', 'E'];
-        const DERIVED_KEYS = ['C', 'F', 'G', 'H', 'I'];
-
         const DIFFICULTY_CONFIG = {
-            easy: { label: 'Addition Only', ops: ['+'], min: 1, max: 9 },
-            medium: { label: 'Addition & Subtraction', ops: ['+', '-'], min: 1, max: 12 },
-            hard: { label: 'Add, Subtract, Multiply & Divide', ops: ['+', '-', '×', '÷'], min: 1, max: 9 },
+            easy: {
+                label: 'Addition Only',
+                ops: ['+'],
+                min: 1,
+                max: 9,
+                sizes: [[3, 3], [3, 4], [4, 3]],
+            },
+            medium: {
+                label: 'Addition & Subtraction',
+                ops: ['+', '-'],
+                min: 1,
+                max: 12,
+                sizes: [[3, 4], [4, 3], [4, 4], [3, 5], [5, 3]],
+            },
+            hard: {
+                label: 'Add, Subtract, Multiply & Divide',
+                ops: ['+', '-', '×', '÷'],
+                min: 1,
+                max: 9,
+                sizes: [[4, 4], [4, 5], [5, 4], [5, 5], [3, 5], [5, 3]],
+            },
         };
-        const FALLBACK_CONFIG = { ops: ['+'], min: 1, max: 9 };
-        const BEST_KEY_PREFIX = 'math-crossword:best:v1:';
+        const FALLBACK_CONFIG = { ops: ['+'], min: 1, max: 9, sizes: [[3, 3]] };
+        const BEST_KEY_PREFIX = 'math-crossword:best:v2:';
 
         const boardEl = document.getElementById('crossword-board');
         const statusEl = document.getElementById('status');
         const timerEl = document.getElementById('timer-value');
         const bestEl = document.getElementById('best-value');
+        const sizeEl = document.getElementById('size-value');
         const difficultySelectEl = document.getElementById('difficulty-select');
         const newPuzzleBtn = document.getElementById('new-puzzle');
         const checkPuzzleBtn = document.getElementById('check-puzzle');
         const revealBtn = document.getElementById('reveal-solution');
 
-        let cells = null;
+        let puzzle = null; // { R, C, board }
         let inputs = {};
         let solved = false;
         let revealed = false;
@@ -193,67 +207,68 @@
             return null;
         }
 
-        function buildBoard(v) {
-            const grid = Array.from({ length: 5 }, () => Array(5).fill(null));
-            grid[0][0] = { type: 'number', solution: v.n00 };
-            grid[0][2] = { type: 'number', solution: v.n02 };
-            grid[0][4] = { type: 'number', solution: v.v04 };
-            grid[2][0] = { type: 'number', solution: v.n20 };
-            grid[2][2] = { type: 'number', solution: v.n22 };
-            grid[2][4] = { type: 'number', solution: v.v24 };
-            grid[4][0] = { type: 'number', solution: v.v40 };
-            grid[4][2] = { type: 'number', solution: v.v42 };
-            grid[4][4] = { type: 'number', solution: v.v44 };
+        // Evaluates a chain of numbers strictly left to right (no operator
+        // precedence), e.g. [a,b,c] with ops [op0,op1] gives (a op0 b) op1 c.
+        function evalChain(nums, ops) {
+            let acc = nums[0];
+            for (let k = 0; k < ops.length; k++) {
+                acc = safeCompute(acc, ops[k], nums[k + 1]);
+                if (acc === null) return null;
+            }
+            return acc;
+        }
 
-            grid[0][1] = { type: 'op', symbol: v.opRow0 };
-            grid[2][1] = { type: 'op', symbol: v.opRow2 };
-            grid[4][1] = { type: 'op', symbol: v.opRow4 };
-            grid[0][3] = { type: 'eq', symbol: '=' };
-            grid[2][3] = { type: 'eq', symbol: '=' };
-            grid[4][3] = { type: 'eq', symbol: '=' };
+        function cartesianPower(pool, n) {
+            if (n === 0) return [[]];
+            const rest = cartesianPower(pool, n - 1);
+            const out = [];
+            for (const item of pool) {
+                for (const r of rest) out.push([item, ...r]);
+            }
+            return out;
+        }
 
-            grid[1][0] = { type: 'op', symbol: v.opCol0 };
-            grid[1][2] = { type: 'op', symbol: v.opCol2 };
-            grid[1][4] = { type: 'op', symbol: v.opCol4 };
-            grid[3][0] = { type: 'eq', symbol: '=' };
-            grid[3][2] = { type: 'eq', symbol: '=' };
-            grid[3][4] = { type: 'eq', symbol: '=' };
+        // Exhaustively searches operator combinations (length `count`, drawn from
+        // opsPool) for one that makes evalChain(operands, combo) equal target.
+        function searchOpsForTarget(operands, opsPool, target, count) {
+            for (const combo of shuffle(cartesianPower(opsPool, count))) {
+                if (evalChain(operands, combo) === target) return combo;
+            }
+            return null;
+        }
 
-            grid[1][1] = { type: 'blocked' };
-            grid[1][3] = { type: 'blocked' };
-            grid[3][1] = { type: 'blocked' };
-            grid[3][3] = { type: 'blocked' };
+        // Builds the display grid: number cells sit at even (row, col); operator
+        // cells sit between them; the last connector in each row/column is "=";
+        // cells at odd row AND odd column are unused "black squares".
+        function buildBoard(R, C, nums, rowOps, colOps) {
+            const displayRows = 2 * R - 1;
+            const displayCols = 2 * C - 1;
+            const grid = Array.from({ length: displayRows }, () => Array(displayCols).fill(null));
 
+            for (let i = 0; i < R; i++) {
+                for (let j = 0; j < C; j++) {
+                    grid[2 * i][2 * j] = { type: 'number', solution: nums[i][j], given: false };
+                }
+            }
+            for (let i = 0; i < R; i++) {
+                for (let k = 0; k < C - 1; k++) {
+                    const isEq = k === C - 2;
+                    grid[2 * i][2 * k + 1] = { type: isEq ? 'eq' : 'op', symbol: isEq ? '=' : rowOps[i][k] };
+                }
+            }
+            for (let j = 0; j < C; j++) {
+                for (let k = 0; k < R - 1; k++) {
+                    const isEq = k === R - 2;
+                    grid[2 * k + 1][2 * j] = { type: isEq ? 'eq' : 'op', symbol: isEq ? '=' : colOps[j][k] };
+                }
+            }
+            for (let i = 0; i < R - 1; i++) {
+                for (let j = 0; j < C - 1; j++) {
+                    grid[2 * i + 1][2 * j + 1] = { type: 'blocked' };
+                }
+            }
             return grid;
         }
-
-        function deriveFull(roots, ops) {
-            const { A, B, D, E } = roots;
-            const C = safeCompute(A, ops.row0, B);
-            if (C === null) return null;
-            const F = safeCompute(D, ops.row2, E);
-            if (F === null) return null;
-            const G = safeCompute(A, ops.col0, D);
-            if (G === null) return null;
-            const H = safeCompute(B, ops.col2, E);
-            if (H === null) return null;
-            const I1 = safeCompute(G, ops.row4, H);
-            if (I1 === null) return null;
-            const I2 = safeCompute(C, ops.col4, F);
-            if (I2 === null || I1 !== I2) return null;
-            return { A, B, C, D, E, F, G, H, I: I1 };
-        }
-
-        // Each derived cell (C, F, G, H) links two root cells together via a fixed
-        // operator, e.g. C = A op B. These are the only edges that can pin down a
-        // blank root's value (I is derived from G/H or C/F, never from a root
-        // directly, so it never helps solve a root and is left out here).
-        const ROOT_EDGES = [
-            { key: 'C', a: 'A', b: 'B', opKey: 'row0' },
-            { key: 'F', a: 'D', b: 'E', opKey: 'row2' },
-            { key: 'G', a: 'A', b: 'D', opKey: 'col0' },
-            { key: 'H', a: 'B', b: 'E', opKey: 'col2' },
-        ];
 
         // Inverts a op b = target to solve for whichever side isn't known.
         // Returns null if the operator makes that inversion ambiguous or
@@ -269,72 +284,119 @@
             return null;
         }
 
-        // Determines whether the root cells not already anchored (given) can be
-        // deduced with certainty from the currently-visible derived clues, by
-        // propagating known values across the C/F/G/H equation edges. This is an
-        // exact algebraic check (not a bounded search), so it correctly accounts
-        // for the fact that a player could type any number, not just ones inside
-        // the puzzle's original generation range.
-        function canResolveRoots(anchors, ops, trueValues, givenEdgeKeys) {
-            const known = { ...anchors };
+        // Solves for the single missing entry (at index m) in a chain, given all
+        // other entries, the operators, and the chain's final target. Works by
+        // reducing the target backward through the known tail of the chain, then
+        // (if needed) forward through the known head, meeting at the gap.
+        function solveChainMissing(nums, ops, target, m) {
+            let req = target;
+            for (let k = nums.length - 1; k > m; k--) {
+                req = solveOther(ops[k - 1], req, nums[k], false);
+                if (req === null) return null;
+            }
+            if (m === 0) return req;
+            let acc = nums[0];
+            for (let k = 1; k < m; k++) {
+                acc = safeCompute(acc, ops[k - 1], nums[k]);
+                if (acc === null) return null;
+            }
+            return solveOther(ops[m - 1], req, acc, true);
+        }
+
+        // A row i (i < R-1) links its C-1 root cells via rowOps[i] to reach the
+        // derived cell at (i, C-1); a column j (j < C-1) links its R-1 root cells
+        // via colOps[j] to reach (R-1, j). These are the only equations that can
+        // pin down a blank root (the last row/column are fully derived and never
+        // touch a root directly, so they're irrelevant to root-uniqueness).
+        function canResolveRoots(R, C, nums, rowOps, colOps, blankedRoots, givenDerived) {
+            const known = {};
+            for (let i = 0; i < R - 1; i++) {
+                for (let j = 0; j < C - 1; j++) {
+                    const key = `${i},${j}`;
+                    if (!blankedRoots.has(key)) known[key] = nums[i][j];
+                }
+            }
+
+            function tryEdge(nodeKeys, ops, target) {
+                let unknownIdx = -1;
+                let unknownCount = 0;
+                const vals = nodeKeys.map((k, idx) => {
+                    if (known[k] === undefined) {
+                        unknownCount++;
+                        unknownIdx = idx;
+                        return undefined;
+                    }
+                    return known[k];
+                });
+                if (unknownCount !== 1) return false;
+                const solved = solveChainMissing(vals, ops, target, unknownIdx);
+                if (solved === null) return false;
+                known[nodeKeys[unknownIdx]] = solved;
+                return true;
+            }
+
             let changed = true;
             while (changed) {
                 changed = false;
-                for (const edge of ROOT_EDGES) {
-                    if (!givenEdgeKeys.has(edge.key)) continue;
-                    const target = trueValues[edge.key];
-                    const aKnown = known[edge.a] !== undefined;
-                    const bKnown = known[edge.b] !== undefined;
-                    if (aKnown && !bKnown) {
-                        const v = solveOther(ops[edge.opKey], target, known[edge.a], true);
-                        if (v !== null) { known[edge.b] = v; changed = true; }
-                    } else if (bKnown && !aKnown) {
-                        const v = solveOther(ops[edge.opKey], target, known[edge.b], false);
-                        if (v !== null) { known[edge.a] = v; changed = true; }
-                    }
+                for (let i = 0; i < R - 1; i++) {
+                    if (!givenDerived.has(`${i},${C - 1}`)) continue;
+                    const nodeKeys = [];
+                    for (let j = 0; j < C - 1; j++) nodeKeys.push(`${i},${j}`);
+                    if (tryEdge(nodeKeys, rowOps[i], nums[i][C - 1])) changed = true;
+                }
+                for (let j = 0; j < C - 1; j++) {
+                    if (!givenDerived.has(`${R - 1},${j}`)) continue;
+                    const nodeKeys = [];
+                    for (let i = 0; i < R - 1; i++) nodeKeys.push(`${i},${j}`);
+                    if (tryEdge(nodeKeys, colOps[j], nums[R - 1][j])) changed = true;
                 }
             }
-            return ROOT_KEYS.every((k) => known[k] !== undefined);
+
+            for (let i = 0; i < R - 1; i++) {
+                for (let j = 0; j < C - 1; j++) {
+                    if (known[`${i},${j}`] === undefined) return false;
+                }
+            }
+            return true;
         }
 
         // Greedily blanks as many cells as possible (roots first, then derived
-        // cells) while the propagation check confirms the remaining clues still
-        // pin down every root uniquely. Whatever is left in givenSet gets prefilled.
-        function computeMinimalGivens(board, ops) {
-            const trueValues = {};
-            for (const key of Object.keys(LETTER_COORDS)) {
-                const [r, c] = LETTER_COORDS[key];
-                trueValues[key] = board[r][c].solution;
+        // cells) while canResolveRoots confirms the remaining clues still pin
+        // down every root uniquely. Whatever is left in givenSet gets prefilled.
+        function computeMinimalGivens(R, C, nums, rowOps, colOps) {
+            const givenSet = new Set();
+            for (let i = 0; i < R; i++) {
+                for (let j = 0; j < C; j++) givenSet.add(`${i},${j}`);
             }
 
-            const givenSet = new Set(Object.keys(LETTER_COORDS));
+            const rootKeys = [];
+            for (let i = 0; i < R - 1; i++) {
+                for (let j = 0; j < C - 1; j++) rootKeys.push(`${i},${j}`);
+            }
+            const derivedKeys = [];
+            for (let i = 0; i < R - 1; i++) derivedKeys.push(`${i},${C - 1}`);
+            for (let j = 0; j < C - 1; j++) derivedKeys.push(`${R - 1},${j}`);
+            derivedKeys.push(`${R - 1},${C - 1}`);
+
             const blankedRoots = new Set();
 
-            function anchorsFor(trialBlankedRoots) {
-                const anchors = {};
-                ROOT_KEYS.forEach((k) => {
-                    if (!trialBlankedRoots.has(k)) anchors[k] = trueValues[k];
-                });
-                return anchors;
+            function derivedGivenFrom(set) {
+                return new Set(derivedKeys.filter((k) => set.has(k)));
             }
 
-            function edgesFor(trialGivenSet) {
-                return new Set(['C', 'F', 'G', 'H'].filter((k) => trialGivenSet.has(k)));
-            }
-
-            for (const key of shuffle(ROOT_KEYS)) {
+            for (const key of shuffle(rootKeys)) {
                 const trialBlanked = new Set(blankedRoots);
                 trialBlanked.add(key);
-                if (canResolveRoots(anchorsFor(trialBlanked), ops, trueValues, edgesFor(givenSet))) {
+                if (canResolveRoots(R, C, nums, rowOps, colOps, trialBlanked, derivedGivenFrom(givenSet))) {
                     blankedRoots.add(key);
                     givenSet.delete(key);
                 }
             }
 
-            for (const key of shuffle(DERIVED_KEYS)) {
+            for (const key of shuffle(derivedKeys)) {
                 const trialGiven = new Set(givenSet);
                 trialGiven.delete(key);
-                if (canResolveRoots(anchorsFor(blankedRoots), ops, trueValues, edgesFor(trialGiven))) {
+                if (canResolveRoots(R, C, nums, rowOps, colOps, blankedRoots, derivedGivenFrom(trialGiven))) {
                     givenSet.delete(key);
                 }
             }
@@ -342,60 +404,90 @@
             return givenSet;
         }
 
-        function applyGivens(board, ops) {
-            const givenSet = computeMinimalGivens(board, ops);
-            for (const key of Object.keys(LETTER_COORDS)) {
-                const [r, c] = LETTER_COORDS[key];
-                board[r][c].given = givenSet.has(key);
+        function applyGivens(board, R, C, nums, rowOps, colOps) {
+            const givenSet = computeMinimalGivens(R, C, nums, rowOps, colOps);
+            for (let i = 0; i < R; i++) {
+                for (let j = 0; j < C; j++) {
+                    board[2 * i][2 * j].given = givenSet.has(`${i},${j}`);
+                }
             }
             return board;
         }
 
-        function attemptGenerate(cfg, maxAttempts) {
+        // Picks operators for a chain of `count` real operators. Short chains (a
+        // single operator) draw freely from the full pool. Longer chains lean on
+        // +/- to stay well-behaved, with at most one ×/÷ mixed in — a chain of
+        // several random × or ÷ in a row blows past the 2-digit display cap or
+        // fails exact division almost every time, which made bigger boards
+        // generate unreliably.
+        function buildOpsForChain(pool, count) {
+            if (count <= 1) {
+                return count === 0 ? [] : [pool[randInt(0, pool.length - 1)]];
+            }
+            const gentlePool = pool.filter((op) => op === '+' || op === '-');
+            const basePool = gentlePool.length > 0 ? gentlePool : pool;
+            const chainOps = [];
+            for (let k = 0; k < count; k++) chainOps.push(basePool[randInt(0, basePool.length - 1)]);
+            const spicyPool = pool.filter((op) => op === '×' || op === '÷');
+            if (spicyPool.length > 0 && Math.random() < 0.6) {
+                chainOps[randInt(0, count - 1)] = spicyPool[randInt(0, spicyPool.length - 1)];
+            }
+            return chainOps;
+        }
+
+        function attemptGenerate(cfg, R, C, maxAttempts) {
             const ops = cfg.ops;
             for (let attempt = 0; attempt < maxAttempts; attempt++) {
-                const opRow0 = ops[randInt(0, ops.length - 1)];
-                const opRow2 = ops[randInt(0, ops.length - 1)];
-                const opCol0 = ops[randInt(0, ops.length - 1)];
-                const opCol2 = ops[randInt(0, ops.length - 1)];
-                const opCol4 = ops[randInt(0, ops.length - 1)];
+                const nums = Array.from({ length: R }, () => Array(C).fill(null));
+                const rowOps = Array.from({ length: R }, () => []);
+                const colOps = Array.from({ length: C }, () => []);
+                let ok = true;
 
-                const n00 = randInt(cfg.min, cfg.max);
-                const n02 = randInt(cfg.min, cfg.max);
-                const n20 = randInt(cfg.min, cfg.max);
-                const n22 = randInt(cfg.min, cfg.max);
-
-                const v04 = safeCompute(n00, opRow0, n02);
-                if (v04 === null || v04 > 99) continue;
-                const v24 = safeCompute(n20, opRow2, n22);
-                if (v24 === null || v24 > 99) continue;
-                const v40 = safeCompute(n00, opCol0, n20);
-                if (v40 === null || v40 > 99) continue;
-                const v42 = safeCompute(n02, opCol2, n22);
-                if (v42 === null || v42 > 99) continue;
-                const v44 = safeCompute(v04, opCol4, v24);
-                if (v44 === null || v44 > 99) continue;
-
-                for (const opRow4 of shuffle(ops)) {
-                    const check = safeCompute(v40, opRow4, v42);
-                    if (check === v44) {
-                        const board = buildBoard({
-                            n00, n02, n20, n22, v04, v24, v40, v42, v44,
-                            opRow0, opRow2, opRow4, opCol0, opCol2, opCol4,
-                        });
-                        return applyGivens(board, {
-                            row0: opRow0, row2: opRow2, row4: opRow4,
-                            col0: opCol0, col2: opCol2, col4: opCol4,
-                        });
-                    }
+                for (let i = 0; i < R - 1 && ok; i++) {
+                    for (let j = 0; j < C - 1; j++) nums[i][j] = randInt(cfg.min, cfg.max);
+                    const opsForRow = buildOpsForChain(ops, C - 2);
+                    const result = evalChain(nums[i].slice(0, C - 1), opsForRow);
+                    if (result === null || result > 99 || result < 0) { ok = false; break; }
+                    rowOps[i] = opsForRow;
+                    nums[i][C - 1] = result;
                 }
+                if (!ok) continue;
+
+                for (let j = 0; j < C - 1 && ok; j++) {
+                    const opsForCol = buildOpsForChain(ops, R - 2);
+                    const operands = [];
+                    for (let i = 0; i < R - 1; i++) operands.push(nums[i][j]);
+                    const result = evalChain(operands, opsForCol);
+                    if (result === null || result > 99 || result < 0) { ok = false; break; }
+                    colOps[j] = opsForCol;
+                    nums[R - 1][j] = result;
+                }
+                if (!ok) continue;
+
+                const lastColOps = buildOpsForChain(ops, R - 2);
+                const lastColOperands = [];
+                for (let i = 0; i < R - 1; i++) lastColOperands.push(nums[i][C - 1]);
+                const target = evalChain(lastColOperands, lastColOps);
+                if (target === null || target > 99 || target < 0) continue;
+
+                const lastRowOperands = nums[R - 1].slice(0, C - 1);
+                const foundOps = searchOpsForTarget(lastRowOperands, ops, target, C - 2);
+                if (!foundOps) continue;
+
+                nums[R - 1][C - 1] = target;
+                colOps[C - 1] = lastColOps;
+                rowOps[R - 1] = foundOps;
+
+                const board = buildBoard(R, C, nums, rowOps, colOps);
+                return { board: applyGivens(board, R, C, nums, rowOps, colOps), R, C };
             }
             return null;
         }
 
         function generatePuzzle(difficulty) {
             const cfg = DIFFICULTY_CONFIG[difficulty] || DIFFICULTY_CONFIG.easy;
-            return attemptGenerate(cfg, 20000) || attemptGenerate(FALLBACK_CONFIG, 200);
+            const [R, C] = cfg.sizes[randInt(0, cfg.sizes.length - 1)];
+            return attemptGenerate(cfg, R, C, 30000) || attemptGenerate(FALLBACK_CONFIG, 3, 3, 500);
         }
 
         function bestKey(difficulty) {
@@ -443,13 +535,26 @@
             return startTime ? (Date.now() - startTime) / 1000 : 0;
         }
 
+        function displayDims() {
+            return { rows: 2 * puzzle.R - 1, cols: 2 * puzzle.C - 1 };
+        }
+
+        function numberCoords() {
+            const coords = [];
+            for (let i = 0; i < puzzle.R; i++) {
+                for (let j = 0; j < puzzle.C; j++) coords.push([2 * i, 2 * j]);
+            }
+            return coords;
+        }
+
         function moveFocus(r, c, dr, dc) {
+            const { rows, cols } = displayDims();
             let nr = r;
             let nc = c;
             while (true) {
                 nr += dr * 2;
                 nc += dc * 2;
-                if (nr < 0 || nr > 4 || nc < 0 || nc > 4) return;
+                if (nr < 0 || nr >= rows || nc < 0 || nc >= cols) return;
                 const target = inputs[`${nr},${nc}`];
                 if (target) {
                     target.focus();
@@ -458,12 +563,28 @@
             }
         }
 
+        function cellSizeFor(rows, cols) {
+            const maxDim = Math.max(rows, cols);
+            const isSmallScreen = window.innerWidth < 640;
+            if (maxDim <= 5) return isSmallScreen ? 64 : 78;
+            if (maxDim <= 7) return isSmallScreen ? 50 : 62;
+            if (maxDim <= 9) return isSmallScreen ? 40 : 50;
+            return isSmallScreen ? 32 : 42;
+        }
+
         function renderBoard() {
+            const { rows, cols } = displayDims();
+            const cellSize = cellSizeFor(rows, cols);
+            boardEl.style.setProperty('--mc-cell', `${cellSize}px`);
+            boardEl.style.setProperty('--mc-font', `${Math.max(13, Math.round(cellSize * 0.32))}px`);
+            boardEl.style.gridTemplateColumns = `repeat(${cols}, var(--mc-cell))`;
+            boardEl.style.gridTemplateRows = `repeat(${rows}, var(--mc-cell))`;
+
             boardEl.innerHTML = '';
             inputs = {};
-            for (let r = 0; r < 5; r++) {
-                for (let c = 0; c < 5; c++) {
-                    const cell = cells[r][c];
+            for (let r = 0; r < rows; r++) {
+                for (let c = 0; c < cols; c++) {
+                    const cell = puzzle.board[r][c];
                     const div = document.createElement('div');
                     div.className = 'mc-cell';
                     if (cell.type === 'blocked') {
@@ -517,7 +638,7 @@
         }
 
         function markCell(input, r, c) {
-            const solution = cells[r][c].solution;
+            const solution = puzzle.board[r][c].solution;
             const value = parseInt(input.value, 10);
             input.classList.remove('mc-correct', 'mc-incorrect');
             if (Number.isNaN(value)) return;
@@ -525,7 +646,7 @@
         }
 
         function blankCoords() {
-            return NUMBER_COORDS.filter(([r, c]) => !cells[r][c].given);
+            return numberCoords().filter(([r, c]) => !puzzle.board[r][c].given);
         }
 
         function allFilled() {
@@ -542,7 +663,7 @@
                     continue;
                 }
                 markCell(input, r, c);
-                if (parseInt(input.value, 10) === cells[r][c].solution) correct++;
+                if (parseInt(input.value, 10) === puzzle.board[r][c].solution) correct++;
             }
 
             if (correct === targets.length) {
@@ -570,7 +691,7 @@
             revealed = true;
             for (const [r, c] of blankCoords()) {
                 const input = inputs[`${r},${c}`];
-                input.value = String(cells[r][c].solution);
+                input.value = String(puzzle.board[r][c].solution);
                 input.classList.remove('mc-incorrect');
                 input.classList.add('mc-correct');
             }
@@ -582,7 +703,8 @@
         function newPuzzle() {
             solved = false;
             revealed = false;
-            cells = generatePuzzle(difficultySelectEl.value);
+            puzzle = generatePuzzle(difficultySelectEl.value);
+            sizeEl.textContent = `${puzzle.R}×${puzzle.C}`;
             renderBoard();
             syncBest();
             statusEl.textContent = 'Some numbers are already filled in — solve the rest so every row and column checks out.';

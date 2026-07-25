@@ -399,6 +399,30 @@ async def math_pyramid(request: Request):
     return templates.TemplateResponse("math_pyramid.html", {"request": request, "lang": lang})
 
 
+UNO_I18N_KEYS = [
+    'name', 'description', 'title', 'subtitle', 'setup_heading', 'setup_subheading',
+    'name_placeholder', 'opponents_label', 'opponents_1', 'opponents_2', 'opponents_3',
+    'start_game', 'you', 'west', 'north', 'east', 'your_turn', 'ai_thinking',
+    'draw_card', 'pass_turn', 'choose_color', 'color_red', 'color_yellow', 'color_green',
+    'color_blue', 'msg_play', 'msg_draw', 'msg_draw_n', 'msg_skip', 'msg_reverse',
+    'msg_uno', 'msg_no_moves', 'round_summary', 'round_win', 'you_win_round',
+    'points_label', 'scoreboard', 'total_points', 'next_round', 'win_title', 'lose_title',
+    'final_scores', 'play_again', 'change_players',
+    'rule_1', 'rule_2', 'rule_3', 'rule_4', 'rule_5',
+]
+
+
+@app.get("/uno", response_class=HTMLResponse)
+async def uno(request: Request):
+    """Uno card game page endpoint."""
+    lang = get_current_lang(request)
+    uno_i18n = {key: get_translation(lang, f'games.uno.{key}') for key in UNO_I18N_KEYS}
+    return templates.TemplateResponse(
+        "uno.html",
+        {"request": request, "lang": lang, "uno_i18n": uno_i18n},
+    )
+
+
 @app.get("/api")
 async def api_root():
     """API root endpoint with API information."""
