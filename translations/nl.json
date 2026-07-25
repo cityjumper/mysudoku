@@ -766,6 +766,14 @@
       "description": "Bestem, verbind en elektrificeer een groeiende stad terwijl je budget en vraag in balans houdt.",
       "title": "SimCity",
       "subtitle": "Bouw wegen, bestem woon-, winkel- en industriegebied en houd de begroting gezond."
+    },
+    "math_crossword": {
+      "name": "Rekenkruiswoord",
+      "description": "Een kruiswoordraster van vergelijkingen — vul de getallen in zodat elke rij en kolom klopt."
+    },
+    "math_pyramid": {
+      "name": "Rekenpiramide",
+      "description": "Vul de getallenpiramide zo in dat elke steen gelijk is aan de som van de twee stenen eronder."
     }
   },
   "common": {

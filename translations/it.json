@@ -766,6 +766,14 @@
       "description": "Pianifica, collega ed elettrifica una città in crescita bilanciando bilancio e domanda.",
       "title": "SimCity",
       "subtitle": "Costruisci strade, delimita zone residenziali, commerciali e industriali e mantieni sano il bilancio."
+    },
+    "math_crossword": {
+      "name": "Cruciverba Matematico",
+      "description": "Una griglia di equazioni in stile cruciverba: inserisci i numeri così che ogni riga e colonna torni."
+    },
+    "math_pyramid": {
+      "name": "Piramide Matematica",
+      "description": "Riempi la piramide di numeri in modo che ogni mattone sia la somma dei due mattoni sottostanti."
     }
   },
   "common": {

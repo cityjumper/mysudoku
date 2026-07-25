@@ -766,6 +766,14 @@
       "description": "Zone, connect and power a growing city while balancing budget and demand.",
       "title": "SimCity",
       "subtitle": "Build roads, zone Residential, Commercial and Industrial land, and keep the budget healthy."
+    },
+    "math_crossword": {
+      "name": "Math Crossword",
+      "description": "A crossword grid of equations — fill in the numbers so every row and column adds up."
+    },
+    "math_pyramid": {
+      "name": "Math Pyramid",
+      "description": "Fill the number pyramid so each brick equals the sum of the two bricks below it."
     }
   },
   "common": {

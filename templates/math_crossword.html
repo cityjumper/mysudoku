@@ -1,0 +1,600 @@
+{% extends "base.html" %}
+
+{% block title %}{{ translate(lang, 'games.math_crossword.name') }}{% endblock %}
+
+{% block extra_head %}
+    <style>
+        .mc-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 64px);
+            grid-template-rows: repeat(5, 64px);
+            gap: 4px;
+        }
+        @media (min-width: 640px) {
+            .mc-grid {
+                grid-template-columns: repeat(5, 78px);
+                grid-template-rows: repeat(5, 78px);
+            }
+        }
+        .mc-cell {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 8px;
+        }
+        .mc-blocked {
+            background: #0f172a;
+        }
+        .mc-op, .mc-eq {
+            font-weight: 800;
+            font-size: 1.5rem;
+            background: #eef2ff;
+            color: #4338ca;
+        }
+        .mc-eq {
+            background: #fef3c7;
+            color: #92400e;
+        }
+        .mc-number input {
+            width: 100%;
+            height: 100%;
+            border: 2px solid #cbd5e1;
+            border-radius: 8px;
+            background: white;
+            text-align: center;
+            font-weight: 700;
+            font-size: 1.35rem;
+            color: #0f172a;
+        }
+        .mc-number input:focus {
+            outline: none;
+            border-color: #6366f1;
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.25);
+        }
+        .mc-number input.mc-correct {
+            border-color: #10b981;
+            background: #ecfdf5;
+            color: #047857;
+        }
+        .mc-number input.mc-incorrect {
+            border-color: #f43f5e;
+            background: #fff1f2;
+            color: #be123c;
+        }
+        .mc-given {
+            width: 100%;
+            height: 100%;
+            border: 2px solid #94a3b8;
+            border-radius: 8px;
+            background: #f1f5f9;
+            color: #334155;
+            font-weight: 800;
+            font-size: 1.35rem;
+        }
+    </style>
+{% endblock %}
+
+{% block body_class %}bg-gradient-to-br from-indigo-50 via-white to-purple-50 min-h-screen{% endblock %}
+
+{% block content %}
+    <div class="container mx-auto px-4 py-8">
+        <div class="max-w-3xl mx-auto mb-6">
+            <a href="/" class="inline-flex items-center text-indigo-700 hover:text-indigo-900 font-semibold">
+                <svg class="w-5 h-5 mr-2" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                    <path fill-rule="evenodd" d="M12.707 15.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 111.414 1.414L7.414 9H17a1 1 0 110 2H7.414l5.293 5.293a1 1 0 010 1.414z" clip-rule="evenodd" />
+                </svg>
+                {{ translate(lang, 'common.home') }}
+            </a>
+        </div>
+
+        <div class="max-w-3xl mx-auto">
+            <header class="text-center mb-6">
+                <h1 class="text-4xl sm:text-5xl font-black tracking-tight text-slate-900">{{ translate(lang, 'games.math_crossword.name') }}</h1>
+                <p class="mt-2 text-slate-700">{{ translate(lang, 'games.math_crossword.description') }}</p>
+            </header>
+
+            <div class="bg-white/90 rounded-2xl shadow-xl ring-1 ring-slate-200 p-4 sm:p-6">
+                <div class="flex flex-wrap gap-3 items-center justify-between mb-5">
+                    <div class="flex flex-wrap items-center gap-2 sm:gap-3">
+                        <div class="rounded-lg bg-white ring-1 ring-slate-200 px-3 py-2">
+                            <div class="text-xs font-semibold uppercase text-slate-500">Time</div>
+                            <div id="timer-value" class="text-xl font-black text-indigo-700">00:00</div>
+                        </div>
+                        <div class="rounded-lg bg-white ring-1 ring-slate-200 px-3 py-2">
+                            <div class="text-xs font-semibold uppercase text-slate-500">Best</div>
+                            <div id="best-value" class="text-xl font-black text-purple-700">--:--</div>
+                        </div>
+                    </div>
+                    <div class="flex flex-wrap items-center gap-2">
+                        <select id="difficulty-select" title="Difficulty" class="rounded-lg bg-white ring-1 ring-slate-300 text-slate-800 font-semibold px-3 py-2">
+                            <option value="easy">Addition Only</option>
+                            <option value="medium">Addition &amp; Subtraction</option>
+                            <option value="hard">Add, Subtract, Multiply &amp; Divide</option>
+                        </select>
+                        <button id="new-puzzle" class="rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-4 py-2">New Puzzle</button>
+                        <button id="check-puzzle" class="rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold px-4 py-2">Check</button>
+                        <button id="reveal-solution" class="rounded-lg bg-slate-700 hover:bg-slate-800 text-white font-semibold px-4 py-2">Reveal</button>
+                    </div>
+                </div>
+
+                <div id="status" class="mb-4 text-center font-semibold text-slate-700">Some numbers are already filled in — solve the rest so every row and column checks out.</div>
+
+                <div class="flex justify-center overflow-x-auto pb-2">
+                    <div id="crossword-board" class="mc-grid" role="group" aria-label="Math crossword grid"></div>
+                </div>
+
+                <div class="mt-5 grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm text-slate-700">
+                    <div class="bg-white rounded-lg ring-1 ring-slate-200 p-3">
+                        <p class="font-semibold text-slate-900">How to Play</p>
+                        <p class="mt-1">Every full row and column (skipping the black squares) reads as one equation: number, operator, number, equals sign, result. Grey squares are given — fill in the white squares so all six equations check out, and there's only one way to do it.</p>
+                    </div>
+                    <div class="bg-white rounded-lg ring-1 ring-slate-200 p-3">
+                        <p class="font-semibold text-slate-900">Controls</p>
+                        <p class="mt-1">Click a square and type a number. Use the arrow keys to jump between squares. The +, −, ×, ÷ and = signs are fixed clues.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block extra_scripts %}
+    <script>
+        const NUMBER_COORDS = [[0,0],[0,2],[0,4],[2,0],[2,2],[2,4],[4,0],[4,2],[4,4]];
+        const LETTER_COORDS = { A: [0,0], B: [0,2], C: [0,4], D: [2,0], E: [2,2], F: [2,4], G: [4,0], H: [4,2], I: [4,4] };
+        const ROOT_KEYS = ['A', 'B', 'D', 'E'];
+        const DERIVED_KEYS = ['C', 'F', 'G', 'H', 'I'];
+
+        const DIFFICULTY_CONFIG = {
+            easy: { label: 'Addition Only', ops: ['+'], min: 1, max: 9 },
+            medium: { label: 'Addition & Subtraction', ops: ['+', '-'], min: 1, max: 12 },
+            hard: { label: 'Add, Subtract, Multiply & Divide', ops: ['+', '-', '×', '÷'], min: 1, max: 9 },
+        };
+        const FALLBACK_CONFIG = { ops: ['+'], min: 1, max: 9 };
+        const BEST_KEY_PREFIX = 'math-crossword:best:v1:';
+
+        const boardEl = document.getElementById('crossword-board');
+        const statusEl = document.getElementById('status');
+        const timerEl = document.getElementById('timer-value');
+        const bestEl = document.getElementById('best-value');
+        const difficultySelectEl = document.getElementById('difficulty-select');
+        const newPuzzleBtn = document.getElementById('new-puzzle');
+        const checkPuzzleBtn = document.getElementById('check-puzzle');
+        const revealBtn = document.getElementById('reveal-solution');
+
+        let cells = null;
+        let inputs = {};
+        let solved = false;
+        let revealed = false;
+        let timerInterval = null;
+        let startTime = null;
+
+        function randInt(min, max) {
+            return min + Math.floor(Math.random() * (max - min + 1));
+        }
+
+        function shuffle(arr) {
+            const a = [...arr];
+            for (let i = a.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [a[i], a[j]] = [a[j], a[i]];
+            }
+            return a;
+        }
+
+        function safeCompute(a, op, b) {
+            if (op === '-') {
+                if (a < b) return null;
+                return a - b;
+            }
+            if (op === '+') return a + b;
+            if (op === '×') return a * b;
+            if (op === '÷') return (b !== 0 && a % b === 0) ? a / b : null;
+            return null;
+        }
+
+        function buildBoard(v) {
+            const grid = Array.from({ length: 5 }, () => Array(5).fill(null));
+            grid[0][0] = { type: 'number', solution: v.n00 };
+            grid[0][2] = { type: 'number', solution: v.n02 };
+            grid[0][4] = { type: 'number', solution: v.v04 };
+            grid[2][0] = { type: 'number', solution: v.n20 };
+            grid[2][2] = { type: 'number', solution: v.n22 };
+            grid[2][4] = { type: 'number', solution: v.v24 };
+            grid[4][0] = { type: 'number', solution: v.v40 };
+            grid[4][2] = { type: 'number', solution: v.v42 };
+            grid[4][4] = { type: 'number', solution: v.v44 };
+
+            grid[0][1] = { type: 'op', symbol: v.opRow0 };
+            grid[2][1] = { type: 'op', symbol: v.opRow2 };
+            grid[4][1] = { type: 'op', symbol: v.opRow4 };
+            grid[0][3] = { type: 'eq', symbol: '=' };
+            grid[2][3] = { type: 'eq', symbol: '=' };
+            grid[4][3] = { type: 'eq', symbol: '=' };
+
+            grid[1][0] = { type: 'op', symbol: v.opCol0 };
+            grid[1][2] = { type: 'op', symbol: v.opCol2 };
+            grid[1][4] = { type: 'op', symbol: v.opCol4 };
+            grid[3][0] = { type: 'eq', symbol: '=' };
+            grid[3][2] = { type: 'eq', symbol: '=' };
+            grid[3][4] = { type: 'eq', symbol: '=' };
+
+            grid[1][1] = { type: 'blocked' };
+            grid[1][3] = { type: 'blocked' };
+            grid[3][1] = { type: 'blocked' };
+            grid[3][3] = { type: 'blocked' };
+
+            return grid;
+        }
+
+        function deriveFull(roots, ops) {
+            const { A, B, D, E } = roots;
+            const C = safeCompute(A, ops.row0, B);
+            if (C === null) return null;
+            const F = safeCompute(D, ops.row2, E);
+            if (F === null) return null;
+            const G = safeCompute(A, ops.col0, D);
+            if (G === null) return null;
+            const H = safeCompute(B, ops.col2, E);
+            if (H === null) return null;
+            const I1 = safeCompute(G, ops.row4, H);
+            if (I1 === null) return null;
+            const I2 = safeCompute(C, ops.col4, F);
+            if (I2 === null || I1 !== I2) return null;
+            return { A, B, C, D, E, F, G, H, I: I1 };
+        }
+
+        // Each derived cell (C, F, G, H) links two root cells together via a fixed
+        // operator, e.g. C = A op B. These are the only edges that can pin down a
+        // blank root's value (I is derived from G/H or C/F, never from a root
+        // directly, so it never helps solve a root and is left out here).
+        const ROOT_EDGES = [
+            { key: 'C', a: 'A', b: 'B', opKey: 'row0' },
+            { key: 'F', a: 'D', b: 'E', opKey: 'row2' },
+            { key: 'G', a: 'A', b: 'D', opKey: 'col0' },
+            { key: 'H', a: 'B', b: 'E', opKey: 'col2' },
+        ];
+
+        // Inverts a op b = target to solve for whichever side isn't known.
+        // Returns null if the operator makes that inversion ambiguous or
+        // impossible (e.g. solving b from a×b=target when a is 0).
+        function solveOther(op, target, known, knownIsA) {
+            if (op === '+') return target - known;
+            if (op === '-') return knownIsA ? known - target : target + known;
+            if (op === '×') return known === 0 ? null : target / known;
+            if (op === '÷') {
+                if (knownIsA) return target === 0 ? null : known / target;
+                return target * known;
+            }
+            return null;
+        }
+
+        // Determines whether the root cells not already anchored (given) can be
+        // deduced with certainty from the currently-visible derived clues, by
+        // propagating known values across the C/F/G/H equation edges. This is an
+        // exact algebraic check (not a bounded search), so it correctly accounts
+        // for the fact that a player could type any number, not just ones inside
+        // the puzzle's original generation range.
+        function canResolveRoots(anchors, ops, trueValues, givenEdgeKeys) {
+            const known = { ...anchors };
+            let changed = true;
+            while (changed) {
+                changed = false;
+                for (const edge of ROOT_EDGES) {
+                    if (!givenEdgeKeys.has(edge.key)) continue;
+                    const target = trueValues[edge.key];
+                    const aKnown = known[edge.a] !== undefined;
+                    const bKnown = known[edge.b] !== undefined;
+                    if (aKnown && !bKnown) {
+                        const v = solveOther(ops[edge.opKey], target, known[edge.a], true);
+                        if (v !== null) { known[edge.b] = v; changed = true; }
+                    } else if (bKnown && !aKnown) {
+                        const v = solveOther(ops[edge.opKey], target, known[edge.b], false);
+                        if (v !== null) { known[edge.a] = v; changed = true; }
+                    }
+                }
+            }
+            return ROOT_KEYS.every((k) => known[k] !== undefined);
+        }
+
+        // Greedily blanks as many cells as possible (roots first, then derived
+        // cells) while the propagation check confirms the remaining clues still
+        // pin down every root uniquely. Whatever is left in givenSet gets prefilled.
+        function computeMinimalGivens(board, ops) {
+            const trueValues = {};
+            for (const key of Object.keys(LETTER_COORDS)) {
+                const [r, c] = LETTER_COORDS[key];
+                trueValues[key] = board[r][c].solution;
+            }
+
+            const givenSet = new Set(Object.keys(LETTER_COORDS));
+            const blankedRoots = new Set();
+
+            function anchorsFor(trialBlankedRoots) {
+                const anchors = {};
+                ROOT_KEYS.forEach((k) => {
+                    if (!trialBlankedRoots.has(k)) anchors[k] = trueValues[k];
+                });
+                return anchors;
+            }
+
+            function edgesFor(trialGivenSet) {
+                return new Set(['C', 'F', 'G', 'H'].filter((k) => trialGivenSet.has(k)));
+            }
+
+            for (const key of shuffle(ROOT_KEYS)) {
+                const trialBlanked = new Set(blankedRoots);
+                trialBlanked.add(key);
+                if (canResolveRoots(anchorsFor(trialBlanked), ops, trueValues, edgesFor(givenSet))) {
+                    blankedRoots.add(key);
+                    givenSet.delete(key);
+                }
+            }
+
+            for (const key of shuffle(DERIVED_KEYS)) {
+                const trialGiven = new Set(givenSet);
+                trialGiven.delete(key);
+                if (canResolveRoots(anchorsFor(blankedRoots), ops, trueValues, edgesFor(trialGiven))) {
+                    givenSet.delete(key);
+                }
+            }
+
+            return givenSet;
+        }
+
+        function applyGivens(board, ops) {
+            const givenSet = computeMinimalGivens(board, ops);
+            for (const key of Object.keys(LETTER_COORDS)) {
+                const [r, c] = LETTER_COORDS[key];
+                board[r][c].given = givenSet.has(key);
+            }
+            return board;
+        }
+
+        function attemptGenerate(cfg, maxAttempts) {
+            const ops = cfg.ops;
+            for (let attempt = 0; attempt < maxAttempts; attempt++) {
+                const opRow0 = ops[randInt(0, ops.length - 1)];
+                const opRow2 = ops[randInt(0, ops.length - 1)];
+                const opCol0 = ops[randInt(0, ops.length - 1)];
+                const opCol2 = ops[randInt(0, ops.length - 1)];
+                const opCol4 = ops[randInt(0, ops.length - 1)];
+
+                const n00 = randInt(cfg.min, cfg.max);
+                const n02 = randInt(cfg.min, cfg.max);
+                const n20 = randInt(cfg.min, cfg.max);
+                const n22 = randInt(cfg.min, cfg.max);
+
+                const v04 = safeCompute(n00, opRow0, n02);
+                if (v04 === null || v04 > 99) continue;
+                const v24 = safeCompute(n20, opRow2, n22);
+                if (v24 === null || v24 > 99) continue;
+                const v40 = safeCompute(n00, opCol0, n20);
+                if (v40 === null || v40 > 99) continue;
+                const v42 = safeCompute(n02, opCol2, n22);
+                if (v42 === null || v42 > 99) continue;
+                const v44 = safeCompute(v04, opCol4, v24);
+                if (v44 === null || v44 > 99) continue;
+
+                for (const opRow4 of shuffle(ops)) {
+                    const check = safeCompute(v40, opRow4, v42);
+                    if (check === v44) {
+                        const board = buildBoard({
+                            n00, n02, n20, n22, v04, v24, v40, v42, v44,
+                            opRow0, opRow2, opRow4, opCol0, opCol2, opCol4,
+                        });
+                        return applyGivens(board, {
+                            row0: opRow0, row2: opRow2, row4: opRow4,
+                            col0: opCol0, col2: opCol2, col4: opCol4,
+                        });
+                    }
+                }
+            }
+            return null;
+        }
+
+        function generatePuzzle(difficulty) {
+            const cfg = DIFFICULTY_CONFIG[difficulty] || DIFFICULTY_CONFIG.easy;
+            return attemptGenerate(cfg, 20000) || attemptGenerate(FALLBACK_CONFIG, 200);
+        }
+
+        function bestKey(difficulty) {
+            return BEST_KEY_PREFIX + difficulty;
+        }
+
+        function readBest(difficulty) {
+            const raw = localStorage.getItem(bestKey(difficulty));
+            const value = Number(raw);
+            return Number.isFinite(value) && value > 0 ? value : null;
+        }
+
+        function writeBest(difficulty, seconds) {
+            localStorage.setItem(bestKey(difficulty), String(seconds));
+        }
+
+        function formatTime(totalSeconds) {
+            const m = Math.floor(totalSeconds / 60).toString().padStart(2, '0');
+            const s = Math.floor(totalSeconds % 60).toString().padStart(2, '0');
+            return `${m}:${s}`;
+        }
+
+        function syncBest() {
+            const best = readBest(difficultySelectEl.value);
+            bestEl.textContent = best !== null ? formatTime(best) : '--:--';
+        }
+
+        function startTimer() {
+            stopTimer();
+            startTime = Date.now();
+            timerEl.textContent = '00:00';
+            timerInterval = setInterval(() => {
+                timerEl.textContent = formatTime((Date.now() - startTime) / 1000);
+            }, 250);
+        }
+
+        function stopTimer() {
+            if (timerInterval) {
+                clearInterval(timerInterval);
+                timerInterval = null;
+            }
+        }
+
+        function elapsedSeconds() {
+            return startTime ? (Date.now() - startTime) / 1000 : 0;
+        }
+
+        function moveFocus(r, c, dr, dc) {
+            let nr = r;
+            let nc = c;
+            while (true) {
+                nr += dr * 2;
+                nc += dc * 2;
+                if (nr < 0 || nr > 4 || nc < 0 || nc > 4) return;
+                const target = inputs[`${nr},${nc}`];
+                if (target) {
+                    target.focus();
+                    return;
+                }
+            }
+        }
+
+        function renderBoard() {
+            boardEl.innerHTML = '';
+            inputs = {};
+            for (let r = 0; r < 5; r++) {
+                for (let c = 0; c < 5; c++) {
+                    const cell = cells[r][c];
+                    const div = document.createElement('div');
+                    div.className = 'mc-cell';
+                    if (cell.type === 'blocked') {
+                        div.classList.add('mc-blocked');
+                    } else if (cell.type === 'op') {
+                        div.classList.add('mc-op');
+                        div.textContent = cell.symbol;
+                    } else if (cell.type === 'eq') {
+                        div.classList.add('mc-eq');
+                        div.textContent = cell.symbol;
+                    } else if (cell.type === 'number' && cell.given) {
+                        div.classList.add('mc-given');
+                        div.textContent = String(cell.solution);
+                    } else if (cell.type === 'number') {
+                        div.classList.add('mc-number');
+                        const input = document.createElement('input');
+                        input.type = 'text';
+                        input.inputMode = 'numeric';
+                        input.pattern = '[0-9]*';
+                        input.maxLength = 2;
+                        input.setAttribute('aria-label', `Answer cell row ${r + 1} column ${c + 1}`);
+                        input.addEventListener('input', () => onCellInput(input, r, c));
+                        input.addEventListener('blur', () => onCellBlur(input, r, c));
+                        input.addEventListener('keydown', (event) => onCellKeydown(event, r, c));
+                        div.appendChild(input);
+                        inputs[`${r},${c}`] = input;
+                    }
+                    boardEl.appendChild(div);
+                }
+            }
+        }
+
+        function onCellInput(input, r, c) {
+            input.value = input.value.replace(/[^0-9]/g, '').slice(0, 2);
+            input.classList.remove('mc-correct', 'mc-incorrect');
+            if (allFilled()) {
+                checkPuzzle();
+            }
+        }
+
+        function onCellBlur(input, r, c) {
+            if (input.value === '') return;
+            markCell(input, r, c);
+        }
+
+        function onCellKeydown(event, r, c) {
+            if (event.key === 'ArrowRight') { event.preventDefault(); moveFocus(r, c, 0, 1); }
+            else if (event.key === 'ArrowLeft') { event.preventDefault(); moveFocus(r, c, 0, -1); }
+            else if (event.key === 'ArrowDown') { event.preventDefault(); moveFocus(r, c, 1, 0); }
+            else if (event.key === 'ArrowUp') { event.preventDefault(); moveFocus(r, c, -1, 0); }
+        }
+
+        function markCell(input, r, c) {
+            const solution = cells[r][c].solution;
+            const value = parseInt(input.value, 10);
+            input.classList.remove('mc-correct', 'mc-incorrect');
+            if (Number.isNaN(value)) return;
+            input.classList.add(value === solution ? 'mc-correct' : 'mc-incorrect');
+        }
+
+        function blankCoords() {
+            return NUMBER_COORDS.filter(([r, c]) => !cells[r][c].given);
+        }
+
+        function allFilled() {
+            return blankCoords().every(([r, c]) => inputs[`${r},${c}`].value !== '');
+        }
+
+        function checkPuzzle() {
+            const targets = blankCoords();
+            let correct = 0;
+            for (const [r, c] of targets) {
+                const input = inputs[`${r},${c}`];
+                if (input.value === '') {
+                    input.classList.remove('mc-correct', 'mc-incorrect');
+                    continue;
+                }
+                markCell(input, r, c);
+                if (parseInt(input.value, 10) === cells[r][c].solution) correct++;
+            }
+
+            if (correct === targets.length) {
+                solved = true;
+                stopTimer();
+                const seconds = Math.floor(elapsedSeconds());
+                if (!revealed) {
+                    const best = readBest(difficultySelectEl.value);
+                    if (best === null || seconds < best) {
+                        writeBest(difficultySelectEl.value, seconds);
+                        syncBest();
+                        statusEl.textContent = `Solved in ${formatTime(seconds)} — new best!`;
+                    } else {
+                        statusEl.textContent = `Solved in ${formatTime(seconds)}!`;
+                    }
+                }
+                statusEl.className = 'mb-4 text-center font-semibold text-emerald-700';
+            } else {
+                statusEl.textContent = `${correct} / ${targets.length} correct so far.`;
+                statusEl.className = 'mb-4 text-center font-semibold text-slate-700';
+            }
+        }
+
+        function revealSolution() {
+            revealed = true;
+            for (const [r, c] of blankCoords()) {
+                const input = inputs[`${r},${c}`];
+                input.value = String(cells[r][c].solution);
+                input.classList.remove('mc-incorrect');
+                input.classList.add('mc-correct');
+            }
+            stopTimer();
+            statusEl.textContent = 'Solution revealed.';
+            statusEl.className = 'mb-4 text-center font-semibold text-slate-700';
+        }
+
+        function newPuzzle() {
+            solved = false;
+            revealed = false;
+            cells = generatePuzzle(difficultySelectEl.value);
+            renderBoard();
+            syncBest();
+            statusEl.textContent = 'Some numbers are already filled in — solve the rest so every row and column checks out.';
+            statusEl.className = 'mb-4 text-center font-semibold text-slate-700';
+            startTimer();
+        }
+
+        newPuzzleBtn.addEventListener('click', newPuzzle);
+        checkPuzzleBtn.addEventListener('click', checkPuzzle);
+        revealBtn.addEventListener('click', revealSolution);
+        difficultySelectEl.addEventListener('change', newPuzzle);
+
+        newPuzzle();
+    </script>
+{% endblock %}

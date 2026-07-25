@@ -385,6 +385,20 @@ async def simcity(request: Request):
     return templates.TemplateResponse("simcity.html", {"request": request, "lang": lang})
 
 
+@app.get("/math-crossword", response_class=HTMLResponse)
+async def math_crossword(request: Request):
+    """Math crossword puzzle page endpoint."""
+    lang = get_current_lang(request)
+    return templates.TemplateResponse("math_crossword.html", {"request": request, "lang": lang})
+
+
+@app.get("/math-pyramid", response_class=HTMLResponse)
+async def math_pyramid(request: Request):
+    """Math pyramid puzzle page endpoint."""
+    lang = get_current_lang(request)
+    return templates.TemplateResponse("math_pyramid.html", {"request": request, "lang": lang})
+
+
 @app.get("/api")
 async def api_root():
     """API root endpoint with API information."""

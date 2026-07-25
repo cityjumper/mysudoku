@@ -1,0 +1,445 @@
+{% extends "base.html" %}
+
+{% block title %}{{ translate(lang, 'games.math_pyramid.name') }}{% endblock %}
+
+{% block extra_head %}
+    <style>
+        .mp-row {
+            display: flex;
+            justify-content: center;
+            gap: 6px;
+        }
+        .mp-cell {
+            width: 56px;
+            height: 56px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        @media (min-width: 640px) {
+            .mp-cell { width: 68px; height: 68px; }
+        }
+        .mp-cell input {
+            width: 100%;
+            height: 100%;
+            border: 2px solid #cbd5e1;
+            border-radius: 10px;
+            background: white;
+            text-align: center;
+            font-weight: 700;
+            font-size: 1.2rem;
+            color: #0f172a;
+        }
+        .mp-cell input:focus {
+            outline: none;
+            border-color: #6366f1;
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.25);
+        }
+        .mp-cell input.mp-correct {
+            border-color: #10b981;
+            background: #ecfdf5;
+            color: #047857;
+        }
+        .mp-cell input.mp-incorrect {
+            border-color: #f43f5e;
+            background: #fff1f2;
+            color: #be123c;
+        }
+        .mp-cell.mp-given {
+            border-radius: 10px;
+            background: #eef2ff;
+            color: #4338ca;
+            font-weight: 800;
+            font-size: 1.2rem;
+            border: 2px solid #c7d2fe;
+        }
+    </style>
+{% endblock %}
+
+{% block body_class %}bg-gradient-to-br from-indigo-50 via-white to-purple-50 min-h-screen{% endblock %}
+
+{% block content %}
+    <div class="container mx-auto px-4 py-8">
+        <div class="max-w-3xl mx-auto mb-6">
+            <a href="/" class="inline-flex items-center text-indigo-700 hover:text-indigo-900 font-semibold">
+                <svg class="w-5 h-5 mr-2" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                    <path fill-rule="evenodd" d="M12.707 15.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 111.414 1.414L7.414 9H17a1 1 0 110 2H7.414l5.293 5.293a1 1 0 010 1.414z" clip-rule="evenodd" />
+                </svg>
+                {{ translate(lang, 'common.home') }}
+            </a>
+        </div>
+
+        <div class="max-w-3xl mx-auto">
+            <header class="text-center mb-6">
+                <h1 class="text-4xl sm:text-5xl font-black tracking-tight text-slate-900">{{ translate(lang, 'games.math_pyramid.name') }}</h1>
+                <p class="mt-2 text-slate-700">{{ translate(lang, 'games.math_pyramid.description') }}</p>
+            </header>
+
+            <div class="bg-white/90 rounded-2xl shadow-xl ring-1 ring-slate-200 p-4 sm:p-6">
+                <div class="flex flex-wrap gap-3 items-center justify-between mb-5">
+                    <div class="flex flex-wrap items-center gap-2 sm:gap-3">
+                        <div class="rounded-lg bg-white ring-1 ring-slate-200 px-3 py-2">
+                            <div class="text-xs font-semibold uppercase text-slate-500">Time</div>
+                            <div id="timer-value" class="text-xl font-black text-indigo-700">00:00</div>
+                        </div>
+                        <div class="rounded-lg bg-white ring-1 ring-slate-200 px-3 py-2">
+                            <div class="text-xs font-semibold uppercase text-slate-500">Best</div>
+                            <div id="best-value" class="text-xl font-black text-purple-700">--:--</div>
+                        </div>
+                    </div>
+                    <div class="flex flex-wrap items-center gap-2">
+                        <select id="difficulty-select" title="Difficulty" class="rounded-lg bg-white ring-1 ring-slate-300 text-slate-800 font-semibold px-3 py-2">
+                            <option value="easy">Easy (4 rows)</option>
+                            <option value="medium" selected>Medium (5 rows)</option>
+                            <option value="hard">Hard (6 rows)</option>
+                            <option value="expert">Expert (7 rows)</option>
+                        </select>
+                        <button id="new-puzzle" class="rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-4 py-2">New Puzzle</button>
+                        <button id="check-puzzle" class="rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold px-4 py-2">Check</button>
+                        <button id="reveal-solution" class="rounded-lg bg-slate-700 hover:bg-slate-800 text-white font-semibold px-4 py-2">Reveal</button>
+                    </div>
+                </div>
+
+                <div id="status" class="mb-4 text-center font-semibold text-slate-700">Fill every blank brick so it equals the sum of the two bricks below it.</div>
+
+                <div class="flex justify-center overflow-x-auto pb-2">
+                    <div id="pyramid-board" class="flex flex-col gap-1.5" role="group" aria-label="Math pyramid grid"></div>
+                </div>
+
+                <div class="mt-5 grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm text-slate-700">
+                    <div class="bg-white rounded-lg ring-1 ring-slate-200 p-3">
+                        <p class="font-semibold text-slate-900">How to Play</p>
+                        <p class="mt-1">Each brick equals the sum of the two bricks directly below it. Some bricks are already filled in (blue) — use them to work out every blank brick. Taller pyramids mean more rows and harder deductions.</p>
+                    </div>
+                    <div class="bg-white rounded-lg ring-1 ring-slate-200 p-3">
+                        <p class="font-semibold text-slate-900">Controls</p>
+                        <p class="mt-1">Click a blank brick and type a number. Use Tab or the arrow keys to move between bricks. Given bricks can't be edited.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block extra_scripts %}
+    <script>
+        const HEIGHT_CONFIG = {
+            easy: { height: 4, min: 1, max: 9 },
+            medium: { height: 5, min: 1, max: 9 },
+            hard: { height: 6, min: 1, max: 9 },
+            expert: { height: 7, min: 1, max: 9 },
+        };
+        const BEST_KEY_PREFIX = 'math-pyramid:best:v1:';
+
+        const boardEl = document.getElementById('pyramid-board');
+        const statusEl = document.getElementById('status');
+        const timerEl = document.getElementById('timer-value');
+        const bestEl = document.getElementById('best-value');
+        const difficultySelectEl = document.getElementById('difficulty-select');
+        const newPuzzleBtn = document.getElementById('new-puzzle');
+        const checkPuzzleBtn = document.getElementById('check-puzzle');
+        const revealBtn = document.getElementById('reveal-solution');
+
+        let height = 5;
+        let solution = null;   // solution[r][c]
+        let given = null;      // given[r][c] boolean
+        let inputs = {};       // "r,c" -> input element
+        let solved = false;
+        let revealed = false;
+        let timerInterval = null;
+        let startTime = null;
+
+        function randInt(min, max) {
+            return min + Math.floor(Math.random() * (max - min + 1));
+        }
+
+        function shuffle(arr) {
+            const a = [...arr];
+            for (let i = a.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [a[i], a[j]] = [a[j], a[i]];
+            }
+            return a;
+        }
+
+        // solution[r][c] = solution[r+1][c] + solution[r+1][c+1]; row 0 is the top (1 cell),
+        // row (h-1) is the bottom (h cells).
+        function buildSolution(h, cfg) {
+            const grid = Array.from({ length: h }, () => []);
+            grid[h - 1] = Array.from({ length: h }, () => randInt(cfg.min, cfg.max));
+            for (let r = h - 2; r >= 0; r--) {
+                grid[r] = [];
+                for (let c = 0; c <= r; c++) {
+                    grid[r][c] = grid[r + 1][c] + grid[r + 1][c + 1];
+                }
+            }
+            return grid;
+        }
+
+        // Given a set of known cells, repeatedly derive new cells using the pyramid
+        // relation (parent = left + right) until no more progress can be made.
+        // Returns the set of coordinates that were successfully derived/known.
+        function propagate(h, knownMask, values) {
+            const mask = knownMask.map((row) => [...row]);
+            const vals = values.map((row) => [...row]);
+            let progress = true;
+            while (progress) {
+                progress = false;
+                for (let r = 0; r < h - 1; r++) {
+                    for (let c = 0; c <= r; c++) {
+                        const pKnown = mask[r][c];
+                        const lKnown = mask[r + 1][c];
+                        const rKnown = mask[r + 1][c + 1];
+                        if (pKnown && lKnown && !rKnown) {
+                            vals[r + 1][c + 1] = vals[r][c] - vals[r + 1][c];
+                            mask[r + 1][c + 1] = true;
+                            progress = true;
+                        } else if (pKnown && rKnown && !lKnown) {
+                            vals[r + 1][c] = vals[r][c] - vals[r + 1][c + 1];
+                            mask[r + 1][c] = true;
+                            progress = true;
+                        } else if (lKnown && rKnown && !pKnown) {
+                            vals[r][c] = vals[r + 1][c] + vals[r + 1][c + 1];
+                            mask[r][c] = true;
+                            progress = true;
+                        }
+                    }
+                }
+            }
+            return mask;
+        }
+
+        function isFullyKnown(h, mask) {
+            for (let r = 0; r < h; r++) {
+                for (let c = 0; c <= r; c++) {
+                    if (!mask[r][c]) return false;
+                }
+            }
+            return true;
+        }
+
+        function allCoords(h) {
+            const coords = [];
+            for (let r = 0; r < h; r++) {
+                for (let c = 0; c <= r; c++) coords.push([r, c]);
+            }
+            return coords;
+        }
+
+        // Start with every cell given, then randomly try removing cells one at a
+        // time, keeping the removal only if propagation can still recover the
+        // full pyramid. This yields a locally-minimal, uniquely-solvable puzzle.
+        function reduceToMinimalGivens(h, sol) {
+            const mask = Array.from({ length: h }, (_, r) => Array(r + 1).fill(true));
+            const order = shuffle(allCoords(h));
+            for (const [r, c] of order) {
+                mask[r][c] = false;
+                const derived = propagate(h, mask, sol);
+                if (!isFullyKnown(h, derived)) {
+                    mask[r][c] = true;
+                }
+            }
+            return mask;
+        }
+
+        function generatePuzzle(difficulty) {
+            const cfg = HEIGHT_CONFIG[difficulty] || HEIGHT_CONFIG.medium;
+            const h = cfg.height;
+            const sol = buildSolution(h, cfg);
+            const mask = reduceToMinimalGivens(h, sol);
+            return { height: h, solution: sol, given: mask };
+        }
+
+        function bestKey(difficulty) {
+            return BEST_KEY_PREFIX + difficulty;
+        }
+
+        function readBest(difficulty) {
+            const raw = localStorage.getItem(bestKey(difficulty));
+            const value = Number(raw);
+            return Number.isFinite(value) && value > 0 ? value : null;
+        }
+
+        function writeBest(difficulty, seconds) {
+            localStorage.setItem(bestKey(difficulty), String(seconds));
+        }
+
+        function formatTime(totalSeconds) {
+            const m = Math.floor(totalSeconds / 60).toString().padStart(2, '0');
+            const s = Math.floor(totalSeconds % 60).toString().padStart(2, '0');
+            return `${m}:${s}`;
+        }
+
+        function syncBest() {
+            const best = readBest(difficultySelectEl.value);
+            bestEl.textContent = best !== null ? formatTime(best) : '--:--';
+        }
+
+        function startTimer() {
+            stopTimer();
+            startTime = Date.now();
+            timerEl.textContent = '00:00';
+            timerInterval = setInterval(() => {
+                timerEl.textContent = formatTime((Date.now() - startTime) / 1000);
+            }, 250);
+        }
+
+        function stopTimer() {
+            if (timerInterval) {
+                clearInterval(timerInterval);
+                timerInterval = null;
+            }
+        }
+
+        function elapsedSeconds() {
+            return startTime ? (Date.now() - startTime) / 1000 : 0;
+        }
+
+        function orderedEditableCoords() {
+            const coords = [];
+            for (let r = 0; r < height; r++) {
+                for (let c = 0; c <= r; c++) {
+                    if (!given[r][c]) coords.push([r, c]);
+                }
+            }
+            return coords;
+        }
+
+        function moveFocus(r, c, dir) {
+            const coords = orderedEditableCoords();
+            const idx = coords.findIndex(([rr, cc]) => rr === r && cc === c);
+            if (idx === -1) return;
+            const next = coords[(idx + dir + coords.length) % coords.length];
+            const target = inputs[`${next[0]},${next[1]}`];
+            if (target) target.focus();
+        }
+
+        function renderBoard() {
+            boardEl.innerHTML = '';
+            inputs = {};
+            for (let r = 0; r < height; r++) {
+                const rowEl = document.createElement('div');
+                rowEl.className = 'mp-row';
+                for (let c = 0; c <= r; c++) {
+                    const cellEl = document.createElement('div');
+                    cellEl.className = 'mp-cell';
+                    if (given[r][c]) {
+                        cellEl.classList.add('mp-given');
+                        cellEl.textContent = String(solution[r][c]);
+                    } else {
+                        const input = document.createElement('input');
+                        input.type = 'text';
+                        input.inputMode = 'numeric';
+                        input.pattern = '[0-9]*';
+                        input.maxLength = 4;
+                        input.setAttribute('aria-label', `Answer brick row ${r + 1} position ${c + 1}`);
+                        input.addEventListener('input', () => onCellInput(input, r, c));
+                        input.addEventListener('blur', () => onCellBlur(input, r, c));
+                        input.addEventListener('keydown', (event) => onCellKeydown(event, r, c));
+                        cellEl.appendChild(input);
+                        inputs[`${r},${c}`] = input;
+                    }
+                    rowEl.appendChild(cellEl);
+                }
+                boardEl.appendChild(rowEl);
+            }
+        }
+
+        function onCellInput(input, r, c) {
+            input.value = input.value.replace(/[^0-9]/g, '').slice(0, 4);
+            input.classList.remove('mp-correct', 'mp-incorrect');
+            if (allFilled()) {
+                checkPuzzle();
+            }
+        }
+
+        function onCellBlur(input, r, c) {
+            if (input.value === '') return;
+            markCell(input, r, c);
+        }
+
+        function onCellKeydown(event, r, c) {
+            if (event.key === 'ArrowRight' || event.key === 'ArrowDown') { event.preventDefault(); moveFocus(r, c, 1); }
+            else if (event.key === 'ArrowLeft' || event.key === 'ArrowUp') { event.preventDefault(); moveFocus(r, c, -1); }
+        }
+
+        function markCell(input, r, c) {
+            const value = parseInt(input.value, 10);
+            input.classList.remove('mp-correct', 'mp-incorrect');
+            if (Number.isNaN(value)) return;
+            input.classList.add(value === solution[r][c] ? 'mp-correct' : 'mp-incorrect');
+        }
+
+        function allFilled() {
+            return orderedEditableCoords().every(([r, c]) => inputs[`${r},${c}`].value !== '');
+        }
+
+        function checkPuzzle() {
+            const coords = orderedEditableCoords();
+            let correct = 0;
+            for (const [r, c] of coords) {
+                const input = inputs[`${r},${c}`];
+                if (input.value === '') {
+                    input.classList.remove('mp-correct', 'mp-incorrect');
+                    continue;
+                }
+                markCell(input, r, c);
+                if (parseInt(input.value, 10) === solution[r][c]) correct++;
+            }
+
+            if (correct === coords.length) {
+                solved = true;
+                stopTimer();
+                const seconds = Math.floor(elapsedSeconds());
+                if (!revealed) {
+                    const best = readBest(difficultySelectEl.value);
+                    if (best === null || seconds < best) {
+                        writeBest(difficultySelectEl.value, seconds);
+                        syncBest();
+                        statusEl.textContent = `Solved in ${formatTime(seconds)} — new best!`;
+                    } else {
+                        statusEl.textContent = `Solved in ${formatTime(seconds)}!`;
+                    }
+                }
+                statusEl.className = 'mb-4 text-center font-semibold text-emerald-700';
+            } else {
+                statusEl.textContent = `${correct} / ${coords.length} correct so far.`;
+                statusEl.className = 'mb-4 text-center font-semibold text-slate-700';
+            }
+        }
+
+        function revealSolution() {
+            revealed = true;
+            for (const [r, c] of orderedEditableCoords()) {
+                const input = inputs[`${r},${c}`];
+                input.value = String(solution[r][c]);
+                input.classList.remove('mp-incorrect');
+                input.classList.add('mp-correct');
+            }
+            stopTimer();
+            statusEl.textContent = 'Solution revealed.';
+            statusEl.className = 'mb-4 text-center font-semibold text-slate-700';
+        }
+
+        function newPuzzle() {
+            solved = false;
+            revealed = false;
+            const puzzle = generatePuzzle(difficultySelectEl.value);
+            height = puzzle.height;
+            solution = puzzle.solution;
+            given = puzzle.given;
+            renderBoard();
+            syncBest();
+            statusEl.textContent = 'Fill every blank brick so it equals the sum of the two bricks below it.';
+            statusEl.className = 'mb-4 text-center font-semibold text-slate-700';
+            startTimer();
+        }
+
+        newPuzzleBtn.addEventListener('click', newPuzzle);
+        checkPuzzleBtn.addEventListener('click', checkPuzzle);
+        revealBtn.addEventListener('click', revealSolution);
+        difficultySelectEl.addEventListener('change', newPuzzle);
+
+        newPuzzle();
+    </script>
+{% endblock %}
