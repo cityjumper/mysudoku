@@ -1,0 +1,740 @@
+{% extends "base.html" %}
+
+{% block title %}{{ translate(lang, 'games.bus_parking.title') }}{% endblock %}
+
+{% block extra_head %}
+<style>
+  #bp-scroll { overflow-x: auto; touch-action: pan-x pan-y; }
+  #bp-grid {
+    position: relative;
+    display: grid;
+    gap: 2px;
+    background: #94a3b8;
+    border-radius: 0.5rem;
+    overflow: hidden;
+    min-width: 820px;
+    touch-action: none;
+    user-select: none;
+  }
+  .bp-cell {
+    aspect-ratio: 1 / 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: clamp(10px, 1.6vw, 18px);
+    line-height: 1;
+    position: relative;
+    background: #eef2f7;
+  }
+  .bp-cell.bp-road { background: #e2e8f0; }
+  .bp-cell.bp-stop { background: #e0f2fe; }
+  .bp-bus {
+    position: relative;
+    width: 74%;
+    height: 74%;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.85em;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.35);
+  }
+  .bp-bus-small { font-size: 0.65em; }
+  .bp-bus-medium { font-size: 0.8em; }
+  .bp-bus-large { font-size: 0.95em; }
+  .bp-lot-bus {
+    position: relative;
+    margin: 2px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.35);
+    cursor: pointer;
+    font-size: clamp(11px, 1.5vw, 19px);
+    z-index: 1;
+  }
+  .bp-lot-bus:active { filter: brightness(0.94); }
+  .bp-bus.bp-shake, .bp-lot-bus.bp-shake { animation: bp-shake 0.35s ease; }
+  @keyframes bp-shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-4px); }
+    75% { transform: translateX(4px); }
+  }
+  .bp-cap-badge {
+    position: absolute;
+    bottom: -4px;
+    left: -4px;
+    min-width: 1.2em;
+    height: 1.2em;
+    padding: 0 3px;
+    border-radius: 999px;
+    background: #0f172a;
+    color: #fff;
+    font-size: 0.5em;
+    font-weight: 800;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 0 0 2px #fff;
+  }
+  .bp-exit-arrow {
+    position: absolute;
+    bottom: -2px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 0.6em;
+    line-height: 1;
+    filter: drop-shadow(0 1px 1px rgba(0,0,0,0.5));
+  }
+  .bp-exit-arrow.bp-exit-clear { color: #16a34a; }
+  .bp-exit-arrow.bp-exit-blocked { color: #dc2626; animation: bp-pulse 0.9s ease-in-out infinite; }
+  .bp-exit-lot-left { bottom: auto; left: -3px; top: 50%; transform: translateY(-50%); }
+  .bp-exit-lot-right { bottom: auto; left: auto; right: -3px; top: 50%; transform: translateY(-50%); }
+  @keyframes bp-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+  .bp-parking-reserved { box-shadow: inset 0 0 0 2px #94a3b8; }
+  .bp-queue-person {
+    width: 34%;
+    height: 34%;
+  }
+  .bp-queue-overflow {
+    font-size: 0.5em;
+    font-weight: 800;
+    color: #334155;
+    background: #e2e8f0;
+    border-radius: 999px;
+    padding: 3px 6px;
+    box-shadow: 0 0 0 1px #cbd5e1;
+  }
+  .bp-badge {
+    position: absolute;
+    top: -4px;
+    right: -4px;
+    min-width: 1.2em;
+    height: 1.2em;
+    padding: 0 3px;
+    border-radius: 999px;
+    background: #1e293b;
+    color: #fff;
+    font-size: 0.55em;
+    font-weight: 800;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 0 0 2px #fff;
+  }
+  .bp-badge.bp-warn { background: #dc2626; }
+  .bp-legend-chip { transition: opacity 0.2s ease; }
+  #gameover-overlay {
+    position: absolute;
+    inset: 0;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    background: rgba(15, 23, 42, 0.85);
+    color: white;
+    border-radius: inherit;
+    text-align: center;
+    padding: 1rem;
+  }
+  #gameover-overlay:not(.hidden) { display: flex; }
+</style>
+{% endblock %}
+
+{% block body_class %}bg-gradient-to-br from-slate-50 to-sky-100 min-h-screen{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+  <div class="max-w-6xl mx-auto mb-6 flex items-center justify-between">
+    <a href="/" class="inline-flex items-center text-sky-800 hover:text-sky-950 font-semibold">
+      <svg class="w-5 h-5 mr-2" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+        <path fill-rule="evenodd" d="M12.707 15.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 111.414 1.414L7.414 9H17a1 1 0 110 2H7.414l5.293 5.293a1 1 0 010 1.414z" clip-rule="evenodd" />
+      </svg>
+      {{ translate(lang, 'common.home') }}
+    </a>
+  </div>
+
+  <div class="max-w-6xl mx-auto">
+    <header class="text-center mb-6">
+      <h1 class="text-4xl sm:text-5xl font-extrabold tracking-tight text-slate-900">{{ translate(lang, 'games.bus_parking.title') }}</h1>
+      <p class="mt-2 text-slate-600">{{ translate(lang, 'games.bus_parking.subtitle') }}</p>
+    </header>
+
+    <!-- Stat bar -->
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
+      <div class="bg-white rounded-xl shadow ring-1 ring-slate-200 p-3 text-center">
+        <div class="text-xs font-bold text-slate-500 uppercase tracking-wide">Score</div>
+        <div id="score-val" class="text-lg font-extrabold text-slate-900">0</div>
+      </div>
+      <div class="bg-white rounded-xl shadow ring-1 ring-slate-200 p-3 text-center">
+        <div class="text-xs font-bold text-slate-500 uppercase tracking-wide">Best</div>
+        <div id="best-val" class="text-lg font-extrabold text-sky-700">0</div>
+      </div>
+      <div class="bg-white rounded-xl shadow ring-1 ring-slate-200 p-3 text-center">
+        <div class="text-xs font-bold text-slate-500 uppercase tracking-wide">Cleared</div>
+        <div id="cleared-val" class="text-lg font-extrabold text-slate-900">0 / 20</div>
+      </div>
+      <div class="bg-white rounded-xl shadow ring-1 ring-slate-200 p-3 text-center">
+        <div class="text-xs font-bold text-slate-500 uppercase tracking-wide">Waiting</div>
+        <div id="waiting-val" class="text-lg font-extrabold text-slate-900">0</div>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+      <div class="lg:col-span-3">
+        <div class="bg-white rounded-2xl shadow-xl ring-1 ring-slate-200 p-3 sm:p-4 relative">
+          <div id="bp-scroll">
+            <div id="bp-grid"></div>
+          </div>
+          <div id="gameover-overlay" class="hidden">
+            <p id="gameover-heading" class="text-2xl font-extrabold mb-1">Overflow! Game Over</p>
+            <p id="final-score-line" class="text-slate-200 mb-4"></p>
+            <button id="restart-btn" type="button" class="rounded-lg bg-sky-600 hover:bg-sky-700 text-white font-bold px-5 py-2">Play Again</button>
+          </div>
+        </div>
+        <p class="mt-3 text-xs sm:text-sm text-slate-500 text-center">Tap a bus to send it out — it only moves if its arrow direction is clear. It then drives itself to the bus stop, boards its own color from the queue, and leaves for good.</p>
+      </div>
+
+      <!-- Sidebar -->
+      <div class="lg:col-span-1 flex flex-col gap-4">
+        <div class="bg-white rounded-2xl shadow-xl ring-1 ring-slate-200 p-4">
+          <h3 class="text-xs font-bold text-slate-500 uppercase tracking-wide mb-3">Bus Stop Queue</h3>
+          <div id="legend-list" class="space-y-2"></div>
+        </div>
+
+        <div class="bg-white rounded-2xl shadow-xl ring-1 ring-slate-200 p-4">
+          <h3 class="text-xs font-bold text-slate-500 uppercase tracking-wide mb-2">Depot Log</h3>
+          <ul id="msg-log" class="text-xs text-slate-600 space-y-1.5 min-h-[80px]"></ul>
+        </div>
+
+        <div class="bg-white rounded-2xl shadow-xl ring-1 ring-slate-200 p-4 hidden lg:block">
+          <h3 class="text-sm font-bold text-slate-700 mb-2">How to play</h3>
+          <ul class="text-xs text-slate-600 space-y-1">
+            <li>• The goal is to clear the whole lot — get all 20 buses off the grid.</li>
+            <li>• Each bus is locked to one direction (◀ ▶ ▼) based on how it's parked.</li>
+            <li>• Tap a bus: if every cell in its arrow direction is empty, it drives itself all the way to the bus stop.</li>
+            <li>• A blocked bus (red arrow) can't move — clear the buses in front of it first.</li>
+            <li>• Bigger buses take up more space but carry more passengers.</li>
+            <li>• Everyone waits in one shared, mixed-color queue — don't let it overflow!</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+(function () {
+  const COLS = 14;
+  const ROWS = 11;
+  const STOP_ROW = ROWS - 1;
+  const TOTAL_BUSES = 20;
+  const NUM_STOP_SLOTS = 3;
+  const STORAGE_KEY = 'bus-parking-best-v2';
+
+  const COLORS = [
+    { key: 'red',    hex: '#ef4444' },
+    { key: 'blue',   hex: '#3b82f6' },
+    { key: 'yellow', hex: '#eab308' },
+    { key: 'green',  hex: '#22c55e' },
+    { key: 'purple', hex: '#a855f7' },
+    { key: 'orange', hex: '#f97316' },
+  ];
+
+  const SIZES = [
+    { key: 'small',  length: 2, capacity: 2, icon: '🚐', cls: 'bp-bus-small' },
+    { key: 'medium', length: 3, capacity: 4, icon: '🚌', cls: 'bp-bus-medium' },
+    { key: 'large',  length: 4, capacity: 6, icon: '🚍', cls: 'bp-bus-large' },
+  ];
+
+  const MAX_QUEUE = 22;
+  const TICK_MS = 380;
+  const GROWTH_MS = 3000;
+
+  const gridEl = document.getElementById('bp-grid');
+  const scoreVal = document.getElementById('score-val');
+  const bestVal = document.getElementById('best-val');
+  const clearedVal = document.getElementById('cleared-val');
+  const waitingVal = document.getElementById('waiting-val');
+  const legendList = document.getElementById('legend-list');
+  const msgLog = document.getElementById('msg-log');
+  const gameoverOverlay = document.getElementById('gameover-overlay');
+  const gameoverHeading = document.getElementById('gameover-heading');
+  const finalScoreLine = document.getElementById('final-score-line');
+  const restartBtn = document.getElementById('restart-btn');
+
+  gridEl.style.gridTemplateColumns = `repeat(${COLS}, 1fr)`;
+
+  let state = null;
+  let cellEls = [];
+  let tickTimer = null;
+  let growthTimer = null;
+
+  function idx(x, y) { return y * COLS + x; }
+
+  function personSvg(hex) {
+    return `<svg viewBox="0 0 24 24" width="100%" height="100%" preserveAspectRatio="xMidYMid meet">
+      <circle cx="12" cy="6.5" r="4.2" fill="${hex}" stroke="#fff" stroke-width="1"/>
+      <path d="M4 22c0-5.2 3.6-8.5 8-8.5s8 3.3 8 8.5" fill="${hex}" stroke="#fff" stroke-width="1"/>
+    </svg>`;
+  }
+
+  function frontCell(bus) {
+    if (bus.dir === 'left') return bus.cells.reduce((a, b) => (a.col < b.col ? a : b));
+    if (bus.dir === 'right') return bus.cells.reduce((a, b) => (a.col > b.col ? a : b));
+    return bus.cells.reduce((a, b) => (a.row > b.row ? a : b));
+  }
+
+  function lotOccupancy(excludeId) {
+    const occ = new Set();
+    for (const b of state.lotBuses) {
+      if (b.id === excludeId) continue;
+      for (const c of b.cells) occ.add(idx(c.col, c.row));
+    }
+    return occ;
+  }
+
+  // Pure geometry check, independent of game state, so it can also be used
+  // to verify a freshly-generated lot is solvable before the game starts.
+  function pathIsClear(bus, occ) {
+    const front = frontCell(bus);
+    let c = front.col, r = front.row;
+    while (true) {
+      if (bus.dir === 'left') c -= 1;
+      else if (bus.dir === 'right') c += 1;
+      else r += 1;
+      if (bus.dir !== 'down' && (c < 0 || c >= COLS)) return true;
+      if (bus.dir === 'down' && r >= STOP_ROW) return true;
+      if (occ.has(idx(c, r))) return false;
+    }
+  }
+
+  function canExit(bus) {
+    return pathIsClear(bus, lotOccupancy(bus.id));
+  }
+
+  // Because each bus is locked to a single direction and never turns, a
+  // random layout can produce a genuine deadlock (a cycle of buses each
+  // blocking the next, Rush-Hour style) with no possible sequence of moves
+  // that clears it. Simulate greedily removing every currently-exitable bus,
+  // round by round, the same way a perfect player would — if buses remain
+  // once no more can be removed, the layout is unsolvable.
+  function isLotFullyClearable(buses) {
+    let remaining = buses;
+    while (remaining.length > 0) {
+      const occ = new Set();
+      for (const b of remaining) for (const c of b.cells) occ.add(idx(c.col, c.row));
+      const stillBlocked = remaining.filter((b) => {
+        const occExcl = new Set(occ);
+        for (const c of b.cells) occExcl.delete(idx(c.col, c.row));
+        return !pathIsClear(b, occExcl);
+      });
+      if (stillBlocked.length === remaining.length) return false;
+      remaining = stillBlocked;
+    }
+    return true;
+  }
+
+  function attemptGenerateLotOnce() {
+    const buses = [];
+    const occupied = new Set();
+    let attempts = 0;
+    let nextId = 1;
+    while (buses.length < TOTAL_BUSES && attempts < 8000) {
+      attempts += 1;
+      const size = SIZES[Math.floor(Math.random() * SIZES.length)];
+      const length = size.length;
+      const horizontal = Math.random() < 0.5;
+      let cells;
+      if (horizontal) {
+        const col = Math.floor(Math.random() * (COLS - length + 1));
+        const row = Math.floor(Math.random() * STOP_ROW);
+        cells = Array.from({ length }, (_, i) => ({ col: col + i, row }));
+      } else {
+        if (STOP_ROW - length + 1 <= 0) continue;
+        const col = Math.floor(Math.random() * COLS);
+        const row = Math.floor(Math.random() * (STOP_ROW - length + 1));
+        cells = Array.from({ length }, (_, i) => ({ col, row: row + i }));
+      }
+      if (cells.some((c) => occupied.has(idx(c.col, c.row)))) continue;
+      const dir = horizontal ? (Math.random() < 0.5 ? 'left' : 'right') : 'down';
+      const color = COLORS[Math.floor(Math.random() * COLORS.length)];
+      for (const c of cells) occupied.add(idx(c.col, c.row));
+      buses.push({ id: nextId++, color, size, dir, cells });
+    }
+    return buses;
+  }
+
+  function generateLot() {
+    let buses = attemptGenerateLotOnce();
+    let tries = 0;
+    while (!isLotFullyClearable(buses) && tries < 300) {
+      buses = attemptGenerateLotOnce();
+      tries += 1;
+    }
+    return buses;
+  }
+
+  function freshState() {
+    const stopSlots = (() => {
+      const cols = [];
+      const start = Math.floor((COLS - NUM_STOP_SLOTS) / 2);
+      for (let i = 0; i < NUM_STOP_SLOTS; i++) cols.push(start + i);
+      return cols.map((col) => ({ col, reservedBy: null }));
+    })();
+    const queue = [];
+    for (let i = 0; i < 6; i++) queue.push(COLORS[Math.floor(Math.random() * COLORS.length)].key);
+    return {
+      score: 0,
+      cleared: 0,
+      lotBuses: generateLot(),
+      travelers: [],
+      stopSlots,
+      queue,
+      gameOver: false,
+      won: false,
+    };
+  }
+
+  function buildGridDom() {
+    gridEl.innerHTML = '';
+    cellEls = [];
+    for (let y = 0; y < ROWS; y++) {
+      for (let x = 0; x < COLS; x++) {
+        const div = document.createElement('div');
+        div.className = 'bp-cell bp-road';
+        div.dataset.x = x;
+        div.dataset.y = y;
+        gridEl.appendChild(div);
+        cellEls.push(div);
+      }
+    }
+  }
+
+  function pushMessage(text) {
+    const li = document.createElement('li');
+    li.textContent = text;
+    msgLog.prepend(li);
+    while (msgLog.children.length > 8) msgLog.removeChild(msgLog.lastChild);
+  }
+
+  function capitalize(s) { return s.charAt(0).toUpperCase() + s.slice(1); }
+
+  function shakeLotBus(id) {
+    const el = gridEl.querySelector(`.bp-lot-bus[data-bus-id="${id}"]`);
+    if (el) {
+      el.classList.remove('bp-shake');
+      void el.offsetWidth;
+      el.classList.add('bp-shake');
+    }
+  }
+
+  function assignStopTarget(traveler) {
+    const openSlot = state.stopSlots.find((s) => s.reservedBy == null);
+    if (openSlot) {
+      openSlot.reservedBy = traveler.id;
+      traveler.targetCol = openSlot.col;
+      return;
+    }
+    // No open slot: join whichever slot currently has the shortest line
+    // waiting for it, so travelers spread across all slots instead of
+    // piling onto whichever one happens to be nearest.
+    let best = null, bestLoad = Infinity, bestDist = Infinity;
+    for (const slot of state.stopSlots) {
+      const load = state.travelers.filter((t) => t.targetCol === slot.col).length;
+      const dist = Math.abs(slot.col - traveler.col);
+      if (load < bestLoad || (load === bestLoad && dist < bestDist)) {
+        best = slot; bestLoad = load; bestDist = dist;
+      }
+    }
+    traveler.targetCol = best.col;
+  }
+
+  function tryExitBus(bus) {
+    if (state.gameOver) return;
+    if (!canExit(bus)) {
+      shakeLotBus(bus.id);
+      return;
+    }
+    let entryCol;
+    if (bus.dir === 'left') entryCol = 0;
+    else if (bus.dir === 'right') entryCol = COLS - 1;
+    else entryCol = frontCell(bus).col;
+    const entryBlocked = state.travelers.some((t) => t.col === entryCol && t.row === STOP_ROW);
+    if (entryBlocked) {
+      shakeLotBus(bus.id);
+      return;
+    }
+    state.lotBuses = state.lotBuses.filter((b) => b.id !== bus.id);
+    const traveler = {
+      id: bus.id,
+      color: bus.color,
+      size: bus.size,
+      capacity: bus.size.capacity,
+      col: entryCol,
+      row: STOP_ROW,
+      targetCol: entryCol,
+      docked: false,
+    };
+    assignStopTarget(traveler);
+    state.travelers.push(traveler);
+    render();
+  }
+
+  function onGridClick(e) {
+    if (state.gameOver) return;
+    const busEl = e.target.closest('.bp-lot-bus');
+    if (!busEl) return;
+    const busId = Number(busEl.dataset.busId);
+    const bus = state.lotBuses.find((b) => b.id === busId);
+    if (bus) tryExitBus(bus);
+  }
+
+  function processBoarding(t) {
+    let remaining = t.capacity;
+    let picked = 0;
+    const newQueue = [];
+    for (const colorKey of state.queue) {
+      if (remaining > 0 && colorKey === t.color.key) {
+        remaining -= 1;
+        picked += 1;
+      } else {
+        newQueue.push(colorKey);
+      }
+    }
+    state.queue = newQueue;
+    const points = picked * 10;
+    state.score += points;
+    state.cleared += 1;
+    pushMessage(`🚌 ${capitalize(t.color.key)} ${t.size.key} bus boarded ${picked} passenger${picked === 1 ? '' : 's'} and left! +${points}`);
+    const slot = state.stopSlots.find((s) => s.col === t.targetCol);
+    if (slot && slot.reservedBy === t.id) slot.reservedBy = null;
+    state.travelers = state.travelers.filter((x) => x.id !== t.id);
+    if (state.cleared >= TOTAL_BUSES) triggerWin();
+  }
+
+  function moveTravelers() {
+    const movedThisTick = new Set();
+    for (const t of state.travelers.slice()) {
+      if (t.docked) { processBoarding(t); continue; }
+      if (movedThisTick.has(t.id)) continue;
+      const slot = state.stopSlots.find((s) => s.col === t.targetCol);
+      if (t.col === t.targetCol) {
+        if (slot && slot.reservedBy === t.id) t.docked = true;
+        else if (slot && slot.reservedBy == null) { slot.reservedBy = t.id; t.docked = true; }
+        // else: another traveler already holds this slot — wait here for it
+        // to leave. Sitting exactly at one's own target is a "parking at the
+        // curb" position, so (see below) it never blocks anyone else's lane.
+        continue;
+      }
+      const dir = t.col < t.targetCol ? 1 : -1;
+      const nextCol = t.col + dir;
+      // Only travelers still mid-journey count as obstacles. One that has
+      // already reached its own target and is just waiting for a slot to
+      // free up has pulled up to the curb and doesn't block through traffic
+      // heading past it to a different stop space.
+      const blocker = state.travelers.find((o) => o.id !== t.id && o.row === STOP_ROW && o.col === nextCol && o.col !== o.targetCol && !movedThisTick.has(o.id));
+      if (blocker) {
+        // Two travelers heading toward each other can end up adjacent, each
+        // wanting the cell the other occupies — an unresolvable head-on
+        // standoff under simple "move if empty" rules (the only deadlock
+        // shape possible on a single 1D lane, since there are no cycles on
+        // a line). Let them swap past each other in that one case.
+        const blockerDir = blocker.col < blocker.targetCol ? 1 : -1;
+        if (blocker.col + blockerDir === t.col) {
+          const tmp = t.col;
+          t.col = blocker.col;
+          blocker.col = tmp;
+          movedThisTick.add(t.id);
+          movedThisTick.add(blocker.id);
+        }
+        continue;
+      }
+      t.col = nextCol;
+      movedThisTick.add(t.id);
+    }
+  }
+
+  function growthTick() {
+    if (state.gameOver) return;
+    if (state.queue.length >= MAX_QUEUE) {
+      triggerLose();
+      return;
+    }
+    const color = COLORS[Math.floor(Math.random() * COLORS.length)];
+    state.queue.push(color.key);
+    render();
+    growthTimer = setTimeout(growthTick, GROWTH_MS);
+  }
+
+  function stopTimers() {
+    if (tickTimer) clearInterval(tickTimer);
+    if (growthTimer) clearTimeout(growthTimer);
+  }
+
+  function triggerWin() {
+    state.gameOver = true;
+    state.won = true;
+    stopTimers();
+    const best = Math.max(state.score, Number(localStorage.getItem(STORAGE_KEY) || 0));
+    localStorage.setItem(STORAGE_KEY, String(best));
+    bestVal.textContent = best;
+    gameoverOverlay.style.background = 'rgba(6, 95, 70, 0.9)';
+    gameoverHeading.textContent = '🎉 Lot Cleared!';
+    finalScoreLine.textContent = `Score: ${state.score} · All ${TOTAL_BUSES} buses cleared`;
+    gameoverOverlay.classList.remove('hidden');
+    render();
+  }
+
+  function triggerLose() {
+    state.gameOver = true;
+    state.won = false;
+    stopTimers();
+    const best = Math.max(state.score, Number(localStorage.getItem(STORAGE_KEY) || 0));
+    localStorage.setItem(STORAGE_KEY, String(best));
+    bestVal.textContent = best;
+    gameoverOverlay.style.background = 'rgba(15, 23, 42, 0.85)';
+    gameoverHeading.textContent = 'Overflow! Game Over';
+    finalScoreLine.textContent = `Score: ${state.score} · ${state.cleared}/${TOTAL_BUSES} buses cleared`;
+    gameoverOverlay.classList.remove('hidden');
+    render();
+  }
+
+  function queueDisplayCols() {
+    const stopCols = state.stopSlots.map((s) => s.col).sort((a, b) => a - b);
+    const rightStart = stopCols[stopCols.length - 1] + 1;
+    const leftStart = stopCols[0] - 1;
+    const cols = [];
+    for (let c = rightStart; c < COLS; c++) cols.push(c);
+    for (let c = leftStart; c >= 0; c--) cols.push(c);
+    return cols;
+  }
+
+  function render() {
+    for (const cell of cellEls) {
+      cell.className = 'bp-cell bp-road';
+      cell.innerHTML = '';
+      delete cell.dataset.color;
+    }
+    gridEl.querySelectorAll('.bp-lot-bus').forEach((el) => el.remove());
+
+    for (const bus of state.lotBuses) {
+      const div = document.createElement('div');
+      div.className = 'bp-lot-bus';
+      div.dataset.busId = bus.id;
+      const minCol = Math.min(...bus.cells.map((c) => c.col));
+      const minRow = Math.min(...bus.cells.map((c) => c.row));
+      const spanCols = bus.dir === 'down' ? 1 : bus.size.length;
+      const spanRows = bus.dir === 'down' ? bus.size.length : 1;
+      div.style.gridColumn = `${minCol + 1} / span ${spanCols}`;
+      div.style.gridRow = `${minRow + 1} / span ${spanRows}`;
+      div.style.background = bus.color.hex;
+      const blocked = !canExit(bus);
+      const arrowChar = bus.dir === 'left' ? '◀' : bus.dir === 'right' ? '▶' : '▼';
+      const arrowClass = bus.dir === 'left' ? 'bp-exit-lot-left' : bus.dir === 'right' ? 'bp-exit-lot-right' : '';
+      div.innerHTML = `<span class="${bus.size.cls}">${bus.size.icon}</span>` +
+        `<span class="bp-cap-badge">${bus.size.capacity}</span>` +
+        `<span class="bp-exit-arrow ${arrowClass} ${blocked ? 'bp-exit-blocked' : 'bp-exit-clear'}">${arrowChar}</span>`;
+      gridEl.appendChild(div);
+    }
+
+    for (const slot of state.stopSlots) {
+      const el = cellEls[idx(slot.col, STOP_ROW)];
+      el.className = 'bp-cell bp-stop' + (slot.reservedBy != null ? ' bp-parking-reserved' : '');
+      el.innerHTML = `<span style="font-size:1.1em">🚏</span>`;
+    }
+
+    const displayCols = queueDisplayCols();
+    for (let i = 0; i < displayCols.length; i++) {
+      if (i >= state.queue.length) break;
+      const col = displayCols[i];
+      const el = cellEls[idx(col, STOP_ROW)];
+      const isLastVisible = i === displayCols.length - 1;
+      if (isLastVisible && state.queue.length > displayCols.length) {
+        el.innerHTML = `<span class="bp-queue-overflow">+${state.queue.length - i}</span>`;
+      } else {
+        const colorObj = COLORS.find((c) => c.key === state.queue[i]);
+        el.innerHTML = `<div class="bp-queue-person">${personSvg(colorObj.hex)}</div>`;
+      }
+    }
+
+    for (const t of state.travelers) {
+      const el = cellEls[idx(t.col, t.row)];
+      el.className = 'bp-cell bp-road';
+      el.innerHTML = `<div class="bp-bus ${t.size.cls}" style="background:${t.color.hex}">${t.size.icon}</div>`;
+    }
+
+    scoreVal.textContent = state.score;
+    clearedVal.textContent = `${state.cleared} / ${TOTAL_BUSES}`;
+    waitingVal.textContent = state.queue.length;
+    bestVal.textContent = Math.max(state.score, Number(localStorage.getItem(STORAGE_KEY) || 0));
+
+    renderLegend();
+  }
+
+  function renderLegend() {
+    legendList.innerHTML = '';
+
+    const overallPct = Math.min(100, Math.round((state.queue.length / MAX_QUEUE) * 100));
+    const overallWarn = state.queue.length >= MAX_QUEUE - 5;
+    const overallRow = document.createElement('div');
+    overallRow.className = 'bp-legend-chip mb-1';
+    overallRow.innerHTML = `
+      <div class="flex items-center justify-between text-xs font-semibold mb-1 text-slate-700">
+        <span>Total waiting</span>
+        <span class="${overallWarn ? 'text-red-600' : ''}">${state.queue.length} / ${MAX_QUEUE}</span>
+      </div>
+      <div class="h-2 rounded-full bg-slate-100 overflow-hidden">
+        <div class="h-full rounded-full" style="width:${overallPct}%; background:${overallWarn ? '#dc2626' : '#0ea5e9'}"></div>
+      </div>`;
+    legendList.appendChild(overallRow);
+
+    const counts = {};
+    for (const c of state.queue) counts[c] = (counts[c] || 0) + 1;
+    for (const color of COLORS) {
+      const n = counts[color.key] || 0;
+      const row = document.createElement('div');
+      row.className = 'bp-legend-chip flex items-center justify-between text-xs font-semibold';
+      row.innerHTML = `<span style="color:${color.hex}">${capitalize(color.key)}</span><span class="text-slate-500">${n}</span>`;
+      legendList.appendChild(row);
+    }
+
+    const lotLeft = state.lotBuses.length + state.travelers.length;
+    const p = document.createElement('p');
+    p.className = 'text-[11px] text-slate-400 mt-1';
+    p.textContent = `${lotLeft} bus${lotLeft === 1 ? '' : 'es'} still on the lot.`;
+    legendList.appendChild(p);
+  }
+
+  gridEl.addEventListener('click', onGridClick);
+
+  function tick() {
+    if (state.gameOver) return;
+    moveTravelers();
+    render();
+  }
+
+  function startTimers() {
+    stopTimers();
+    tickTimer = setInterval(tick, TICK_MS);
+    growthTimer = setTimeout(growthTick, GROWTH_MS);
+  }
+
+  function init() {
+    state = freshState();
+    buildGridDom();
+    msgLog.innerHTML = '';
+    gameoverOverlay.classList.add('hidden');
+    pushMessage('🚏 Welcome! Tap a bus to send it toward the stop.');
+    render();
+    startTimers();
+  }
+
+  restartBtn.addEventListener('click', init);
+
+  init();
+})();
+</script>
+{% endblock %}

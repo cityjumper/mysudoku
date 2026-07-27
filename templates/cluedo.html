@@ -1,0 +1,1397 @@
+{% extends "base.html" %}
+
+{% block title %}{{ translate(lang, 'games.cluedo.title') }}{% endblock %}
+
+{% block extra_head %}
+<style>
+  .cl-felt {
+    background: radial-gradient(circle at 50% 20%, #312e81 0%, #1e1b4b 65%, #14123a 100%);
+  }
+
+  .char-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    padding: 10px 6px;
+    border-radius: 12px;
+    background: #f1f5f9;
+    border: 2px solid transparent;
+    font-weight: 700;
+    font-size: 11px;
+    color: #334155;
+    text-align: center;
+    transition: all 0.15s ease;
+  }
+  .char-btn.selected { border-color: #7c3aed; background: #f5f3ff; color: #4c1d95; }
+  .char-swatch {
+    width: 26px;
+    height: 26px;
+    border-radius: 999px;
+    box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.8), 0 1px 3px rgba(0,0,0,0.3);
+  }
+
+  .opp-btn {
+    padding: 12px 6px;
+    border-radius: 12px;
+    background: #f1f5f9;
+    font-weight: 700;
+    font-size: 13px;
+    color: #334155;
+    border: 2px solid transparent;
+    text-align: center;
+    transition: all 0.15s ease;
+  }
+  .opp-btn.selected { background: #ede9fe; border-color: #7c3aed; color: #4c1d95; }
+
+  .cl-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 10px;
+    border-radius: 999px;
+    background: #f1f5f9;
+    color: #1e293b;
+    font-size: 12px;
+    font-weight: 700;
+    border: 2px solid transparent;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.12s ease;
+    -webkit-user-select: none;
+    user-select: none;
+  }
+  .cl-chip:hover { transform: translateY(-1px); }
+  .cl-chip.selected { border-color: #7c3aed; box-shadow: 0 0 0 2px rgba(124, 58, 237, 0.25); }
+  .cl-chip .cl-dot { width: 12px; height: 12px; border-radius: 999px; flex-shrink: 0; box-shadow: 0 0 0 1px rgba(0,0,0,0.15); }
+  .cl-chip-row { display: flex; flex-wrap: wrap; gap: 6px; }
+
+  .cl-card {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 10px;
+    border-radius: 10px;
+    background: #fff;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.15);
+    border: 1px solid #e2e8f0;
+    font-size: 12px;
+    font-weight: 700;
+    color: #1e293b;
+  }
+  .cl-card .cl-dot { width: 11px; height: 11px; border-radius: 999px; flex-shrink: 0; box-shadow: 0 0 0 1px rgba(0,0,0,0.15); }
+
+  .cl-player-chip {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    border-radius: 999px;
+    background: rgba(255,255,255,0.08);
+    color: #ede9fe;
+    font-size: 12px;
+    font-weight: 700;
+    border: 2px solid transparent;
+    flex-shrink: 0;
+  }
+  .cl-player-chip.active { background: #facc15; color: #422006; box-shadow: 0 0 0 3px rgba(250, 204, 21, 0.35); }
+  .cl-player-chip.eliminated { opacity: 0.45; }
+  .cl-player-chip .cl-dot { width: 12px; height: 12px; border-radius: 999px; box-shadow: 0 0 0 1px rgba(255,255,255,0.4); }
+  .cl-out-tag { font-size: 9px; font-weight: 800; background: #ef4444; color: #fff; border-radius: 999px; padding: 1px 6px; }
+
+  .cl-note-cell {
+    width: 34px;
+    height: 30px;
+    text-align: center;
+    vertical-align: middle;
+    font-weight: 800;
+    font-size: 14px;
+    cursor: pointer;
+    border: 1px solid #e2e8f0;
+    color: #94a3b8;
+    background: #fff;
+  }
+  .cl-note-cell:hover { background: #f8fafc; }
+  .cl-note-cell.cl-yes { color: #16a34a; background: #f0fdf4; }
+  .cl-note-cell.cl-no { color: #dc2626; background: #fef2f2; }
+  .cl-note-cell.cl-maybe { color: #b45309; background: #fffbeb; }
+  .cl-note-cell.cl-auto { cursor: default; box-shadow: inset 0 0 0 1px #a78bfa; }
+  .cl-note-table { border-collapse: collapse; font-size: 12px; }
+  .cl-note-table th { position: sticky; top: 0; background: #f8fafc; font-size: 10px; padding: 4px 6px; z-index: 5; }
+  .cl-note-table td.cl-item-label {
+    position: sticky;
+    left: 0;
+    background: #fff;
+    text-align: left;
+    padding: 4px 8px;
+    font-size: 11px;
+    font-weight: 700;
+    color: #334155;
+    white-space: nowrap;
+    z-index: 4;
+    border: 1px solid #e2e8f0;
+  }
+  .cl-note-table th.cl-col-head { width: 30px; min-width: 30px; max-width: 30px; height: 88px; padding: 6px 2px 4px; vertical-align: bottom; }
+  .cl-col-name {
+    display: block;
+    writing-mode: vertical-rl;
+    transform: rotate(180deg);
+    margin: 3px auto 0;
+    font-size: 10px;
+    font-weight: 700;
+    color: #334155;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-height: 70px;
+  }
+
+  .cl-give-up { font-size: 12px; color: #94a3b8; text-decoration: underline; cursor: pointer; }
+  .cl-give-up:hover { color: #64748b; }
+
+  .cl-board {
+    display: grid;
+    grid-template-columns: 1fr 1fr 2.3fr 1fr 1fr 1fr 2.3fr 1fr 1fr 1fr 2.3fr 1fr 1fr;
+    grid-template-rows: 1fr 1fr 2.3fr 1fr 1fr 1fr 2.3fr 1fr 1fr 1fr 2.3fr 1fr 1fr;
+    gap: 2px;
+    width: 100%;
+    max-width: 800px;
+    aspect-ratio: 1 / 1;
+    margin: 0 auto;
+  }
+  .cl-cell {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    overflow: hidden;
+  }
+  .cl-cell.cl-corridor {
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.1);
+  }
+  .cl-cell.cl-room {
+    background: rgba(255,255,255,0.94);
+    border: 1px solid rgba(255,255,255,0.5);
+    color: #1e293b;
+    font-size: 10px;
+    font-weight: 800;
+    text-align: center;
+    line-height: 1.15;
+    padding: 2px;
+    gap: 2px;
+    border-radius: 8px;
+  }
+  .cl-cell.cl-room .cl-room-icon { font-size: 20px; }
+  .cl-cell.cl-reachable { cursor: pointer; box-shadow: inset 0 0 0 2px #facc15, 0 0 8px rgba(250, 204, 21, 0.6); }
+  .cl-cell.cl-reachable.cl-corridor { background: rgba(250, 204, 21, 0.25); }
+  .cl-cell.cl-passage-link::after {
+    content: '🚪';
+    position: absolute;
+    top: 1px;
+    right: 2px;
+    font-size: 9px;
+  }
+  .cl-cell.cl-door {
+    background: rgba(250, 204, 21, 0.14);
+  }
+  .cl-cell.cl-door.cl-reachable { background: rgba(250, 204, 21, 0.35); }
+  .cl-door-mark {
+    position: absolute;
+    background: #f59e0b;
+    border-radius: 2px;
+    box-shadow: 0 0 0 1px rgba(255,255,255,0.7);
+    z-index: 2;
+  }
+  .cl-door-mark.cl-door-n { top: -2px; left: 50%; width: 26%; height: 4px; transform: translateX(-50%); }
+  .cl-door-mark.cl-door-s { bottom: -2px; left: 50%; width: 26%; height: 4px; transform: translateX(-50%); }
+  .cl-door-mark.cl-door-e { right: -2px; top: 50%; width: 4px; height: 26%; transform: translateY(-50%); }
+  .cl-door-mark.cl-door-w { left: -2px; top: 50%; width: 4px; height: 26%; transform: translateY(-50%); }
+  .cl-token-row { display: flex; flex-wrap: wrap; gap: 2px; align-items: center; justify-content: center; position: absolute; bottom: 1px; left: 0; right: 0; }
+  .cl-cell.cl-room .cl-token-row { position: static; margin-top: 1px; }
+  .cl-token {
+    width: 11px;
+    height: 11px;
+    border-radius: 999px;
+    box-shadow: 0 0 0 1.5px rgba(255,255,255,0.9), 0 1px 2px rgba(0,0,0,0.4);
+    flex-shrink: 0;
+  }
+  .cl-cell.cl-room .cl-token { width: 14px; height: 14px; }
+
+  .cl-die {
+    width: 48px;
+    height: 48px;
+    background: white;
+    border: 3px solid #1e1b4b;
+    border-radius: 10px;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    grid-template-rows: repeat(3, 1fr);
+    padding: 6px;
+    gap: 2px;
+    flex-shrink: 0;
+  }
+  .cl-pip { width: 7px; height: 7px; border-radius: 50%; background: #1e1b4b; opacity: 0; align-self: center; justify-self: center; }
+  .cl-pip.cl-pip-on { opacity: 1; }
+
+  .cl-move-hint { font-size: 12px; color: #ede9fe; opacity: 0.85; }
+
+  #log div { padding: 3px 0; border-bottom: 1px dashed #f1f5f9; }
+  #log div:last-child { border-bottom: none; }
+  .cl-log-default { color: #64748b; }
+  .cl-log-system { color: #7c3aed; font-weight: 800; text-align: center; border-bottom: none !important; }
+  .cl-log-turn { color: #0f172a; font-weight: 800; }
+  .cl-log-suggest { color: #6d28d9; font-weight: 600; }
+  .cl-log-move { color: #0369a1; }
+  .cl-log-passage { color: #4338ca; font-weight: 600; }
+  .cl-log-fail { color: #94a3b8; }
+  .cl-log-reveal { color: #0f766e; font-weight: 600; }
+  .cl-log-reveal-you { color: #047857; font-weight: 800; background: #ecfdf5; padding-left: 4px; border-radius: 4px; }
+  .cl-log-hint { color: #b45309; font-weight: 700; }
+  .cl-log-deduce { color: #92400e; font-weight: 800; background: #fffbeb; padding-left: 4px; border-radius: 4px; }
+  .cl-log-wrong { color: #b91c1c; font-weight: 800; }
+</style>
+{% endblock %}
+
+{% block body_class %}bg-gradient-to-br from-indigo-50 via-violet-50 to-purple-100 min-h-screen{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+  <div class="max-w-6xl mx-auto mb-6 flex items-center justify-between">
+    <a href="/" class="inline-flex items-center text-violet-800 hover:text-violet-950 font-semibold">
+      <svg class="w-5 h-5 mr-2" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+        <path fill-rule="evenodd" d="M12.707 15.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 111.414 1.414L7.414 9H17a1 1 0 110 2H7.414l5.293 5.293a1 1 0 010 1.414z" clip-rule="evenodd" />
+      </svg>
+      {{ translate(lang, 'common.home') }}
+    </a>
+    <div class="flex items-center gap-4">
+      <a href="/mastermind" class="text-sm font-semibold text-slate-600 hover:text-slate-900">{{ translate(lang, 'games.mastermind.name') }}</a>
+    </div>
+  </div>
+
+  <div class="max-w-6xl mx-auto">
+    <header class="text-center mb-8">
+      <h1 class="text-4xl sm:text-5xl font-extrabold tracking-tight text-slate-900">{{ translate(lang, 'games.cluedo.title') }}</h1>
+      <p class="mt-2 text-slate-600">{{ translate(lang, 'games.cluedo.subtitle') }}</p>
+    </header>
+
+    <!-- SETUP SCREEN -->
+    <div id="setup-screen" class="bg-white rounded-2xl shadow-xl ring-1 ring-slate-200 p-6 sm:p-8 max-w-lg mx-auto">
+      <h2 class="text-xl font-bold text-slate-900 mb-1">{{ translate(lang, 'games.cluedo.setup_heading') }}</h2>
+      <p class="text-sm text-slate-500 mb-6">{{ translate(lang, 'games.cluedo.setup_subheading') }}</p>
+
+      <input id="name-input" type="text" maxlength="16" placeholder="{{ translate(lang, 'games.cluedo.name_placeholder') }}"
+        class="w-full border border-slate-300 rounded-lg px-4 py-3 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-violet-500 mb-6">
+
+      <div class="text-xs font-bold uppercase tracking-wide text-slate-500 mb-2">{{ translate(lang, 'games.cluedo.character_label') }}</div>
+      <div id="char-grid" class="grid grid-cols-3 gap-2 mb-6"></div>
+
+      <div class="text-xs font-bold uppercase tracking-wide text-slate-500 mb-2">{{ translate(lang, 'games.cluedo.opponents_label') }}</div>
+      <div class="grid grid-cols-5 gap-2 mb-6">
+        <button type="button" class="opp-btn" data-count="1">{{ translate(lang, 'games.cluedo.opponents_1') }}</button>
+        <button type="button" class="opp-btn" data-count="2">{{ translate(lang, 'games.cluedo.opponents_2') }}</button>
+        <button type="button" class="opp-btn" data-count="3">{{ translate(lang, 'games.cluedo.opponents_3') }}</button>
+        <button type="button" class="opp-btn" data-count="4">{{ translate(lang, 'games.cluedo.opponents_4') }}</button>
+        <button type="button" class="opp-btn" data-count="5">{{ translate(lang, 'games.cluedo.opponents_5') }}</button>
+      </div>
+
+      <button id="start-game" type="button" class="w-full rounded-xl bg-violet-700 hover:bg-violet-800 text-white font-bold px-8 py-3 text-lg shadow-lg transition-colors">
+        {{ translate(lang, 'games.cluedo.start_game') }} 🔎
+      </button>
+    </div>
+
+    <!-- GAME SCREEN -->
+    <div id="game-screen" class="hidden grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div class="lg:col-span-2 flex flex-col gap-4">
+        <div class="cl-felt rounded-2xl shadow-xl ring-1 ring-slate-900/20 p-4 sm:p-5">
+          <div class="text-[10px] font-bold uppercase tracking-wide text-violet-200 mb-2">{{ translate(lang, 'games.cluedo.players_heading') }}</div>
+          <div id="players-bar" class="flex flex-wrap gap-2 mb-4"></div>
+
+          <div class="text-[10px] font-bold uppercase tracking-wide text-violet-200 mb-2">{{ translate(lang, 'games.cluedo.board_heading') }}</div>
+          <div id="board" class="cl-board"></div>
+          <div id="move-hint" class="cl-move-hint text-center mt-2"></div>
+        </div>
+
+        <div class="bg-white rounded-2xl shadow-xl ring-1 ring-slate-200 p-4 sm:p-6">
+          <div id="turn-banner" class="text-sm font-bold text-slate-800 mb-3 min-h-[20px]"></div>
+
+          <div class="flex flex-wrap items-center gap-2 mb-3 pb-3 border-b border-slate-100">
+            <div id="die" class="cl-die">
+              <div class="cl-pip"></div><div class="cl-pip"></div><div class="cl-pip"></div>
+              <div class="cl-pip"></div><div class="cl-pip"></div><div class="cl-pip"></div>
+              <div class="cl-pip"></div><div class="cl-pip"></div><div class="cl-pip"></div>
+            </div>
+            <button id="roll-btn" type="button" class="rounded-lg bg-amber-400 hover:bg-amber-300 disabled:opacity-40 disabled:cursor-not-allowed text-amber-950 font-bold px-4 py-2 text-sm">{{ translate(lang, 'games.cluedo.roll_dice') }} 🎲</button>
+            <button id="end-turn-btn" type="button" class="hidden rounded-lg bg-slate-700 hover:bg-slate-800 text-white font-bold px-4 py-2 text-sm">{{ translate(lang, 'games.cluedo.skip_turn') }}</button>
+            <button id="passage-btn" type="button" class="hidden rounded-lg bg-indigo-100 hover:bg-indigo-200 text-indigo-900 font-bold px-4 py-2 text-sm">{{ translate(lang, 'games.cluedo.secret_passage') }} 🚪</button>
+            <button id="skip-move-btn" type="button" class="hidden rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 font-semibold px-4 py-2 text-sm">{{ translate(lang, 'games.cluedo.skip_move') }}</button>
+          </div>
+
+          <div id="suggestion-form">
+            <h3 class="text-sm font-bold text-slate-700 mb-1">{{ translate(lang, 'games.cluedo.suggest_heading') }}</h3>
+            <div id="asking-in-room" class="text-xs font-bold text-violet-700 mb-3"></div>
+            <div class="text-xs font-bold uppercase tracking-wide text-slate-500 mb-1">{{ translate(lang, 'games.cluedo.suspect_label') }}</div>
+            <div id="pick-suspect" class="cl-chip-row mb-3"></div>
+            <div class="text-xs font-bold uppercase tracking-wide text-slate-500 mb-1">{{ translate(lang, 'games.cluedo.weapon_label') }}</div>
+            <div id="pick-weapon" class="cl-chip-row mb-4"></div>
+
+            <div class="flex flex-wrap items-center gap-2 mb-4">
+              <button id="suggest-btn" type="button" class="rounded-lg bg-violet-700 hover:bg-violet-800 disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold px-4 py-2 text-sm">{{ translate(lang, 'games.cluedo.suggest_button') }}</button>
+              <button id="accuse-btn" type="button" class="rounded-lg bg-red-600 hover:bg-red-700 disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold px-4 py-2 text-sm">{{ translate(lang, 'games.cluedo.accuse_button') }}</button>
+            </div>
+
+            <div class="text-xs font-bold uppercase tracking-wide text-slate-500 mb-1">{{ translate(lang, 'games.cluedo.room_label') }}</div>
+            <p class="text-[11px] text-slate-400 mb-1">{{ translate(lang, 'games.cluedo.accuse_room_hint') }}</p>
+            <div id="pick-room" class="cl-chip-row"></div>
+          </div>
+
+          <div id="message" class="mt-4 text-sm font-semibold text-violet-800 min-h-[20px]"></div>
+        </div>
+
+        <div class="bg-white rounded-2xl shadow-xl ring-1 ring-slate-200 p-4 sm:p-6">
+          <h3 class="text-sm font-bold text-slate-700 uppercase tracking-wide mb-2">{{ translate(lang, 'games.cluedo.hand_heading') }}</h3>
+          <div id="hand-row" class="flex flex-wrap gap-2"></div>
+        </div>
+
+        <div class="bg-white rounded-2xl shadow-xl ring-1 ring-slate-200 p-5">
+          <h3 class="text-sm font-bold text-slate-700 mb-2">{{ translate(lang, 'common.rules') }}</h3>
+          <ul class="text-sm text-slate-600 space-y-1">
+            <li>• {{ translate(lang, 'games.cluedo.rule_1') }}</li>
+            <li>• {{ translate(lang, 'games.cluedo.rule_2') }}</li>
+            <li>• {{ translate(lang, 'games.cluedo.rule_3') }}</li>
+            <li>• {{ translate(lang, 'games.cluedo.rule_4') }}</li>
+            <li>• {{ translate(lang, 'games.cluedo.rule_5') }}</li>
+            <li>• {{ translate(lang, 'games.cluedo.rule_6') }}</li>
+          </ul>
+        </div>
+
+        <div class="bg-white rounded-2xl shadow-xl ring-1 ring-slate-200 p-5 flex flex-col gap-2">
+          <button id="change-players-btn" type="button" class="w-full rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 font-semibold px-4 py-2 text-sm transition-colors">{{ translate(lang, 'games.cluedo.change_players') }}</button>
+          <div class="text-center">
+            <span id="give-up-btn" class="cl-give-up">{{ translate(lang, 'games.cluedo.give_up_button') }}</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="lg:col-span-1 flex flex-col gap-4">
+        <div class="bg-white rounded-2xl shadow-xl ring-1 ring-slate-200 p-4 sm:p-6">
+          <h3 class="text-sm font-bold text-slate-700 uppercase tracking-wide mb-2">{{ translate(lang, 'games.cluedo.log_heading') }}</h3>
+          <div id="log" class="h-64 lg:h-80 overflow-y-auto text-xs space-y-0.5"></div>
+        </div>
+
+        <div class="bg-white rounded-2xl shadow-xl ring-1 ring-slate-200 p-4 sm:p-6">
+          <h3 class="text-sm font-bold text-slate-700 uppercase tracking-wide">{{ translate(lang, 'games.cluedo.notebook_heading') }}</h3>
+          <p class="text-xs text-slate-400 mb-3">{{ translate(lang, 'games.cluedo.notebook_hint') }}</p>
+          <div class="space-y-5">
+            <div>
+              <div class="text-xs font-bold text-violet-700 uppercase tracking-wide mb-1">{{ translate(lang, 'games.cluedo.suspects_heading') }}</div>
+              <div class="overflow-x-auto"><table id="note-suspects" class="cl-note-table"></table></div>
+            </div>
+            <div>
+              <div class="text-xs font-bold text-violet-700 uppercase tracking-wide mb-1">{{ translate(lang, 'games.cluedo.weapons_heading') }}</div>
+              <div class="overflow-x-auto"><table id="note-weapons" class="cl-note-table"></table></div>
+            </div>
+            <div>
+              <div class="text-xs font-bold text-violet-700 uppercase tracking-wide mb-1">{{ translate(lang, 'games.cluedo.rooms_heading') }}</div>
+              <div class="overflow-x-auto"><table id="note-rooms" class="cl-note-table"></table></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- CHOOSE CARD TO SHOW MODAL -->
+<div id="choose-card-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4">
+  <div class="bg-white rounded-2xl shadow-2xl p-6 sm:p-8 max-w-sm w-full text-center">
+    <h2 class="text-xl font-extrabold text-slate-900 mb-1">{{ translate(lang, 'games.cluedo.choose_card_title') }}</h2>
+    <p id="choose-card-body" class="text-sm text-slate-500 mb-5"></p>
+    <div id="choose-card-options" class="flex flex-col gap-2"></div>
+  </div>
+</div>
+
+<!-- ACCUSE CONFIRM MODAL -->
+<div id="accuse-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4">
+  <div class="bg-white rounded-2xl shadow-2xl p-6 sm:p-8 max-w-sm w-full text-center">
+    <h2 class="text-xl font-extrabold text-slate-900 mb-2">{{ translate(lang, 'games.cluedo.accuse_confirm_title') }}</h2>
+    <p id="accuse-modal-body" class="text-slate-600 mb-6"></p>
+    <div class="flex gap-3">
+      <button id="accuse-cancel-btn" type="button" class="flex-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 font-semibold px-4 py-2">{{ translate(lang, 'games.cluedo.accuse_confirm_no') }}</button>
+      <button id="accuse-confirm-btn" type="button" class="flex-1 rounded-lg bg-red-600 hover:bg-red-700 text-white font-bold px-4 py-2">{{ translate(lang, 'games.cluedo.accuse_confirm_yes') }}</button>
+    </div>
+  </div>
+</div>
+
+<!-- GIVE UP CONFIRM MODAL -->
+<div id="giveup-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4">
+  <div class="bg-white rounded-2xl shadow-2xl p-6 sm:p-8 max-w-sm w-full text-center">
+    <h2 class="text-xl font-extrabold text-slate-900 mb-2">{{ translate(lang, 'games.cluedo.give_up_confirm_title') }}</h2>
+    <p class="text-slate-600 mb-6">{{ translate(lang, 'games.cluedo.give_up_confirm_body') }}</p>
+    <div class="flex gap-3">
+      <button id="giveup-cancel-btn" type="button" class="flex-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 font-semibold px-4 py-2">{{ translate(lang, 'games.cluedo.give_up_confirm_no') }}</button>
+      <button id="giveup-confirm-btn" type="button" class="flex-1 rounded-lg bg-red-600 hover:bg-red-700 text-white font-bold px-4 py-2">{{ translate(lang, 'games.cluedo.give_up_confirm_yes') }}</button>
+    </div>
+  </div>
+</div>
+
+<!-- GAME OVER MODAL -->
+<div id="modal-overlay" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4">
+  <div class="bg-white rounded-2xl shadow-2xl p-6 sm:p-8 max-w-sm w-full text-center">
+    <h2 id="modal-title" class="text-2xl font-extrabold text-slate-900 mb-2"></h2>
+    <p id="modal-note" class="text-slate-600 mb-6"></p>
+    <button id="modal-action" type="button" class="w-full rounded-lg bg-violet-700 hover:bg-violet-800 text-white font-bold px-4 py-2 transition-colors"></button>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+(function () {
+  const I18N = {{ cluedo_i18n | tojson }};
+
+  function fmt(str, vars) {
+    return String(str).replace(/\{(\w+)\}/g, (_, key) => (key in vars ? vars[key] : `{${key}}`));
+  }
+
+  function escapeHtml(str) {
+    return String(str).replace(/[&<>"']/g, (c) => ({
+      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+    }[c]));
+  }
+
+  function shuffle(arr) {
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
+  }
+
+  const SUSPECTS = ['scarlett', 'mustard', 'white', 'green', 'peacock', 'plum'];
+  const SUSPECT_COLOR = { scarlett: '#dc2626', mustard: '#ca8a04', white: '#94a3b8', green: '#16a34a', peacock: '#2563eb', plum: '#7c3aed' };
+  const WEAPONS = ['candlestick', 'knife', 'leadpipe', 'revolver', 'rope', 'wrench'];
+  const WEAPON_ICON = { candlestick: '🕯️', knife: '🔪', leadpipe: '🔧', revolver: '🔫', rope: '🪢', wrench: '🔩' };
+  const ROOMS = ['kitchen', 'ballroom', 'conservatory', 'diningroom', 'billiardroom', 'library', 'lounge', 'hall', 'study'];
+  const ROOM_ICON = { kitchen: '🍳', ballroom: '💃', conservatory: '🌿', diningroom: '🍽️', billiardroom: '🎱', library: '📚', lounge: '🛋️', hall: '🚪', study: '📖' };
+
+  function buildCards() {
+    const cards = [];
+    let id = 0;
+    SUSPECTS.forEach((k) => cards.push({ id: id++, category: 'suspect', key: k, label: I18N['suspect_' + k], color: SUSPECT_COLOR[k] }));
+    WEAPONS.forEach((k) => cards.push({ id: id++, category: 'weapon', key: k, label: I18N['weapon_' + k], icon: WEAPON_ICON[k] }));
+    ROOMS.forEach((k) => cards.push({ id: id++, category: 'room', key: k, label: I18N['room_' + k], icon: ROOM_ICON[k] }));
+    return cards;
+  }
+
+  let ALL_CARDS = [];
+  let SUSPECT_CARDS = [];
+  let WEAPON_CARDS = [];
+  let ROOM_CARDS = [];
+
+  // ---------- Board graph ----------
+  // 13x13 grid of nodes "col,row". Rooms sit at columns/rows 2, 6, 10, leaving a margin of
+  // corridor squares above/left of the outer rooms too (not just between them); everything
+  // else is corridor.
+  const BOARD_SIZE = 13;
+  const ROOM_POS = [
+    [2, 2, 'kitchen'], [6, 2, 'ballroom'], [10, 2, 'conservatory'],
+    [2, 6, 'diningroom'], [6, 6, 'hall'], [10, 6, 'lounge'],
+    [2, 10, 'study'], [6, 10, 'library'], [10, 10, 'billiardroom'],
+  ];
+  const ROOM_AT = {}; // nodeId -> roomKey
+  const ROOM_NODE = {}; // roomKey -> nodeId
+  ROOM_POS.forEach(([c, r, key]) => { ROOM_AT[`${c},${r}`] = key; ROOM_NODE[key] = `${c},${r}`; });
+
+  const PASSAGES = { kitchen: 'billiardroom', billiardroom: 'kitchen', conservatory: 'study', study: 'conservatory' };
+
+  // Each room can only be entered/exited via these specific corridor cells (its doors) —
+  // not from every corridor square that happens to touch the room.
+  const DOORS = {
+    kitchen: ['3,2'],
+    ballroom: ['6,3'],
+    conservatory: ['9,2'],
+    diningroom: ['3,6'],
+    hall: ['6,5', '6,7'],
+    lounge: ['9,6'],
+    study: ['3,10'],
+    library: ['6,9'],
+    billiardroom: ['9,10'],
+  };
+  const DOOR_CELLS = new Set(Object.values(DOORS).flat());
+
+  const STARTING_POS = {
+    scarlett: '4,0', mustard: '8,0', white: '12,4', green: '12,8', peacock: '8,12', plum: '0,8',
+  };
+
+  const BOARD_NODES = [];
+  const BOARD_ADJ = {};
+  for (let c = 0; c < BOARD_SIZE; c++) {
+    for (let r = 0; r < BOARD_SIZE; r++) {
+      const id = `${c},${r}`;
+      BOARD_NODES.push(id);
+      BOARD_ADJ[id] = [];
+    }
+  }
+  // Corridor-to-corridor movement is free in all four directions; corridor-to-room
+  // movement is only possible through a room's designated door(s), added below.
+  BOARD_NODES.forEach((id) => {
+    if (ROOM_AT[id]) return;
+    const [c, r] = id.split(',').map(Number);
+    [[1, 0], [-1, 0], [0, 1], [0, -1]].forEach(([dc, dr]) => {
+      const nc = c + dc, nr = r + dr;
+      const nb = `${nc},${nr}`;
+      if (nc >= 0 && nc < BOARD_SIZE && nr >= 0 && nr < BOARD_SIZE && !ROOM_AT[nb]) BOARD_ADJ[id].push(nb);
+    });
+  });
+  Object.entries(DOORS).forEach(([roomKey, doorIds]) => {
+    const roomNode = ROOM_NODE[roomKey];
+    doorIds.forEach((doorId) => {
+      BOARD_ADJ[roomNode].push(doorId);
+      BOARD_ADJ[doorId].push(roomNode);
+    });
+  });
+
+  function doorDirection(roomId, doorId) {
+    const [rc, rr] = roomId.split(',').map(Number);
+    const [dc, dr] = doorId.split(',').map(Number);
+    if (dc > rc) return 'e';
+    if (dc < rc) return 'w';
+    if (dr > rr) return 's';
+    return 'n';
+  }
+
+  function nodeType(id) {
+    return ROOM_AT[id] ? 'room' : 'corridor';
+  }
+
+  const BOARD_DIST = {}; // all-pairs shortest path (ignores the "stop at room" rule; used only as a heuristic)
+  BOARD_NODES.forEach((src) => {
+    const d = { [src]: 0 };
+    const queue = [src];
+    while (queue.length) {
+      const cur = queue.shift();
+      BOARD_ADJ[cur].forEach((nb) => {
+        if (!(nb in d)) { d[nb] = d[cur] + 1; queue.push(nb); }
+      });
+    }
+    BOARD_DIST[src] = d;
+  });
+
+  // Cells reachable within `budget` steps, stopping movement upon entering a room,
+  // and unable to pass through (but able to land in) a room, and unable to pass through
+  // corridor cells occupied by another player's token.
+  function reachableFrom(startId, budget, occupiedCorridors) {
+    const visited = new Map([[startId, 0]]);
+    let frontier = [startId];
+    for (let d = 0; d < budget; d++) {
+      const next = [];
+      frontier.forEach((cur) => {
+        if (cur !== startId && nodeType(cur) === 'room') return; // can't continue past a room
+        BOARD_ADJ[cur].forEach((nb) => {
+          if (visited.has(nb)) return;
+          if (nodeType(nb) === 'corridor' && occupiedCorridors.has(nb)) return;
+          visited.set(nb, d + 1);
+          next.push(nb);
+        });
+      });
+      frontier = next;
+    }
+    return visited;
+  }
+
+  const G = {
+    players: [],
+    turnIndex: 0,
+    awaitingHuman: false,
+    moveUsed: false,
+    awaitingDestination: false,
+    reachable: null,
+    solution: null,
+    notes: {},
+    aiKnown: {},
+    aiShownHistory: {},
+    aiTargetRoom: {},
+    gameOver: false,
+  };
+
+  let logEntries = [];
+  let selectedCount = 3;
+  let selectedCharacter = 'scarlett';
+  let pickedSuspectKey = null;
+  let pickedWeaponKey = null;
+  let pickedRoomKey = null;
+
+  // ---------- DOM refs ----------
+  const setupScreen = document.getElementById('setup-screen');
+  const gameScreen = document.getElementById('game-screen');
+  const nameInput = document.getElementById('name-input');
+  const startGameBtn = document.getElementById('start-game');
+  const changePlayersBtn = document.getElementById('change-players-btn');
+  const oppButtons = Array.from(document.querySelectorAll('.opp-btn'));
+  const charGrid = document.getElementById('char-grid');
+
+  const playersBar = document.getElementById('players-bar');
+  const boardEl = document.getElementById('board');
+  const dieEl = document.getElementById('die');
+  const rollBtn = document.getElementById('roll-btn');
+  const passageBtn = document.getElementById('passage-btn');
+  const skipMoveBtn = document.getElementById('skip-move-btn');
+  const moveHintEl = document.getElementById('move-hint');
+  const turnBanner = document.getElementById('turn-banner');
+  const askingInRoomEl = document.getElementById('asking-in-room');
+  const pickSuspectEl = document.getElementById('pick-suspect');
+  const pickWeaponEl = document.getElementById('pick-weapon');
+  const pickRoomEl = document.getElementById('pick-room');
+  const suggestBtn = document.getElementById('suggest-btn');
+  const accuseBtn = document.getElementById('accuse-btn');
+  const endTurnBtn = document.getElementById('end-turn-btn');
+  const messageEl = document.getElementById('message');
+  const logEl = document.getElementById('log');
+  const handRowEl = document.getElementById('hand-row');
+  const giveUpBtn = document.getElementById('give-up-btn');
+
+  const chooseCardModal = document.getElementById('choose-card-modal');
+  const chooseCardBody = document.getElementById('choose-card-body');
+  const chooseCardOptions = document.getElementById('choose-card-options');
+
+  const accuseModal = document.getElementById('accuse-modal');
+  const accuseModalBody = document.getElementById('accuse-modal-body');
+  const accuseCancelBtn = document.getElementById('accuse-cancel-btn');
+  const accuseConfirmBtn = document.getElementById('accuse-confirm-btn');
+
+  const giveupModal = document.getElementById('giveup-modal');
+  const giveupCancelBtn = document.getElementById('giveup-cancel-btn');
+  const giveupConfirmBtn = document.getElementById('giveup-confirm-btn');
+
+  const modalOverlay = document.getElementById('modal-overlay');
+  const modalTitle = document.getElementById('modal-title');
+  const modalNote = document.getElementById('modal-note');
+  const modalAction = document.getElementById('modal-action');
+
+  // ---------- Setup ----------
+  function renderCharGrid() {
+    charGrid.innerHTML = '';
+    SUSPECTS.forEach((k) => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'char-btn' + (k === selectedCharacter ? ' selected' : '');
+      btn.innerHTML = `<span class="char-swatch" style="background:${SUSPECT_COLOR[k]}"></span><span>${escapeHtml(I18N['suspect_' + k])}</span>`;
+      btn.addEventListener('click', () => { selectedCharacter = k; renderCharGrid(); });
+      charGrid.appendChild(btn);
+    });
+  }
+  renderCharGrid();
+
+  oppButtons.forEach((btn) => {
+    btn.addEventListener('click', () => {
+      selectedCount = parseInt(btn.dataset.count, 10);
+      oppButtons.forEach((b) => b.classList.toggle('selected', b === btn));
+    });
+  });
+  oppButtons[1].classList.add('selected'); // data-count="2"
+  selectedCount = 2;
+
+  function buildPlayers(count, humanName, humanCharacter) {
+    const pool = shuffle(SUSPECTS.filter((k) => k !== humanCharacter)).slice(0, count);
+    const players = [{ id: 0, name: humanName, isHuman: true, character: humanCharacter, hand: [], out: false, pos: STARTING_POS[humanCharacter], suggestedInRoom: false }];
+    pool.forEach((k, i) => {
+      players.push({ id: i + 1, name: I18N['suspect_' + k], isHuman: false, character: k, hand: [], out: false, pos: STARTING_POS[k], suggestedInRoom: false });
+    });
+    return players;
+  }
+
+  startGameBtn.addEventListener('click', () => {
+    const name = nameInput.value.trim() || I18N.you;
+    G.players = buildPlayers(selectedCount, name, selectedCharacter);
+    setupScreen.classList.add('hidden');
+    gameScreen.classList.remove('hidden');
+    startGame();
+  });
+
+  changePlayersBtn.addEventListener('click', backToSetup);
+
+  function backToSetup() {
+    G.gameOver = true;
+    modalOverlay.classList.add('hidden');
+    accuseModal.classList.add('hidden');
+    giveupModal.classList.add('hidden');
+    chooseCardModal.classList.add('hidden');
+    gameScreen.classList.add('hidden');
+    setupScreen.classList.remove('hidden');
+  }
+
+  // ---------- Helpers ----------
+  function setNote(cardId, col, val, auto) {
+    if (!G.notes[cardId]) G.notes[cardId] = {};
+    G.notes[cardId][col] = val;
+    G.notes[cardId][col + '_auto'] = !!auto;
+  }
+
+  function noteVal(cardId, col) {
+    return (G.notes[cardId] && G.notes[cardId][col]) || '';
+  }
+
+  function seatName(idx) {
+    return G.players[idx].name;
+  }
+
+  function log(msg, type) {
+    logEntries.push({ msg, type: type || 'default' });
+    if (logEntries.length > 60) logEntries.shift();
+    logEl.innerHTML = logEntries.map((e) => `<div class="cl-log-${e.type}">${escapeHtml(e.msg)}</div>`).join('');
+    logEl.scrollTop = logEl.scrollHeight;
+  }
+
+  function setMessage(msg, type) {
+    messageEl.textContent = msg;
+    log(msg, type);
+  }
+
+  function cardColorDot(card) {
+    if (card.category === 'suspect') return `<span class="cl-dot" style="background:${card.color}"></span>`;
+    return `<span>${card.icon}</span>`;
+  }
+
+  // ---------- New game ----------
+  function startGame() {
+    ALL_CARDS = buildCards();
+    SUSPECT_CARDS = ALL_CARDS.filter((c) => c.category === 'suspect');
+    WEAPON_CARDS = ALL_CARDS.filter((c) => c.category === 'weapon');
+    ROOM_CARDS = ALL_CARDS.filter((c) => c.category === 'room');
+
+    const solSuspect = SUSPECT_CARDS[Math.floor(Math.random() * SUSPECT_CARDS.length)];
+    const solWeapon = WEAPON_CARDS[Math.floor(Math.random() * WEAPON_CARDS.length)];
+    const solRoom = ROOM_CARDS[Math.floor(Math.random() * ROOM_CARDS.length)];
+    G.solution = { suspect: solSuspect, weapon: solWeapon, room: solRoom };
+
+    const remaining = shuffle(ALL_CARDS.filter((c) => c.id !== solSuspect.id && c.id !== solWeapon.id && c.id !== solRoom.id));
+    G.players.forEach((p) => { p.hand = []; p.out = false; p.pos = STARTING_POS[p.character]; p.suggestedInRoom = false; });
+    let i = 0;
+    while (remaining.length) {
+      G.players[i % G.players.length].hand.push(remaining.pop());
+      i++;
+    }
+
+    G.notes = {};
+    ALL_CARDS.forEach((c) => { G.notes[c.id] = {}; });
+    G.players[0].hand.forEach((c) => {
+      setNote(c.id, 'p0', 'yes', true);
+      setNote(c.id, 'solution', 'no', true);
+    });
+
+    G.aiKnown = {};
+    G.aiShownHistory = {};
+    G.aiTargetRoom = {};
+    G.players.forEach((p) => {
+      if (!p.isHuman) G.aiKnown[p.id] = new Set(p.hand.map((c) => c.id));
+    });
+
+    G.gameOver = false;
+    G.turnIndex = 0;
+    logEntries = [];
+    log('— ' + I18N.title + ' —', 'system');
+
+    pickedSuspectKey = SUSPECTS[0];
+    pickedWeaponKey = WEAPONS[0];
+    pickedRoomKey = ROOMS[0];
+
+    renderStaticPickers();
+    startTurn();
+  }
+
+  // ---------- Turn loop ----------
+  function startTurn() {
+    G.moveUsed = false;
+    G.awaitingDestination = false;
+    G.reachable = null;
+    setDieFace(0);
+    const player = G.players[G.turnIndex];
+    if (player.isHuman) {
+      G.awaitingHuman = true;
+      setMessage(I18N.your_turn, 'turn');
+      renderAll();
+    } else {
+      G.awaitingHuman = false;
+      setMessage(fmt(I18N.ai_thinking, { name: seatName(G.turnIndex) }), 'turn');
+      renderAll();
+      setTimeout(() => aiTakeTurn(G.turnIndex), 800 + Math.random() * 500);
+    }
+  }
+
+  function advanceTurn() {
+    if (G.players.every((p) => p.out)) { endGame('stuck'); return; }
+    let next = G.turnIndex;
+    let loops = 0;
+    do {
+      next = (next + 1) % G.players.length;
+      loops++;
+    } while (G.players[next].out && loops <= G.players.length + 1);
+    G.turnIndex = next;
+    startTurn();
+  }
+
+  function movePlayerTo(idx, nodeId) {
+    const player = G.players[idx];
+    player.pos = nodeId;
+    if (nodeType(nodeId) === 'room') player.suggestedInRoom = false;
+  }
+
+  function canSuggestNow(idx) {
+    const player = G.players[idx];
+    return nodeType(player.pos) === 'room' && !player.suggestedInRoom;
+  }
+
+  // ---------- AI logic ----------
+  function aiCheckCertainSolution(idx) {
+    const known = G.aiKnown[idx];
+    const sC = SUSPECT_CARDS.filter((c) => !known.has(c.id));
+    const wC = WEAPON_CARDS.filter((c) => !known.has(c.id));
+    const rC = ROOM_CARDS.filter((c) => !known.has(c.id));
+    if (sC.length === 1 && wC.length === 1 && rC.length === 1) return { suspect: sC[0], weapon: wC[0], room: rC[0] };
+    return null;
+  }
+
+  function aiBuildSuggestion(idx) {
+    const known = G.aiKnown[idx];
+    function pick(list) {
+      const unknown = list.filter((c) => !known.has(c.id));
+      const pool = unknown.length ? unknown : list;
+      return pool[Math.floor(Math.random() * pool.length)];
+    }
+    return { suspect: pick(SUSPECT_CARDS), weapon: pick(WEAPON_CARDS), room: pick(ROOM_CARDS) };
+  }
+
+  function aiPickCardToShow(idx, matches) {
+    const history = G.aiShownHistory[idx] || new Set();
+    const alreadyShown = matches.filter((c) => history.has(c.id));
+    const pool = alreadyShown.length ? alreadyShown : matches;
+    return pool[Math.floor(Math.random() * pool.length)];
+  }
+
+  function aiPickTargetRoom(idx) {
+    const known = G.aiKnown[idx];
+    const unknownRooms = ROOM_CARDS.filter((c) => !known.has(c.id));
+    const pool = unknownRooms.length ? unknownRooms : ROOM_CARDS;
+    return pool[Math.floor(Math.random() * pool.length)].key;
+  }
+
+  function aiTakeTurn(idx) {
+    const certain = aiCheckCertainSolution(idx);
+    if (certain) {
+      setTimeout(() => performAccusation(idx, certain.suspect, certain.weapon, certain.room), 500);
+      return;
+    }
+    if (canSuggestNow(idx)) {
+      setTimeout(() => aiDoSuggestion(idx), 700);
+    } else {
+      setTimeout(() => aiDoMove(idx), 700);
+    }
+  }
+
+  function aiDoSuggestion(idx) {
+    const player = G.players[idx];
+    const roomKey = ROOM_AT[player.pos];
+    const room = ROOM_CARDS.find((c) => c.key === roomKey);
+    const s = aiBuildSuggestion(idx);
+    player.suggestedInRoom = true;
+    log(fmt(I18N.msg_suggest, { name: seatName(idx), suspect: s.suspect.label, room: room.label, weapon: s.weapon.label }), 'suggest');
+    renderAll();
+    resolveSuggestion(idx, [s.suspect, s.weapon, room]);
+  }
+
+  function aiDoMove(idx) {
+    const player = G.players[idx];
+    const curRoomKey = nodeType(player.pos) === 'room' ? ROOM_AT[player.pos] : null;
+    const target = aiPickTargetRoom(idx);
+    if (curRoomKey && PASSAGES[curRoomKey] === target) {
+      movePlayerTo(idx, ROOM_NODE[target]);
+      log(fmt(I18N.msg_passage, { name: seatName(idx), room: ROOM_CARDS.find((c) => c.key === target).label }), 'passage');
+      renderAll();
+      setTimeout(() => afterAiMove(idx), 600);
+      return;
+    }
+    const roll = 1 + Math.floor(Math.random() * 6);
+    log(fmt(I18N.msg_roll, { name: seatName(idx), roll }), 'move');
+    const occupied = new Set(G.players.filter((p, i) => i !== idx && nodeType(p.pos) === 'corridor').map((p) => p.pos));
+    const reachable = reachableFrom(player.pos, roll, occupied);
+    const targetNode = ROOM_NODE[target];
+    let best = null;
+    let bestDist = Infinity;
+    reachable.forEach((dist, cellId) => {
+      if (cellId === player.pos) return;
+      const d = BOARD_DIST[cellId][targetNode];
+      if (d < bestDist) { bestDist = d; best = cellId; }
+    });
+    if (best) {
+      movePlayerTo(idx, best);
+      if (nodeType(best) === 'room') {
+        log(fmt(I18N.msg_enter_room, { name: seatName(idx), room: ROOM_CARDS.find((c) => c.key === ROOM_AT[best]).label }), 'move');
+      }
+    }
+    renderAll();
+    setTimeout(() => afterAiMove(idx), 600);
+  }
+
+  function afterAiMove(idx) {
+    if (canSuggestNow(idx)) {
+      setTimeout(() => aiDoSuggestion(idx), 700);
+    } else {
+      setTimeout(() => advanceTurn(), 500);
+    }
+  }
+
+  // ---------- Suggestion resolution ----------
+  function resolveSuggestion(suggesterIdx, cards) {
+    const order = [];
+    let idx = suggesterIdx;
+    for (let step = 0; step < G.players.length - 1; step++) {
+      idx = (idx + 1) % G.players.length;
+      order.push(idx);
+    }
+    processDisproveStep(suggesterIdx, cards, order, 0);
+  }
+
+  function processDisproveStep(suggesterIdx, cards, order, pos) {
+    if (pos >= order.length) {
+      onNoOneDisproved(suggesterIdx, cards);
+      return;
+    }
+    const pIdx = order[pos];
+    const player = G.players[pIdx];
+    const matches = player.hand.filter((c) => cards.some((cc) => cc.id === c.id));
+    if (matches.length === 0) {
+      recordFail(pIdx, cards);
+      renderAll();
+      setTimeout(() => processDisproveStep(suggesterIdx, cards, order, pos + 1), 350);
+      return;
+    }
+    if (player.isHuman) {
+      if (matches.length === 1) {
+        completeShow(suggesterIdx, pIdx, matches[0]);
+      } else {
+        openChooseCardModal(seatName(suggesterIdx), matches, (chosen) => completeShow(suggesterIdx, pIdx, chosen));
+      }
+    } else {
+      const chosen = aiPickCardToShow(pIdx, matches);
+      setTimeout(() => completeShow(suggesterIdx, pIdx, chosen), 600);
+    }
+  }
+
+  function recordFail(pIdx, cards) {
+    cards.forEach((c) => {
+      if (noteVal(c.id, 'p' + pIdx) !== 'yes') setNote(c.id, 'p' + pIdx, 'no', true);
+    });
+    log(fmt(I18N.msg_cannot_disprove, { name: seatName(pIdx) }), 'fail');
+  }
+
+  function completeShow(suggesterIdx, showerIdx, card) {
+    const suggester = G.players[suggesterIdx];
+    const shower = G.players[showerIdx];
+    if (!G.aiShownHistory[showerIdx]) G.aiShownHistory[showerIdx] = new Set();
+    G.aiShownHistory[showerIdx].add(card.id);
+
+    if (suggester.isHuman) {
+      setNote(card.id, 'p' + showerIdx, 'yes', true);
+      setNote(card.id, 'solution', 'no', true);
+      setMessage(fmt(I18N.msg_shown_to_you, { name: seatName(showerIdx), card: card.label }), 'reveal-you');
+    } else {
+      if (shower.isHuman) {
+        log(fmt(I18N.msg_you_show, { asker: seatName(suggesterIdx), card: card.label }), 'reveal');
+      } else {
+        log(fmt(I18N.msg_shows_hidden, { name: seatName(showerIdx), asker: seatName(suggesterIdx) }), 'reveal');
+      }
+      G.aiKnown[suggesterIdx].add(card.id);
+    }
+    renderAll();
+    setTimeout(() => afterSuggestionResolved(suggesterIdx), 700);
+  }
+
+  function onNoOneDisproved(suggesterIdx, cards) {
+    log(I18N.msg_no_one_disprove, 'hint');
+    const suggester = G.players[suggesterIdx];
+    cards.forEach((c) => {
+      const ownsIt = suggester.hand.some((hc) => hc.id === c.id);
+      if (!ownsIt) {
+        if (suggester.isHuman) {
+          setNote(c.id, 'solution', 'yes', true);
+          log(fmt(I18N.msg_solution_deduced, { card: c.label }), 'deduce');
+        } else {
+          G.aiKnown[suggesterIdx].add(c.id);
+        }
+      }
+    });
+    renderAll();
+    setTimeout(() => afterSuggestionResolved(suggesterIdx), 700);
+  }
+
+  function afterSuggestionResolved(suggesterIdx) {
+    const player = G.players[suggesterIdx];
+    if (player.isHuman) {
+      G.awaitingHuman = true;
+      renderAll();
+    } else {
+      const certain = aiCheckCertainSolution(suggesterIdx);
+      if (certain) {
+        setTimeout(() => performAccusation(suggesterIdx, certain.suspect, certain.weapon, certain.room), 600);
+      } else {
+        setTimeout(() => advanceTurn(), 500);
+      }
+    }
+  }
+
+  // ---------- Suggest / Accuse (human) ----------
+  function findPicked() {
+    return {
+      suspect: SUSPECT_CARDS.find((c) => c.key === pickedSuspectKey),
+      weapon: WEAPON_CARDS.find((c) => c.key === pickedWeaponKey),
+      room: ROOM_CARDS.find((c) => c.key === pickedRoomKey),
+    };
+  }
+
+  suggestBtn.addEventListener('click', () => {
+    if (!G.awaitingHuman || !canSuggestNow(0)) return;
+    const player = G.players[0];
+    const roomKey = ROOM_AT[player.pos];
+    const suspect = SUSPECT_CARDS.find((c) => c.key === pickedSuspectKey);
+    const weapon = WEAPON_CARDS.find((c) => c.key === pickedWeaponKey);
+    const room = ROOM_CARDS.find((c) => c.key === roomKey);
+    player.suggestedInRoom = true;
+    G.awaitingHuman = false;
+    log(fmt(I18N.msg_suggest, { name: seatName(0), suspect: suspect.label, room: room.label, weapon: weapon.label }), 'suggest');
+    renderAll();
+    resolveSuggestion(0, [suspect, weapon, room]);
+  });
+
+  rollBtn.addEventListener('click', () => {
+    if (!G.awaitingHuman || G.moveUsed) return;
+    const roll = 1 + Math.floor(Math.random() * 6);
+    setDieFace(roll);
+    log(fmt(I18N.msg_roll, { name: seatName(0), roll }), 'move');
+    const occupied = new Set(G.players.filter((p, i) => i !== 0 && nodeType(p.pos) === 'corridor').map((p) => p.pos));
+    G.reachable = reachableFrom(G.players[0].pos, roll, occupied);
+    G.awaitingDestination = true;
+    renderAll();
+  });
+
+  passageBtn.addEventListener('click', () => {
+    if (!G.awaitingHuman || G.moveUsed) return;
+    const curKey = nodeType(G.players[0].pos) === 'room' ? ROOM_AT[G.players[0].pos] : null;
+    if (!curKey || !PASSAGES[curKey]) return;
+    const destKey = PASSAGES[curKey];
+    movePlayerTo(0, ROOM_NODE[destKey]);
+    G.moveUsed = true;
+    log(fmt(I18N.msg_passage, { name: seatName(0), room: ROOM_CARDS.find((c) => c.key === destKey).label }), 'passage');
+    renderAll();
+  });
+
+  skipMoveBtn.addEventListener('click', () => {
+    if (!G.awaitingHuman || !G.awaitingDestination) return;
+    G.moveUsed = true;
+    G.awaitingDestination = false;
+    G.reachable = null;
+    renderAll();
+  });
+
+  boardEl.addEventListener('click', (e) => {
+    const cell = e.target.closest('.cl-cell[data-node]');
+    if (!cell) return;
+    const nodeId = cell.dataset.node;
+    if (!G.awaitingHuman || !G.awaitingDestination || !G.reachable) return;
+    if (!G.reachable.has(nodeId) || nodeId === G.players[0].pos) return;
+    movePlayerTo(0, nodeId);
+    G.moveUsed = true;
+    G.awaitingDestination = false;
+    G.reachable = null;
+    if (nodeType(nodeId) === 'room') {
+      log(fmt(I18N.msg_enter_room, { name: seatName(0), room: ROOM_CARDS.find((c) => c.key === ROOM_AT[nodeId]).label }), 'move');
+    }
+    renderAll();
+  });
+
+  accuseBtn.addEventListener('click', () => {
+    if (!G.awaitingHuman) return;
+    const { suspect, weapon, room } = findPicked();
+    accuseModalBody.textContent = fmt(I18N.accuse_confirm_body, { suspect: suspect.label, weapon: weapon.label, room: room.label });
+    accuseModal.classList.remove('hidden');
+  });
+
+  accuseCancelBtn.addEventListener('click', () => accuseModal.classList.add('hidden'));
+  accuseConfirmBtn.addEventListener('click', () => {
+    accuseModal.classList.add('hidden');
+    const { suspect, weapon, room } = findPicked();
+    G.awaitingHuman = false;
+    performAccusation(0, suspect, weapon, room);
+  });
+
+  endTurnBtn.addEventListener('click', () => {
+    if (!G.awaitingHuman) return;
+    G.awaitingHuman = false;
+    advanceTurn();
+  });
+
+  giveUpBtn.addEventListener('click', () => {
+    if (G.gameOver) return;
+    giveupModal.classList.remove('hidden');
+  });
+  giveupCancelBtn.addEventListener('click', () => giveupModal.classList.add('hidden'));
+  giveupConfirmBtn.addEventListener('click', () => {
+    giveupModal.classList.add('hidden');
+    endGame('gaveup');
+  });
+
+  function performAccusation(idx, suspect, weapon, room) {
+    const correct = suspect.id === G.solution.suspect.id && weapon.id === G.solution.weapon.id && room.id === G.solution.room.id;
+    if (correct) {
+      endGame('win', idx);
+      return;
+    }
+    G.players[idx].out = true;
+    if (idx === 0) {
+      setMessage(I18N.msg_you_wrong_accusation, 'wrong');
+    } else {
+      log(fmt(I18N.msg_wrong_accusation, { name: seatName(idx) }), 'wrong');
+    }
+    renderAll();
+    if (G.players.every((p) => p.out)) {
+      endGame('stuck');
+      return;
+    }
+    setTimeout(() => advanceTurn(), 900);
+  }
+
+  // ---------- Choose-card modal ----------
+  function openChooseCardModal(askerName, matches, onChoose) {
+    chooseCardBody.textContent = fmt(I18N.choose_card_body, { asker: askerName });
+    chooseCardOptions.innerHTML = '';
+    matches.forEach((card) => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'w-full flex items-center justify-center gap-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold px-4 py-3 text-sm';
+      btn.innerHTML = `${cardColorDot(card)}<span>${escapeHtml(card.label)}</span>`;
+      btn.addEventListener('click', () => {
+        chooseCardModal.classList.add('hidden');
+        onChoose(card);
+      });
+      chooseCardOptions.appendChild(btn);
+    });
+    chooseCardModal.classList.remove('hidden');
+  }
+
+  // ---------- Game over ----------
+  function endGame(kind, winnerIdx) {
+    G.gameOver = true;
+    G.awaitingHuman = false;
+    const solText = fmt(I18N.solution_reveal, {
+      suspect: G.solution.suspect.label, room: G.solution.room.label, weapon: G.solution.weapon.label,
+    });
+    let title;
+    if (kind === 'win') {
+      title = winnerIdx === 0 ? I18N.win_title : fmt(I18N.lose_title, { name: seatName(winnerIdx) });
+    } else if (kind === 'stuck') {
+      title = I18N.stuck_title;
+    } else {
+      title = I18N.stuck_title;
+    }
+    modalTitle.textContent = title;
+    modalNote.textContent = solText;
+    modalAction.textContent = I18N.play_again;
+    modalAction.onclick = () => {
+      modalOverlay.classList.add('hidden');
+      startGame();
+    };
+    modalOverlay.classList.remove('hidden');
+    renderAll();
+  }
+
+  // ---------- Rendering ----------
+  function renderStaticPickers() {
+    function buildRow(container, list, getKey, setKey) {
+      container.innerHTML = '';
+      list.forEach((card) => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'cl-chip' + (getKey() === card.key ? ' selected' : '');
+        btn.innerHTML = card.category === 'suspect'
+          ? `<span class="cl-dot" style="background:${card.color}"></span><span>${escapeHtml(card.label)}</span>`
+          : `<span>${card.icon}</span><span>${escapeHtml(card.label)}</span>`;
+        btn.addEventListener('click', () => {
+          setKey(card.key);
+          buildRow(container, list, getKey, setKey);
+        });
+        container.appendChild(btn);
+      });
+    }
+    buildRow(pickSuspectEl, SUSPECT_CARDS, () => pickedSuspectKey, (k) => { pickedSuspectKey = k; });
+    buildRow(pickWeaponEl, WEAPON_CARDS, () => pickedWeaponKey, (k) => { pickedWeaponKey = k; });
+    buildRow(pickRoomEl, ROOM_CARDS, () => pickedRoomKey, (k) => { pickedRoomKey = k; });
+  }
+
+  function renderPlayersBar() {
+    playersBar.innerHTML = G.players.map((p, i) => {
+      const cls = 'cl-player-chip' + (i === G.turnIndex && !G.gameOver ? ' active' : '') + (p.out ? ' eliminated' : '');
+      const outTag = p.out ? `<span class="cl-out-tag">${escapeHtml(I18N.eliminated_tag)}</span>` : '';
+      const aiTag = !p.isHuman ? `<span class="opacity-70">(${escapeHtml(I18N.ai_suffix)})</span>` : '';
+      return `<div class="${cls}"><span class="cl-dot" style="background:${SUSPECT_COLOR[p.character]}"></span><span>${escapeHtml(p.name)}</span> ${aiTag}<span class="opacity-70">· ${p.hand.length}</span>${outTag}</div>`;
+    }).join('');
+  }
+
+  function renderHand() {
+    const hand = G.players[0].hand;
+    handRowEl.innerHTML = hand.map((c) => {
+      const dot = c.category === 'suspect'
+        ? `<span class="cl-dot" style="background:${c.color}"></span>`
+        : `<span>${c.icon}</span>`;
+      return `<span class="cl-card">${dot}<span>${escapeHtml(c.label)}</span></span>`;
+    }).join('');
+  }
+
+  const PIP_FACES = {
+    1: [5], 2: [1, 9], 3: [1, 5, 9], 4: [1, 3, 7, 9], 5: [1, 3, 5, 7, 9], 6: [1, 3, 4, 6, 7, 9],
+  };
+
+  function setDieFace(n) {
+    const pips = dieEl.querySelectorAll('.cl-pip');
+    const active = new Set(PIP_FACES[n] || []);
+    pips.forEach((pip, i) => pip.classList.toggle('cl-pip-on', active.has(i + 1)));
+  }
+
+  function renderControls() {
+    const humanTurn = G.awaitingHuman && !G.gameOver;
+    const human = G.players[0];
+    const humanCanSuggest = humanTurn && canSuggestNow(0);
+    const curRoomKey = nodeType(human.pos) === 'room' ? ROOM_AT[human.pos] : null;
+
+    suggestBtn.disabled = !humanCanSuggest;
+    accuseBtn.disabled = !humanTurn;
+    endTurnBtn.classList.toggle('hidden', !humanTurn);
+    rollBtn.classList.toggle('hidden', !humanTurn);
+    rollBtn.disabled = !humanTurn || G.moveUsed || G.awaitingDestination;
+    passageBtn.classList.toggle('hidden', !(humanTurn && !G.moveUsed && curRoomKey && PASSAGES[curRoomKey]));
+    skipMoveBtn.classList.toggle('hidden', !(humanTurn && G.awaitingDestination));
+
+    moveHintEl.textContent = (humanTurn && G.awaitingDestination) ? I18N.move_hint : '';
+
+    if (humanCanSuggest) {
+      askingInRoomEl.textContent = fmt(I18N.asking_in_room, { room: ROOM_CARDS.find((c) => c.key === curRoomKey).label });
+    } else if (humanTurn && !curRoomKey) {
+      askingInRoomEl.textContent = I18N.move_into_room_hint;
+    } else {
+      askingInRoomEl.textContent = '';
+    }
+
+    const player = G.players[G.turnIndex];
+    if (G.gameOver) {
+      turnBanner.textContent = '';
+    } else if (player.isHuman) {
+      turnBanner.textContent = I18N.your_turn;
+    } else {
+      turnBanner.textContent = fmt(I18N.ai_thinking, { name: seatName(G.turnIndex) });
+    }
+  }
+
+  function renderBoard() {
+    const occupantsByNode = {};
+    G.players.forEach((p) => {
+      if (!occupantsByNode[p.pos]) occupantsByNode[p.pos] = [];
+      occupantsByNode[p.pos].push(p);
+    });
+    boardEl.innerHTML = '';
+    for (let r = 0; r < BOARD_SIZE; r++) {
+      for (let c = 0; c < BOARD_SIZE; c++) {
+        const id = `${c},${r}`;
+        const type = nodeType(id);
+        const cell = document.createElement('div');
+        cell.dataset.node = id;
+        cell.className = 'cl-cell ' + (type === 'room' ? 'cl-room' : 'cl-corridor');
+        if (type === 'room') {
+          const roomKey = ROOM_AT[id];
+          const card = ROOM_CARDS.find((rc) => rc.key === roomKey);
+          if (PASSAGES[roomKey]) cell.classList.add('cl-passage-link');
+          cell.innerHTML = `<span class="cl-room-icon">${card.icon}</span><span>${escapeHtml(card.label)}</span>`;
+          (DOORS[roomKey] || []).forEach((doorId) => {
+            const mark = document.createElement('span');
+            mark.className = 'cl-door-mark cl-door-' + doorDirection(id, doorId);
+            cell.appendChild(mark);
+          });
+        } else if (DOOR_CELLS.has(id)) {
+          cell.classList.add('cl-door');
+        }
+        if (G.reachable && G.reachable.has(id) && id !== G.players[0].pos) cell.classList.add('cl-reachable');
+        const occupants = occupantsByNode[id] || [];
+        if (occupants.length) {
+          const row = document.createElement('div');
+          row.className = 'cl-token-row';
+          occupants.forEach((p) => {
+            const tok = document.createElement('span');
+            tok.className = 'cl-token';
+            tok.style.background = SUSPECT_COLOR[p.character];
+            tok.title = p.name;
+            row.appendChild(tok);
+          });
+          cell.appendChild(row);
+        }
+        boardEl.appendChild(cell);
+      }
+    }
+  }
+
+  function renderNoteTable(tableEl, cards) {
+    const cols = [{ key: 'p0', label: I18N.notebook_you_col, color: SUSPECT_COLOR[G.players[0].character] }]
+      .concat(G.players.slice(1).map((p) => ({ key: 'p' + p.id, label: p.name, color: SUSPECT_COLOR[p.character] })))
+      .concat([{ key: 'solution', label: I18N.notebook_solution_col, color: '#1e293b' }]);
+
+    let html = '<thead><tr><th></th>';
+    cols.forEach((c) => {
+      html += `<th class="cl-col-head" title="${escapeHtml(c.label)}"><span class="cl-dot" style="background:${c.color};display:inline-block;"></span><span class="cl-col-name">${escapeHtml(c.label)}</span></th>`;
+    });
+    html += '</tr></thead><tbody>';
+    cards.forEach((card) => {
+      html += `<tr><td class="cl-item-label">${escapeHtml(card.label)}</td>`;
+      cols.forEach((c) => {
+        const val = noteVal(card.id, c.key);
+        const auto = (G.notes[card.id] && G.notes[card.id][c.key + '_auto']) || c.key === 'p0';
+        const cls = 'cl-note-cell' + (val === 'yes' ? ' cl-yes' : val === 'no' ? ' cl-no' : val === 'maybe' ? ' cl-maybe' : '') + (auto ? ' cl-auto' : '');
+        const symbol = val === 'yes' ? '✓' : val === 'no' ? '✗' : val === 'maybe' ? '?' : '';
+        html += `<td class="${cls}" data-card="${card.id}" data-col="${c.key}" data-auto="${auto ? '1' : '0'}">${symbol}</td>`;
+      });
+      html += '</tr>';
+    });
+    html += '</tbody>';
+    tableEl.innerHTML = html;
+  }
+
+  function onNoteCellClick(e) {
+    const td = e.target.closest('td[data-card]');
+    if (!td) return;
+    if (td.dataset.auto === '1') return;
+    const cardId = parseInt(td.dataset.card, 10);
+    const col = td.dataset.col;
+    const cur = noteVal(cardId, col);
+    const next = cur === '' ? 'yes' : cur === 'yes' ? 'no' : cur === 'no' ? 'maybe' : '';
+    setNote(cardId, col, next, false);
+    renderNotebook();
+  }
+
+  document.getElementById('note-suspects').addEventListener('click', onNoteCellClick);
+  document.getElementById('note-weapons').addEventListener('click', onNoteCellClick);
+  document.getElementById('note-rooms').addEventListener('click', onNoteCellClick);
+
+  function renderNotebook() {
+    renderNoteTable(document.getElementById('note-suspects'), SUSPECT_CARDS);
+    renderNoteTable(document.getElementById('note-weapons'), WEAPON_CARDS);
+    renderNoteTable(document.getElementById('note-rooms'), ROOM_CARDS);
+  }
+
+  function renderAll() {
+    renderPlayersBar();
+    renderBoard();
+    renderHand();
+    renderControls();
+    renderNotebook();
+  }
+})();
+</script>
+{% endblock %}

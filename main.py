@@ -170,6 +170,13 @@ async def tetris_3d(request: Request):
     return templates.TemplateResponse("tetris_3d.html", {"request": request, "lang": lang})
 
 
+@app.get("/tictactoe-3d", response_class=HTMLResponse)
+async def tictactoe_3d(request: Request):
+    """3D Tic-Tac-Toe page endpoint."""
+    lang = get_current_lang(request)
+    return templates.TemplateResponse("tictactoe_3d.html", {"request": request, "lang": lang})
+
+
 @app.get("/kenken", response_class=HTMLResponse)
 async def kenken(request: Request):
     """KenKen page endpoint."""
@@ -420,6 +427,52 @@ async def uno(request: Request):
     return templates.TemplateResponse(
         "uno.html",
         {"request": request, "lang": lang, "uno_i18n": uno_i18n},
+    )
+
+
+@app.get("/bus-parking", response_class=HTMLResponse)
+async def bus_parking(request: Request):
+    """Bus Parking color-matching puzzle page endpoint."""
+    lang = get_current_lang(request)
+    return templates.TemplateResponse("bus_parking.html", {"request": request, "lang": lang})
+
+
+CLUEDO_I18N_KEYS = [
+    'name', 'description', 'title', 'subtitle',
+    'setup_heading', 'setup_subheading', 'name_placeholder', 'character_label',
+    'opponents_label', 'opponents_1', 'opponents_2', 'opponents_3', 'opponents_4', 'opponents_5',
+    'start_game', 'you', 'ai_suffix', 'your_turn', 'ai_thinking',
+    'suggest_heading', 'suspect_label', 'weapon_label', 'room_label',
+    'suggest_button', 'accuse_button', 'skip_turn',
+    'accuse_confirm_title', 'accuse_confirm_body', 'accuse_confirm_yes', 'accuse_confirm_no',
+    'accuse_room_hint',
+    'give_up_button', 'give_up_confirm_title', 'give_up_confirm_body', 'give_up_confirm_yes', 'give_up_confirm_no',
+    'notebook_heading', 'notebook_hint', 'notebook_you_col', 'notebook_solution_col',
+    'suspects_heading', 'weapons_heading', 'rooms_heading', 'hand_heading', 'players_heading', 'log_heading',
+    'board_heading', 'roll_dice', 'secret_passage', 'skip_move', 'move_hint',
+    'asking_in_room', 'move_into_room_hint',
+    'msg_suggest', 'msg_cannot_disprove', 'msg_shows_hidden', 'msg_you_show', 'msg_shown_to_you',
+    'msg_no_one_disprove', 'msg_solution_deduced', 'msg_roll', 'msg_enter_room', 'msg_passage',
+    'choose_card_title', 'choose_card_body',
+    'msg_wrong_accusation', 'msg_you_wrong_accusation',
+    'win_title', 'lose_title', 'stuck_title', 'solution_reveal',
+    'play_again', 'change_players', 'eliminated_tag',
+    'rule_1', 'rule_2', 'rule_3', 'rule_4', 'rule_5', 'rule_6',
+    'suspect_scarlett', 'suspect_mustard', 'suspect_white', 'suspect_green', 'suspect_peacock', 'suspect_plum',
+    'weapon_candlestick', 'weapon_knife', 'weapon_leadpipe', 'weapon_revolver', 'weapon_rope', 'weapon_wrench',
+    'room_kitchen', 'room_ballroom', 'room_conservatory', 'room_diningroom', 'room_billiardroom',
+    'room_library', 'room_lounge', 'room_hall', 'room_study',
+]
+
+
+@app.get("/cluedo", response_class=HTMLResponse)
+async def cluedo(request: Request):
+    """Cluedo deduction game page endpoint."""
+    lang = get_current_lang(request)
+    cluedo_i18n = {key: get_translation(lang, f'games.cluedo.{key}') for key in CLUEDO_I18N_KEYS}
+    return templates.TemplateResponse(
+        "cluedo.html",
+        {"request": request, "lang": lang, "cluedo_i18n": cluedo_i18n},
     )
 
 

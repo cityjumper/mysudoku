@@ -1,0 +1,911 @@
+{% extends "base.html" %}
+
+{% block title %}{{ translate(lang, 'games.tictactoe_3d.title') }}{% endblock %}
+
+{% block extra_head %}
+<style>
+  .game-shell {
+    max-width: 1120px;
+    margin: 0 auto;
+  }
+
+  .scene-wrap {
+    position: relative;
+    border-radius: 1rem;
+    overflow: hidden;
+    background: radial-gradient(circle at 20% 20%, #1f2a44 0%, #0b1020 50%, #05070f 100%);
+    min-height: 420px;
+    height: clamp(420px, 62vh, 700px);
+    touch-action: none;
+    box-shadow: 0 30px 60px rgba(5, 7, 15, 0.4);
+  }
+
+  .hud-overlay {
+    position: absolute;
+    left: 12px;
+    right: 12px;
+    top: 12px;
+    display: flex;
+    justify-content: space-between;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    pointer-events: none;
+    z-index: 2;
+  }
+
+  .hud-pill {
+    background: rgba(15, 23, 42, 0.68);
+    color: #e2e8f0;
+    border: 1px solid rgba(148, 163, 184, 0.35);
+    border-radius: 9999px;
+    padding: 0.35rem 0.7rem;
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    -webkit-backdrop-filter: blur(4px);
+    backdrop-filter: blur(4px);
+  }
+
+  .turn-dot {
+    display: inline-block;
+    width: 0.72rem;
+    height: 0.72rem;
+    border-radius: 9999px;
+    margin-right: 0.35rem;
+    vertical-align: middle;
+  }
+
+  .dot-x { background: #ef4444; }
+  .dot-o { background: #38bdf8; }
+
+  .btn-row {
+    display: flex;
+    gap: 0.6rem;
+    flex-wrap: wrap;
+  }
+
+  .btn-solid {
+    border: 0;
+    border-radius: 0.7rem;
+    font-weight: 700;
+    font-size: 0.95rem;
+    padding: 0.6rem 0.95rem;
+    min-height: 44px;
+    cursor: pointer;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .btn-primary {
+    background: #0284c7;
+    color: #ffffff;
+  }
+
+  .btn-primary:hover { background: #0369a1; }
+
+  .btn-muted {
+    background: #e2e8f0;
+    color: #1e293b;
+  }
+
+  .btn-muted:hover { background: #cbd5e1; }
+
+  @media (max-width: 640px) {
+    .scene-wrap {
+      min-height: 380px;
+      height: 56vh;
+    }
+
+    .hud-pill {
+      font-size: 0.7rem;
+      padding: 0.28rem 0.55rem;
+    }
+
+    .btn-row .btn-solid {
+      flex: 1 1 calc(50% - 0.3rem);
+    }
+  }
+</style>
+{% endblock %}
+
+{% block body_class %}bg-gradient-to-br from-slate-100 to-sky-100 min-h-screen{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+  <div class="game-shell">
+    <div class="mb-5 flex items-center justify-between gap-3">
+      <a href="/" class="inline-flex items-center text-sky-800 hover:text-sky-950 font-semibold">
+        <svg class="w-5 h-5 mr-2" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+          <path fill-rule="evenodd" d="M12.707 15.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 111.414 1.414L7.414 9H17a1 1 0 110 2H7.414l5.293 5.293a1 1 0 010 1.414z" clip-rule="evenodd" />
+        </svg>
+        {{ translate(lang, 'common.home') }}
+      </a>
+      <div class="text-xs sm:text-sm text-slate-600 font-semibold">3x3x3</div>
+    </div>
+
+    <header class="text-center mb-6">
+      <h1 class="text-3xl sm:text-5xl font-extrabold tracking-tight text-slate-900">{{ translate(lang, 'games.tictactoe_3d.title') }}</h1>
+      <p class="mt-2 text-slate-600 text-sm sm:text-base">{{ translate(lang, 'games.tictactoe_3d.subtitle') }}</p>
+    </header>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div class="lg:col-span-2">
+        <div class="scene-wrap" id="scene-wrap" aria-label="3D Tic-Tac-Toe board">
+          <div class="hud-overlay">
+            <div class="hud-pill" id="turn-pill"></div>
+            <div class="hud-pill" id="hint-pill">{{ translate(lang, 'games.tictactoe_3d.hint_drag_tap') }}</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="lg:col-span-1">
+        <div class="bg-white rounded-2xl shadow-xl ring-1 ring-slate-200 p-5 sm:p-6">
+          <h2 class="text-xl font-bold text-slate-900">{{ translate(lang, 'games.tictactoe_3d.status') }}</h2>
+          <div id="status" class="mt-2 text-lg font-bold text-slate-800">{{ translate(lang, 'games.tictactoe_3d.x_to_move') }}</div>
+          <div id="substatus" class="mt-1 text-sm text-slate-600">{{ translate(lang, 'games.tictactoe_3d.tap_top_cell') }}</div>
+
+          <div class="mt-5 btn-row">
+            <button id="new-game" class="btn-solid btn-primary">{{ translate(lang, 'games.tictactoe_3d.new_game') }}</button>
+            <button id="undo-move" class="btn-solid btn-muted">{{ translate(lang, 'games.tictactoe_3d.undo') }}</button>
+          </div>
+
+          <div class="mt-2 btn-row">
+            <button id="roll-left" class="btn-solid btn-muted">{{ translate(lang, 'games.tictactoe_3d.roll_left') }}</button>
+            <button id="roll-right" class="btn-solid btn-muted">{{ translate(lang, 'games.tictactoe_3d.roll_right') }}</button>
+            <button id="reset-view" class="btn-solid btn-muted">{{ translate(lang, 'games.tictactoe_3d.reset_view') }}</button>
+          </div>
+
+          <div class="mt-6 grid grid-cols-2 gap-3">
+            <div class="rounded-xl bg-red-50 ring-1 ring-red-100 p-4">
+              <div class="text-xs font-semibold uppercase tracking-wide text-red-700">{{ translate(lang, 'games.tictactoe_3d.x_wins_label') }}</div>
+              <div id="score-x" class="mt-1 text-3xl font-extrabold text-red-900">0</div>
+            </div>
+            <div class="rounded-xl bg-sky-50 ring-1 ring-sky-100 p-4">
+              <div class="text-xs font-semibold uppercase tracking-wide text-sky-700">{{ translate(lang, 'games.tictactoe_3d.o_wins_label') }}</div>
+              <div id="score-o" class="mt-1 text-3xl font-extrabold text-sky-900">0</div>
+            </div>
+            <div class="rounded-xl bg-slate-50 ring-1 ring-slate-200 p-4 col-span-2">
+              <div class="text-xs font-semibold uppercase tracking-wide text-slate-600">{{ translate(lang, 'games.tictactoe_3d.games_played') }}</div>
+              <div id="score-games" class="mt-1 text-3xl font-extrabold text-slate-900">0</div>
+            </div>
+          </div>
+
+          <div class="mt-6">
+            <h3 class="text-sm font-bold text-slate-700 mb-2">{{ translate(lang, 'games.tictactoe_3d.how_to_play') }}</h3>
+            <ul class="text-sm text-slate-600 space-y-1">
+              <li>• {{ translate(lang, 'games.tictactoe_3d.rule_1') }}</li>
+              <li>• {{ translate(lang, 'games.tictactoe_3d.rule_2') }}</li>
+              <li>• {{ translate(lang, 'games.tictactoe_3d.rule_3') }}</li>
+              <li>• {{ translate(lang, 'games.tictactoe_3d.rule_4') }}</li>
+              <li>• {{ translate(lang, 'games.tictactoe_3d.rule_5') }}</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(() => {
+  const t = {
+    lib_failed: "{{ translate(lang, 'games.tictactoe_3d.lib_failed') }}",
+    lib_refresh: "{{ translate(lang, 'games.tictactoe_3d.lib_refresh') }}",
+    rotate_clearer: "{{ translate(lang, 'games.tictactoe_3d.rotate_clearer') }}",
+    column_full: "{{ translate(lang, 'games.tictactoe_3d.column_full') }}",
+    move_undone: "{{ translate(lang, 'games.tictactoe_3d.move_undone') }}",
+    x_wins: "{{ translate(lang, 'games.tictactoe_3d.x_wins') }}",
+    o_wins: "{{ translate(lang, 'games.tictactoe_3d.o_wins') }}",
+    draw: "{{ translate(lang, 'games.tictactoe_3d.draw') }}",
+    start_new_or_undo: "{{ translate(lang, 'games.tictactoe_3d.start_new_or_undo') }}",
+    drag_to_rotate_keep: "{{ translate(lang, 'games.tictactoe_3d.drag_to_rotate_keep') }}",
+    x_to_move: "{{ translate(lang, 'games.tictactoe_3d.x_to_move') }}",
+    o_to_move: "{{ translate(lang, 'games.tictactoe_3d.o_to_move') }}",
+    tap_top_cell: "{{ translate(lang, 'games.tictactoe_3d.tap_top_cell') }}",
+    game_over: "{{ translate(lang, 'games.tictactoe_3d.game_over') }}",
+    x_turn: "{{ translate(lang, 'games.tictactoe_3d.x_turn') }}",
+    o_turn: "{{ translate(lang, 'games.tictactoe_3d.o_turn') }}"
+  };
+
+  const SIZE = 3;
+  const SPACING = 1.55;
+  const SCORE_KEY = 'ttt-3d:scores:v2';
+  const TAP_THRESHOLD_PX = 8;
+  const DEFAULT_VIEW = {
+    x: -0.78,
+    y: 0.42,
+    z: 0,
+  };
+
+  const wrapEl = document.getElementById('scene-wrap');
+  const turnPillEl = document.getElementById('turn-pill');
+  const statusEl = document.getElementById('status');
+  const substatusEl = document.getElementById('substatus');
+  const scoreXEl = document.getElementById('score-x');
+  const scoreOEl = document.getElementById('score-o');
+  const scoreGamesEl = document.getElementById('score-games');
+
+  if (!window.THREE) {
+    statusEl.textContent = t.lib_failed;
+    substatusEl.textContent = t.lib_refresh;
+    return;
+  }
+
+  let board = createBoard();
+  let currentPlayer = 1; // 1 = X, 2 = O
+  let gameOver = false;
+  let winningCells = [];
+  let moveStack = [];
+
+  const scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x0b1222);
+
+  const camera = new THREE.PerspectiveCamera(52, 1, 0.1, 100);
+  camera.position.set(0, 0.35, 10.6);
+  camera.lookAt(0, 0, 0);
+
+  const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+  renderer.outputEncoding = THREE.sRGBEncoding;
+  renderer.domElement.style.display = 'block';
+  renderer.domElement.style.width = '100%';
+  renderer.domElement.style.height = '100%';
+  wrapEl.appendChild(renderer.domElement);
+
+  const ambient = new THREE.AmbientLight(0xffffff, 0.7);
+  scene.add(ambient);
+  const keyLight = new THREE.DirectionalLight(0xffffff, 1.0);
+  keyLight.position.set(6, 10, 8);
+  scene.add(keyLight);
+  const fillLight = new THREE.DirectionalLight(0x88aaff, 0.45);
+  fillLight.position.set(-7, -3, -6);
+  scene.add(fillLight);
+
+  const gameRoot = new THREE.Group();
+  gameRoot.rotation.x = DEFAULT_VIEW.x;
+  gameRoot.rotation.y = DEFAULT_VIEW.y;
+  gameRoot.rotation.z = DEFAULT_VIEW.z;
+  scene.add(gameRoot);
+
+  const boardGroup = new THREE.Group();
+  gameRoot.add(boardGroup);
+
+  const pieceGroup = new THREE.Group();
+  gameRoot.add(pieceGroup);
+
+  const selectorGroup = new THREE.Group();
+  gameRoot.add(selectorGroup);
+
+  const boardCells = [];
+  const pieceMap = new Map();
+  const selectors = [];
+  const raycaster = new THREE.Raycaster();
+  const pointerNdc = new THREE.Vector2();
+  let hoveredSelector = null;
+  let selectorPulse = 0;
+
+  buildBoardVisuals();
+  buildTopSelectors();
+  updatePieces();
+  updateStatus();
+  renderScores();
+
+  let pointerDownPos = null;
+  let activePointerId = null;
+  let dragMoved = false;
+  let startRotX = gameRoot.rotation.x;
+  let startRotY = gameRoot.rotation.y;
+  let startRotZ = gameRoot.rotation.z;
+  let activeLegacyTouchId = null;
+
+  function beginInteraction(id, clientX, clientY) {
+    activePointerId = id;
+    dragMoved = false;
+    pointerDownPos = { x: clientX, y: clientY };
+    startRotX = gameRoot.rotation.x;
+    startRotY = gameRoot.rotation.y;
+    startRotZ = gameRoot.rotation.z;
+  }
+
+  function moveInteraction(id, clientX, clientY, shiftKey) {
+    if (activePointerId !== id || !pointerDownPos) return;
+    const dx = clientX - pointerDownPos.x;
+    const dy = clientY - pointerDownPos.y;
+    if ((dx * dx + dy * dy) > (TAP_THRESHOLD_PX * TAP_THRESHOLD_PX)) {
+      dragMoved = true;
+    }
+    if (shiftKey) {
+      gameRoot.rotation.z = startRotZ + dx * 0.008;
+    } else {
+      gameRoot.rotation.y = startRotY + dx * 0.008;
+      gameRoot.rotation.x = Math.max(-1.2, Math.min(0.8, startRotX + dy * 0.006));
+    }
+  }
+
+  function endInteraction(id, clientX, clientY) {
+    if (activePointerId !== id || !pointerDownPos) return;
+    const dx = clientX - pointerDownPos.x;
+    const dy = clientY - pointerDownPos.y;
+    activePointerId = null;
+    pointerDownPos = null;
+    if (dragMoved || (dx * dx + dy * dy) > (TAP_THRESHOLD_PX * TAP_THRESHOLD_PX)) {
+      return;
+    }
+    tryDropFromPointer(clientX, clientY);
+  }
+
+  function updateHover(clientX, clientY) {
+    const selector = getSelectorFromPointer(clientX, clientY);
+    if (selector !== hoveredSelector) {
+      hoveredSelector = selector;
+      updateSelectorHighlights();
+    }
+  }
+
+  if (window.PointerEvent) {
+    renderer.domElement.addEventListener('pointerdown', (event) => {
+      beginInteraction(event.pointerId, event.clientX, event.clientY);
+      try {
+        renderer.domElement.setPointerCapture(event.pointerId);
+      } catch (_) {
+        // Pointer capture may not be supported on all browsers.
+      }
+    }, { passive: true });
+
+    renderer.domElement.addEventListener('pointermove', (event) => {
+      moveInteraction(event.pointerId, event.clientX, event.clientY, event.shiftKey);
+      updateHover(event.clientX, event.clientY);
+    }, { passive: true });
+
+    renderer.domElement.addEventListener('pointerup', (event) => {
+      try {
+        renderer.domElement.releasePointerCapture(event.pointerId);
+      } catch (_) {
+        // Safe no-op fallback.
+      }
+      endInteraction(event.pointerId, event.clientX, event.clientY);
+    }, { passive: true });
+
+    renderer.domElement.addEventListener('pointercancel', () => {
+      activePointerId = null;
+      pointerDownPos = null;
+      hoveredSelector = null;
+      updateSelectorHighlights();
+    }, { passive: true });
+
+    renderer.domElement.addEventListener('pointerleave', () => {
+      hoveredSelector = null;
+      updateSelectorHighlights();
+    }, { passive: true });
+  } else {
+    renderer.domElement.addEventListener('mousedown', (event) => {
+      beginInteraction('mouse', event.clientX, event.clientY);
+    });
+
+    window.addEventListener('mousemove', (event) => {
+      moveInteraction('mouse', event.clientX, event.clientY, event.shiftKey);
+      updateHover(event.clientX, event.clientY);
+    });
+
+    window.addEventListener('mouseup', (event) => {
+      endInteraction('mouse', event.clientX, event.clientY);
+    });
+
+    renderer.domElement.addEventListener('touchstart', (event) => {
+      if (!event.changedTouches.length || activeLegacyTouchId !== null) return;
+      const touch = event.changedTouches[0];
+      activeLegacyTouchId = touch.identifier;
+      beginInteraction(activeLegacyTouchId, touch.clientX, touch.clientY);
+    }, { passive: true });
+
+    renderer.domElement.addEventListener('touchmove', (event) => {
+      for (const touch of event.changedTouches) {
+        if (touch.identifier !== activeLegacyTouchId) continue;
+        moveInteraction(activeLegacyTouchId, touch.clientX, touch.clientY, false);
+        updateHover(touch.clientX, touch.clientY);
+        break;
+      }
+    }, { passive: true });
+
+    const onLegacyTouchEnd = (event) => {
+      for (const touch of event.changedTouches) {
+        if (touch.identifier !== activeLegacyTouchId) continue;
+        endInteraction(activeLegacyTouchId, touch.clientX, touch.clientY);
+        activeLegacyTouchId = null;
+        hoveredSelector = null;
+        updateSelectorHighlights();
+        break;
+      }
+    };
+
+    renderer.domElement.addEventListener('touchend', onLegacyTouchEnd, { passive: true });
+    renderer.domElement.addEventListener('touchcancel', onLegacyTouchEnd, { passive: true });
+  }
+
+  renderer.domElement.addEventListener('click', (event) => {
+    if (!event.isTrusted) return;
+    if (event.detail === 0) {
+      tryDropFromPointer(event.clientX, event.clientY);
+    }
+  });
+
+  document.getElementById('new-game').addEventListener('click', () => {
+    board = createBoard();
+    currentPlayer = 1;
+    gameOver = false;
+    winningCells = [];
+    moveStack = [];
+    updatePieces();
+    updateStatus();
+  });
+
+  document.getElementById('undo-move').addEventListener('click', () => {
+    if (moveStack.length === 0) return;
+    const prev = moveStack.pop();
+    board[prev.z][prev.y][prev.x] = 0;
+    gameOver = false;
+    winningCells = [];
+    currentPlayer = prev.player;
+    updatePieces();
+    updateStatus(t.move_undone);
+  });
+
+  function rotateRoll(delta) {
+    gameRoot.rotation.z += delta;
+  }
+
+  function resetView() {
+    gameRoot.rotation.x = DEFAULT_VIEW.x;
+    gameRoot.rotation.y = DEFAULT_VIEW.y;
+    gameRoot.rotation.z = DEFAULT_VIEW.z;
+  }
+
+  document.getElementById('roll-left').addEventListener('click', () => rotateRoll(-0.22));
+  document.getElementById('roll-right').addEventListener('click', () => rotateRoll(0.22));
+  document.getElementById('reset-view').addEventListener('click', resetView);
+
+  window.addEventListener('keydown', (event) => {
+    if (event.key === 'q' || event.key === 'Q') {
+      rotateRoll(-0.12);
+    }
+    if (event.key === 'e' || event.key === 'E') {
+      rotateRoll(0.12);
+    }
+    if (event.key === 'r' || event.key === 'R') {
+      resetView();
+    }
+  });
+
+  window.addEventListener('resize', resizeRenderer);
+  resizeRenderer();
+  animate();
+
+  function createBoard() {
+    return Array.from({ length: SIZE }, () =>
+      Array.from({ length: SIZE }, () => Array(SIZE).fill(0))
+    );
+  }
+
+  function gridToWorld(x, y, z) {
+    const offset = (SIZE - 1) / 2;
+    return {
+      x: (x - offset) * SPACING,
+      y: (y - offset) * SPACING,
+      z: (z - offset) * SPACING,
+    };
+  }
+
+  function keyFor(x, y, z) {
+    return `${x},${y},${z}`;
+  }
+
+  function buildBoardVisuals() {
+    const boardSpan = SIZE * SPACING + 1.1;
+
+    const pedestalGeo = new THREE.BoxGeometry(boardSpan, boardSpan, 0.65);
+    const pedestalMat = new THREE.MeshPhongMaterial({
+      color: 0x0f172a,
+      emissive: 0x0b1222,
+      shininess: 55,
+    });
+    const pedestal = new THREE.Mesh(pedestalGeo, pedestalMat);
+    pedestal.position.set(0, 0, -((SIZE - 1) / 2) * SPACING - 0.95);
+    boardGroup.add(pedestal);
+
+    const baseEdgeGeo = new THREE.EdgesGeometry(pedestalGeo);
+    const baseEdgeMat = new THREE.LineBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.42 });
+    const pedestalEdges = new THREE.LineSegments(baseEdgeGeo, baseEdgeMat);
+    pedestalEdges.position.copy(pedestal.position);
+    boardGroup.add(pedestalEdges);
+
+    const slotGeo = new THREE.BoxGeometry(1.05, 1.05, 1.05);
+    const slotMat = new THREE.MeshPhongMaterial({
+      color: 0x4f92d5,
+      transparent: true,
+      opacity: 0.16,
+      emissive: 0x123862,
+      shininess: 24,
+      depthWrite: false,
+    });
+
+    const edgeGeo = new THREE.EdgesGeometry(slotGeo);
+    const edgeMat = new THREE.LineBasicMaterial({ color: 0x9ed2ff, transparent: true, opacity: 0.55 });
+
+    for (let z = 0; z < SIZE; z += 1) {
+      for (let y = 0; y < SIZE; y += 1) {
+        for (let x = 0; x < SIZE; x += 1) {
+          const pos = gridToWorld(x, y, z);
+          const slot = new THREE.Mesh(slotGeo, slotMat.clone());
+          slot.position.set(pos.x, pos.y, pos.z);
+          slot.userData = { x, y, z };
+          boardGroup.add(slot);
+
+          const edge = new THREE.LineSegments(edgeGeo, edgeMat.clone());
+          edge.position.set(pos.x, pos.y, pos.z);
+          boardGroup.add(edge);
+
+          boardCells.push({ x, y, z, slot, edge });
+        }
+      }
+    }
+
+    const frameGeo = new THREE.BoxGeometry(SIZE * SPACING + 0.8, SIZE * SPACING + 0.8, SIZE * SPACING + 0.8);
+    const frameEdges = new THREE.EdgesGeometry(frameGeo);
+    const frame = new THREE.LineSegments(frameEdges, new THREE.LineBasicMaterial({ color: 0x93c5fd, transparent: true, opacity: 0.7 }));
+    boardGroup.add(frame);
+  }
+
+  function buildTopSelectors() {
+    const selectGeo = new THREE.CylinderGeometry(0.4, 0.4, 0.22, 28);
+    const selectMat = new THREE.MeshBasicMaterial({ color: 0x22d3ee, transparent: true, opacity: 0.5 });
+    const ringGeo = new THREE.TorusGeometry(0.52, 0.08, 12, 32);
+    const ringMat = new THREE.MeshBasicMaterial({ color: 0x93c5fd, transparent: true, opacity: 0.66 });
+
+    for (let y = 0; y < SIZE; y += 1) {
+      for (let x = 0; x < SIZE; x += 1) {
+        const world = gridToWorld(x, y, SIZE - 1);
+        const mesh = new THREE.Mesh(selectGeo, selectMat.clone());
+        mesh.position.set(world.x, world.y, world.z + 1.1);
+        mesh.userData = { x, y, phase: x * 0.7 + y * 0.43 };
+
+        const ring = new THREE.Mesh(ringGeo, ringMat.clone());
+        ring.rotation.x = Math.PI / 2;
+        ring.position.set(0, 0, 0.14);
+        mesh.add(ring);
+        mesh.userData.ring = ring;
+
+        selectorGroup.add(mesh);
+        selectors.push(mesh);
+      }
+    }
+
+    updateSelectorHighlights();
+  }
+
+  function makeMarkTexture(symbol, color) {
+    const canvas = document.createElement('canvas');
+    canvas.width = 128;
+    canvas.height = 128;
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.font = 'bold 96px Arial, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = color;
+    ctx.shadowColor = 'rgba(0,0,0,0.55)';
+    ctx.shadowBlur = 10;
+    ctx.fillText(symbol, canvas.width / 2, canvas.height / 2 + 4);
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.needsUpdate = true;
+    return texture;
+  }
+
+  const xTexture = makeMarkTexture('X', '#ef4444');
+  const oTexture = makeMarkTexture('O', '#38bdf8');
+
+  function updatePieces() {
+    const present = new Set();
+
+    for (let z = 0; z < SIZE; z += 1) {
+      for (let y = 0; y < SIZE; y += 1) {
+        for (let x = 0; x < SIZE; x += 1) {
+          const value = board[z][y][x];
+          const key = keyFor(x, y, z);
+          if (!value) continue;
+
+          present.add(key);
+          if (!pieceMap.has(key)) {
+            const mesh = createPieceMesh(value);
+            const pos = gridToWorld(x, y, z);
+            mesh.position.set(pos.x, pos.y, pos.z);
+            pieceGroup.add(mesh);
+            pieceMap.set(key, mesh);
+          }
+        }
+      }
+    }
+
+    for (const [key, mesh] of pieceMap.entries()) {
+      if (!present.has(key)) {
+        pieceGroup.remove(mesh);
+        mesh.material.map.dispose();
+        mesh.material.dispose();
+        pieceMap.delete(key);
+      }
+    }
+
+    highlightWinningLine();
+    updateSelectorHighlights();
+  }
+
+  function createPieceMesh(player) {
+    const texture = player === 1 ? xTexture : oTexture;
+    const mat = new THREE.SpriteMaterial({ map: texture, transparent: true, depthTest: true });
+    const sprite = new THREE.Sprite(mat);
+    sprite.scale.set(0.9, 0.9, 0.9);
+    sprite.userData = { player };
+    return sprite;
+  }
+
+  function highlightWinningLine() {
+    const winning = new Set(winningCells.map((cell) => keyFor(cell.x, cell.y, cell.z)));
+
+    for (const [key, mesh] of pieceMap.entries()) {
+      const isWinner = winning.has(key);
+      mesh.scale.setScalar(isWinner ? 1.15 : 1);
+    }
+
+    for (const cell of boardCells) {
+      const isWinnerCell = winning.has(keyFor(cell.x, cell.y, cell.z));
+      cell.slot.material.opacity = isWinnerCell ? 0.4 : 0.16;
+      cell.slot.material.color.setHex(isWinnerCell ? 0x0ea5e9 : 0x4f92d5);
+    }
+  }
+
+  function tryDropFromPointer(clientX, clientY) {
+    if (gameOver) return;
+
+    const selector = getSelectorFromPointer(clientX, clientY);
+    if (!selector) {
+      updateStatus(t.rotate_clearer);
+      return;
+    }
+
+    const { x, y } = selector.userData;
+    dropPiece(x, y);
+  }
+
+  function getSelectorFromPointer(clientX, clientY) {
+    const rect = renderer.domElement.getBoundingClientRect();
+    pointerNdc.x = ((clientX - rect.left) / rect.width) * 2 - 1;
+    pointerNdc.y = -((clientY - rect.top) / rect.height) * 2 + 1;
+    raycaster.setFromCamera(pointerNdc, camera);
+    const hits = raycaster.intersectObjects(selectors, false);
+    return hits.length ? hits[0].object : null;
+  }
+
+  function isColumnFull(x, y) {
+    return board[SIZE - 1][y][x] !== 0;
+  }
+
+  function updateSelectorHighlights() {
+    for (const mesh of selectors) {
+      const { x, y } = mesh.userData;
+      const available = !isColumnFull(x, y) && !gameOver;
+      const isHovered = hoveredSelector === mesh && available;
+
+      const fillColor = isHovered ? 0xffffff : (available ? 0x22d3ee : 0x64748b);
+      const fillOpacity = isHovered ? 0.92 : (available ? 0.52 : 0.12);
+      mesh.material.color.setHex(fillColor);
+      mesh.material.opacity = fillOpacity;
+
+      if (mesh.userData.ring) {
+        mesh.userData.ring.material.color.setHex(isHovered ? 0xffffff : (available ? 0x93c5fd : 0x475569));
+        mesh.userData.ring.material.opacity = isHovered ? 1 : (available ? 0.72 : 0.2);
+      }
+
+      if (!available) {
+        mesh.scale.setScalar(0.9);
+      }
+    }
+  }
+
+  function dropPiece(x, y) {
+    let placedZ = -1;
+    for (let z = 0; z < SIZE; z += 1) {
+      if (board[z][y][x] === 0) {
+        board[z][y][x] = currentPlayer;
+        placedZ = z;
+        break;
+      }
+    }
+
+    if (placedZ === -1) {
+      updateStatus(t.column_full);
+      return;
+    }
+
+    moveStack.push({ x, y, z: placedZ, player: currentPlayer });
+
+    const winLine = getWinningLine(x, y, placedZ, currentPlayer);
+    if (winLine) {
+      winningCells = winLine;
+      gameOver = true;
+      updatePieces();
+      const winnerText = currentPlayer === 1 ? t.x_wins : t.o_wins;
+      updateStatus(winnerText, true);
+      const scores = loadScores();
+      if (currentPlayer === 1) scores.x += 1;
+      else scores.o += 1;
+      scores.games += 1;
+      saveScores(scores);
+      renderScores();
+      return;
+    }
+
+    if (isBoardFull()) {
+      gameOver = true;
+      winningCells = [];
+      updatePieces();
+      updateStatus(t.draw, true);
+      const scores = loadScores();
+      scores.games += 1;
+      saveScores(scores);
+      renderScores();
+      return;
+    }
+
+    currentPlayer = currentPlayer === 1 ? 2 : 1;
+    updatePieces();
+    updateStatus();
+  }
+
+  function getWinningLine(x, y, z, player) {
+    const dirs = [
+      [1, 0, 0],
+      [0, 1, 0],
+      [0, 0, 1],
+      [1, 1, 0],
+      [1, -1, 0],
+      [1, 0, 1],
+      [1, 0, -1],
+      [0, 1, 1],
+      [0, 1, -1],
+      [1, 1, 1],
+      [1, 1, -1],
+      [1, -1, 1],
+      [1, -1, -1],
+    ];
+
+    for (const [dx, dy, dz] of dirs) {
+      const line = [{ x, y, z }];
+      line.push(...walkDir(x, y, z, dx, dy, dz, player));
+      line.unshift(...walkDir(x, y, z, -dx, -dy, -dz, player));
+      if (line.length >= SIZE) {
+        return line.slice(0, SIZE);
+      }
+    }
+    return null;
+  }
+
+  function walkDir(x, y, z, dx, dy, dz, player) {
+    const out = [];
+    let cx = x + dx;
+    let cy = y + dy;
+    let cz = z + dz;
+
+    while (isInside(cx, cy, cz) && board[cz][cy][cx] === player) {
+      out.push({ x: cx, y: cy, z: cz });
+      cx += dx;
+      cy += dy;
+      cz += dz;
+    }
+
+    return out;
+  }
+
+  function isInside(x, y, z) {
+    return x >= 0 && x < SIZE && y >= 0 && y < SIZE && z >= 0 && z < SIZE;
+  }
+
+  function isBoardFull() {
+    for (let z = 0; z < SIZE; z += 1) {
+      for (let y = 0; y < SIZE; y += 1) {
+        for (let x = 0; x < SIZE; x += 1) {
+          if (board[z][y][x] === 0) return false;
+        }
+      }
+    }
+    return true;
+  }
+
+  function loadScores() {
+    try {
+      const raw = localStorage.getItem(SCORE_KEY);
+      if (!raw) return { x: 0, o: 0, games: 0 };
+      const parsed = JSON.parse(raw);
+      return {
+        x: Number(parsed.x) || 0,
+        o: Number(parsed.o) || 0,
+        games: Number(parsed.games) || 0,
+      };
+    } catch {
+      return { x: 0, o: 0, games: 0 };
+    }
+  }
+
+  function saveScores(scores) {
+    localStorage.setItem(SCORE_KEY, JSON.stringify(scores));
+  }
+
+  function renderScores() {
+    const scores = loadScores();
+    scoreXEl.textContent = String(scores.x);
+    scoreOEl.textContent = String(scores.o);
+    scoreGamesEl.textContent = String(scores.games);
+  }
+
+  function updateStatus(message = null, lockColor = false) {
+    if (message) {
+      statusEl.textContent = message;
+      substatusEl.textContent = gameOver ? t.start_new_or_undo : t.drag_to_rotate_keep;
+      statusEl.style.color = lockColor ? '#0f172a' : '#1e293b';
+      updateTurnPill();
+      return;
+    }
+
+    if (gameOver) return;
+
+    const xTurn = currentPlayer === 1;
+    statusEl.textContent = xTurn ? t.x_to_move : t.o_to_move;
+    substatusEl.textContent = t.tap_top_cell;
+    statusEl.style.color = '#0f172a';
+    updateTurnPill();
+  }
+
+  function updateTurnPill() {
+    if (gameOver) {
+      turnPillEl.textContent = t.game_over;
+      return;
+    }
+    const xTurn = currentPlayer === 1;
+    turnPillEl.innerHTML = `${xTurn ? '<span class="turn-dot dot-x"></span>' : '<span class="turn-dot dot-o"></span>'}${xTurn ? t.x_turn : t.o_turn}`;
+  }
+
+  function resizeRenderer() {
+    const rect = wrapEl.getBoundingClientRect();
+    const width = Math.max(320, rect.width);
+    const height = Math.max(300, rect.height);
+    renderer.setSize(width, height, true);
+    camera.aspect = width / height;
+    camera.updateProjectionMatrix();
+  }
+
+  function animate() {
+    requestAnimationFrame(animate);
+
+    selectorPulse += 0.05;
+    for (const mesh of selectors) {
+      const { x, y, phase } = mesh.userData;
+      const available = !isColumnFull(x, y) && !gameOver;
+      const isHovered = hoveredSelector === mesh && available;
+      if (isHovered) {
+        mesh.scale.setScalar(1.18);
+        continue;
+      }
+      if (!available) {
+        mesh.scale.setScalar(0.9);
+        continue;
+      }
+      const pulse = 1 + 0.08 * Math.sin(selectorPulse + phase);
+      mesh.scale.setScalar(pulse);
+    }
+
+    renderer.render(scene, camera);
+  }
+})();
+</script>
+{% endblock %}
