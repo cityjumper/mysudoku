@@ -499,6 +499,13 @@ async def crazy_eights(request: Request):
     )
 
 
+@app.get("/number-match", response_class=HTMLResponse)
+async def number_match(request: Request):
+    """Number Match clearing puzzle page endpoint."""
+    lang = get_current_lang(request)
+    return templates.TemplateResponse("number_match.html", {"request": request, "lang": lang})
+
+
 @app.get("/api")
 async def api_root():
     """API root endpoint with API information."""

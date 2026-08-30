@@ -1020,6 +1020,12 @@
       "msg_passage": "{name} neemt de geheime gang naar de {room}.",
       "rule_6": "Je mag maar één vraag per bezoek aan een kamer stellen — verlaat de kamer en kom terug (of gebruik een geheime gang) om opnieuw te vragen.",
       "log_heading": "Spellog"
+    },
+    "number_match": {
+      "name": "Cijfers Wissen",
+      "description": "Wis paren getallen die gelijk zijn of samen 10 vormen en via een vrije rechte lijn verbonden zijn, voordat het bord vastloopt.",
+      "title": "Cijfers Wissen",
+      "subtitle": "Kies twee getallen die gelijk zijn of samen 10 vormen en een vrije lijn delen — rij, kolom of diagonaal — om ze allebei te wissen."
     }
   },
   "common": {

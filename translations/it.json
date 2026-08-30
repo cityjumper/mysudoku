@@ -1020,6 +1020,12 @@
       "msg_passage": "{name} usa il passaggio segreto verso la stanza {room}.",
       "rule_6": "Puoi fare solo una domanda per ogni visita in una stanza — esci e rientra (o usa un passaggio segreto) per chiedere di nuovo.",
       "log_heading": "Registro di gioco"
+    },
+    "number_match": {
+      "name": "Abbina Numeri",
+      "description": "Elimina coppie di numeri uguali o che sommano a 10, collegati da una linea libera, prima che la griglia si blocchi.",
+      "title": "Abbina Numeri",
+      "subtitle": "Scegli due numeri uguali o la cui somma è 10, collegati da una linea libera — riga, colonna o diagonale — per eliminarli entrambi."
     }
   },
   "common": {

@@ -1020,6 +1020,12 @@
       "msg_passage": "{name} took the secret passage to the {room}.",
       "rule_6": "You may ask only one question per visit to a room — leave and come back (or use a secret passage) to ask again.",
       "log_heading": "Game Log"
+    },
+    "number_match": {
+      "name": "Number Match",
+      "description": "Clear pairs of numbers that are equal or add up to 10, connected in a straight unblocked line, before the board runs out of moves.",
+      "title": "Number Match",
+      "subtitle": "Pick two numbers that are equal or sum to 10 and share a clear line — row, column, or diagonal — to clear them both."
     }
   },
   "common": {

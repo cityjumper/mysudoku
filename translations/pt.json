@@ -1019,6 +1019,12 @@
       "msg_passage": "{name} usa a passagem secreta para a {room}.",
       "rule_6": "Só pode fazer uma pergunta por cada visita a uma divisão — saia e volte (ou use uma passagem secreta) para perguntar de novo.",
       "log_heading": "Registo do jogo"
+    },
+    "number_match": {
+      "name": "Combine Números",
+      "description": "Elimine pares de números iguais ou que somam 10, ligados por uma linha livre, antes que o tabuleiro fique sem jogadas.",
+      "title": "Combine Números",
+      "subtitle": "Escolha dois números iguais ou que somem 10 e compartilhem uma linha livre — linha, coluna ou diagonal — para eliminar os dois."
     }
   },
   "common": {
