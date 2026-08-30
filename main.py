@@ -476,6 +476,29 @@ async def cluedo(request: Request):
     )
 
 
+CRAZY_EIGHTS_I18N_KEYS = [
+    'name', 'description', 'title', 'subtitle', 'setup_heading', 'setup_subheading',
+    'name_placeholder', 'opponents_label', 'opponents_1', 'opponents_2', 'opponents_3',
+    'start_game', 'you', 'west', 'north', 'east', 'your_turn', 'ai_thinking',
+    'draw_card', 'pass_turn', 'choose_suit', 'suit_hearts', 'suit_diamonds', 'suit_clubs', 'suit_spades',
+    'msg_play', 'msg_draw', 'msg_eight', 'msg_no_moves', 'round_summary', 'round_win', 'you_win_round',
+    'points_label', 'scoreboard', 'total_points', 'next_round', 'win_title', 'lose_title',
+    'final_scores', 'play_again', 'change_players',
+    'rule_1', 'rule_2', 'rule_3', 'rule_4', 'rule_5',
+]
+
+
+@app.get("/crazy-eights", response_class=HTMLResponse)
+async def crazy_eights(request: Request):
+    """Crazy Eights card game page endpoint."""
+    lang = get_current_lang(request)
+    crazy_eights_i18n = {key: get_translation(lang, f'games.crazy_eights.{key}') for key in CRAZY_EIGHTS_I18N_KEYS}
+    return templates.TemplateResponse(
+        "crazy_eights.html",
+        {"request": request, "lang": lang, "crazy_eights_i18n": crazy_eights_i18n},
+    )
+
+
 @app.get("/api")
 async def api_root():
     """API root endpoint with API information."""
