@@ -398,6 +398,14 @@
     }
   }
 
+  function removeEmptyRows() {
+    const filtered = state.grid.filter((row) => row.some((v) => v != null));
+    if (filtered.length !== state.grid.length) {
+      state.grid = filtered;
+      buildGridDom();
+    }
+  }
+
   function clearMatch(a, b) {
     state.grid[a.r][a.c] = null;
     state.grid[b.r][b.c] = null;
@@ -407,6 +415,7 @@
     pushMessage(`Matched ${a.v} + ${b.v} → +${points}`);
     saveBest();
     checkTarget();
+    removeEmptyRows();
     render();
     if (activeCells().length === 0) {
       setTimeout(triggerStageClear, 250);
