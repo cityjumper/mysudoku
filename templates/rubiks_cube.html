@@ -24,6 +24,7 @@
     display: block;
     width: 100%;
     height: 100%;
+    cursor: grab;
   }
 
   .hud-overlay {
@@ -119,7 +120,30 @@
     gap: 0.35rem;
   }
 
+  .move-btn.slice-move { background: #7c2d12; }
+  .move-btn.slice-move:hover { background: #9a3412; }
+
   #disabled-veil.disabled { pointer-events: none; opacity: 0.55; }
+
+  .turn-hint {
+    position: absolute;
+    z-index: 3;
+    pointer-events: none;
+    background: rgba(15, 23, 42, 0.92);
+    border: 1px solid rgba(148, 163, 184, 0.4);
+    border-radius: 0.5rem;
+    padding: 0.4rem 0.6rem;
+    font-size: 0.75rem;
+    line-height: 1.35;
+    color: #e2e8f0;
+    white-space: nowrap;
+    opacity: 0;
+    transform: translateY(2px);
+    transition: opacity 0.1s ease, transform 0.1s ease;
+  }
+  .turn-hint.visible { opacity: 1; transform: translateY(0); }
+  .turn-hint .hint-cw { color: #86efac; font-weight: 700; }
+  .turn-hint .hint-ccw { color: #fca5a5; font-weight: 700; }
 
   /* Tutorial modal */
   .tutorial-backdrop {
@@ -221,6 +245,7 @@
             <div class="hud-pill" id="moves-pill"></div>
             <div class="hud-pill" id="status-pill">{{ translate(lang, 'games.rubiks_cube.ready_message') }}</div>
           </div>
+          <div class="turn-hint" id="turn-hint"></div>
         </div>
         <p class="mt-3 text-xs sm:text-sm text-slate-500 text-center">
           {{ translate(lang, 'games.rubiks_cube.hint_orbit') }} · {{ translate(lang, 'games.rubiks_cube.hint_tap') }}
@@ -244,6 +269,9 @@
             <h3 class="text-xs font-bold uppercase tracking-wide text-slate-500 mb-2">{{ translate(lang, 'games.rubiks_cube.face_turns_label') }}</h3>
             <div class="move-grid" id="face-move-grid"></div>
 
+            <h3 class="text-xs font-bold uppercase tracking-wide text-slate-500 mt-4 mb-2">{{ translate(lang, 'games.rubiks_cube.middle_slices_label') }}</h3>
+            <div class="move-grid" id="slice-move-grid"></div>
+
             <h3 class="text-xs font-bold uppercase tracking-wide text-slate-500 mt-4 mb-2">{{ translate(lang, 'games.rubiks_cube.whole_cube_label') }}</h3>
             <div class="rotate-grid" id="cube-rotate-grid"></div>
           </div>
@@ -257,6 +285,7 @@
               <li>• {{ translate(lang, 'games.rubiks_cube.rule_2') }}</li>
               <li>• {{ translate(lang, 'games.rubiks_cube.rule_3') }}</li>
               <li>• {{ translate(lang, 'games.rubiks_cube.rule_4') }}</li>
+              <li>• {{ translate(lang, 'games.rubiks_cube.rule_5') }}</li>
             </ul>
           </div>
         </div>
@@ -368,7 +397,9 @@
     solved_message: "{{ translate(lang, 'games.rubiks_cube.solved_message') }}",
     scrambling_message: "{{ translate(lang, 'games.rubiks_cube.scrambling_message') }}",
     ready_message: "{{ translate(lang, 'games.rubiks_cube.ready_message') }}",
-    moves_label: "{{ translate(lang, 'games.rubiks_cube.moves_label') }}"
+    moves_label: "{{ translate(lang, 'games.rubiks_cube.moves_label') }}",
+    left_click_label: "{{ translate(lang, 'games.rubiks_cube.left_click_label') }}",
+    right_click_label: "{{ translate(lang, 'games.rubiks_cube.right_click_label') }}"
   };
 
   const wrapEl = document.getElementById('scene-wrap');
@@ -376,6 +407,7 @@
   const movesPillEl = document.getElementById('moves-pill');
   const moveCountEl = document.getElementById('move-count');
   const disabledVeilEl = document.getElementById('disabled-veil');
+  const turnHintEl = document.getElementById('turn-hint');
 
   if (!window.THREE) {
     statusPillEl.textContent = t.lib_failed;
@@ -436,8 +468,12 @@
   rig.add(cubeGroup);
 
   let cubies = [];
+  let hoveredCubies = [];
+  let hoveredLetter = null;
 
   function buildCube() {
+    hoveredCubies = [];
+    hoveredLetter = null;
     cubeGroup.clear();
     cubies = [];
     for (let x = -1; x <= 1; x++) {
@@ -509,29 +545,47 @@
   }
 
   renderer.domElement.addEventListener('pointerdown', (e) => {
+    if (e.button === 2) return; // right-click is handled by contextmenu, not orbit-drag
     renderer.domElement.setPointerCapture(e.pointerId);
     onPointerDown(e.clientX, e.clientY);
   });
-  renderer.domElement.addEventListener('pointermove', (e) => onPointerMoveDrag(e.clientX, e.clientY));
+  renderer.domElement.addEventListener('pointermove', (e) => {
+    if (pointerDown) {
+      onPointerMoveDrag(e.clientX, e.clientY);
+      hideTurnHint();
+      return;
+    }
+    updateHoverPreview(e.clientX, e.clientY);
+  });
   renderer.domElement.addEventListener('pointerup', (e) => onPointerUpDrag(e.clientX, e.clientY));
   renderer.domElement.addEventListener('pointercancel', () => { pointerDown = false; });
-  renderer.domElement.addEventListener('pointerleave', () => { pointerDown = false; });
+  renderer.domElement.addEventListener('pointerleave', () => { pointerDown = false; hideTurnHint(); });
+  renderer.domElement.addEventListener('contextmenu', (e) => {
+    e.preventDefault();
+    if (animating) return;
+    const letter = raycastFaceLetter(e.clientX, e.clientY);
+    if (letter) queueMoves([letter + "'"]);
+  });
 
   // ---------- Tap-to-turn (raycast) ----------
   const raycaster = new THREE.Raycaster();
   const pointerNdc = new THREE.Vector2();
 
-  function handleTap(clientX, clientY) {
-    if (animating) return;
+  function raycastFaceLetter(clientX, clientY) {
     const rect = renderer.domElement.getBoundingClientRect();
     pointerNdc.x = ((clientX - rect.left) / rect.width) * 2 - 1;
     pointerNdc.y = -((clientY - rect.top) / rect.height) * 2 + 1;
     raycaster.setFromCamera(pointerNdc, camera);
     const hits = raycaster.intersectObjects(cubies, false);
-    if (!hits.length) return;
+    if (!hits.length) return null;
     const hit = hits[0];
     const localNormal = hit.face.normal.clone().transformDirection(hit.object.matrix);
-    const letter = normalToFaceLetter(localNormal);
+    return normalToFaceLetter(localNormal);
+  }
+
+  function handleTap(clientX, clientY) {
+    if (animating) return;
+    const letter = raycastFaceLetter(clientX, clientY);
     if (letter) queueMoves([letter]);
   }
 
@@ -542,19 +596,80 @@
     return normal.z > 0 ? 'F' : 'B';
   }
 
+  // ---------- Hover preview (highlight layer + show click directions) ----------
+  const HIGHLIGHT_EMISSIVE = 0x4a4a12;
+
+  function clearHoverHighlight() {
+    hoveredCubies.forEach((c) => {
+      c.material.forEach((m) => m.emissive.setHex(0x000000));
+    });
+    hoveredCubies = [];
+    hoveredLetter = null;
+  }
+
+  function applyHoverHighlight(letter) {
+    if (letter === hoveredLetter) return;
+    clearHoverHighlight();
+    hoveredLetter = letter;
+    hoveredCubies = getAffectedCubies(letter);
+    hoveredCubies.forEach((c) => {
+      c.material.forEach((m) => m.emissive.setHex(HIGHLIGHT_EMISSIVE));
+    });
+  }
+
+  function showTurnHint(clientX, clientY, letter) {
+    const rect = wrapEl.getBoundingClientRect();
+    turnHintEl.style.left = `${clientX - rect.left + 16}px`;
+    turnHintEl.style.top = `${clientY - rect.top + 16}px`;
+    turnHintEl.innerHTML =
+      `<div>${t.left_click_label}: <span class="hint-cw">${letter}</span></div>` +
+      `<div>${t.right_click_label}: <span class="hint-ccw">${letter}'</span></div>`;
+    turnHintEl.classList.add('visible');
+  }
+
+  function hideTurnHint() {
+    turnHintEl.classList.remove('visible');
+    clearHoverHighlight();
+    renderer.domElement.style.cursor = 'grab';
+  }
+
+  function updateHoverPreview(clientX, clientY) {
+    if (animating || queueRunning) { hideTurnHint(); return; }
+    const letter = raycastFaceLetter(clientX, clientY);
+    if (!letter) { hideTurnHint(); return; }
+    applyHoverHighlight(letter);
+    showTurnHint(clientX, clientY, letter);
+    renderer.domElement.style.cursor = 'pointer';
+  }
+
   // ---------- Move engine ----------
-  // A move token is like "U", "U'", "U2", "x", "x'", "x2"
+  // A move token is like "U", "U'", "U2", "M", "M'", "x", "x'", "x2"
+  // posSign selects which layer turns (0 = the hidden middle slice); rotSign sets its spin direction.
   const FACE_INFO = {
-    U: { axis: 'y', sign: 1, wholeCube: false },
-    D: { axis: 'y', sign: -1, wholeCube: false },
-    L: { axis: 'x', sign: -1, wholeCube: false },
-    R: { axis: 'x', sign: 1, wholeCube: false },
-    F: { axis: 'z', sign: 1, wholeCube: false },
-    B: { axis: 'z', sign: -1, wholeCube: false },
-    x: { axis: 'x', sign: 1, wholeCube: true },
-    y: { axis: 'y', sign: 1, wholeCube: true },
-    z: { axis: 'z', sign: 1, wholeCube: true }
+    U: { axis: 'y', posSign: 1, rotSign: 1, wholeCube: false },
+    D: { axis: 'y', posSign: -1, rotSign: -1, wholeCube: false },
+    L: { axis: 'x', posSign: -1, rotSign: -1, wholeCube: false },
+    R: { axis: 'x', posSign: 1, rotSign: 1, wholeCube: false },
+    F: { axis: 'z', posSign: 1, rotSign: 1, wholeCube: false },
+    B: { axis: 'z', posSign: -1, rotSign: -1, wholeCube: false },
+    M: { axis: 'x', posSign: 0, rotSign: -1, wholeCube: false }, // follows L
+    E: { axis: 'y', posSign: 0, rotSign: -1, wholeCube: false }, // follows D
+    S: { axis: 'z', posSign: 0, rotSign: 1, wholeCube: false }, // follows F
+    x: { axis: 'x', posSign: 1, rotSign: 1, wholeCube: true },
+    y: { axis: 'y', posSign: 1, rotSign: 1, wholeCube: true },
+    z: { axis: 'z', posSign: 1, rotSign: 1, wholeCube: true }
   };
+
+  function getAffectedCubies(letter) {
+    const info = FACE_INFO[letter];
+    if (!info) return [];
+    if (info.wholeCube) return cubies;
+    const targetLayer = info.posSign * SPACING;
+    return cubies.filter((c) => {
+      const coord = info.axis === 'x' ? c.position.x : info.axis === 'y' ? c.position.y : c.position.z;
+      return Math.abs(coord - targetLayer) < 0.3;
+    });
+  }
 
   let animating = false;
   let moveHistory = [];
@@ -595,6 +710,7 @@
   }
 
   function setControlsEnabled(enabled) {
+    if (!enabled) hideTurnHint();
     disabledVeilEl.classList.toggle('disabled', !enabled);
     document.getElementById('scramble-btn').disabled = !enabled;
     document.getElementById('reset-btn').disabled = !enabled;
@@ -609,18 +725,13 @@
       const info = FACE_INFO[letter];
       if (!info) { resolve(); return; }
 
-      const targetLayer = info.sign * SPACING;
-      const affected = cubies.filter((c) => {
-        if (info.wholeCube) return true;
-        const coord = info.axis === 'x' ? c.position.x : info.axis === 'y' ? c.position.y : c.position.z;
-        return Math.abs(coord - targetLayer) < 0.3;
-      });
+      const affected = getAffectedCubies(letter);
 
       const pivot = new THREE.Group();
       cubeGroup.add(pivot);
       affected.forEach((c) => pivot.attach(c));
 
-      const totalAngle = -info.sign * (Math.PI / 2) * turns;
+      const totalAngle = -info.rotSign * (Math.PI / 2) * turns;
       const axisVec = info.axis === 'x' ? new THREE.Vector3(1, 0, 0)
         : info.axis === 'y' ? new THREE.Vector3(0, 1, 0)
         : new THREE.Vector3(0, 0, 1);
@@ -712,6 +823,17 @@
     faceGrid.appendChild(btn);
   });
 
+  const SLICE_BUTTONS = ['M', "M'", 'E', "E'", 'S', "S'"];
+  const sliceGrid = document.getElementById('slice-move-grid');
+  SLICE_BUTTONS.forEach((tok) => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'move-btn slice-move';
+    btn.textContent = tok;
+    btn.addEventListener('click', () => queueMoves([tok]));
+    sliceGrid.appendChild(btn);
+  });
+
   const ROTATE_BUTTONS = ['x', "x'", 'y', "y'", 'z', "z'"];
   const rotateGrid = document.getElementById('cube-rotate-grid');
   ROTATE_BUTTONS.forEach((tok) => {
@@ -772,7 +894,7 @@
 
   window.addEventListener('keydown', (e) => {
     if (animating || queueRunning) return;
-    const map = { u: 'U', d: 'D', l: 'L', r: 'R', f: 'F', b: 'B' };
+    const map = { u: 'U', d: 'D', l: 'L', r: 'R', f: 'F', b: 'B', m: 'M', e: 'E', s: 'S' };
     const key = e.key;
     const lower = key.toLowerCase();
     if (map[lower]) {
