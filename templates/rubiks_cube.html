@@ -1,0 +1,810 @@
+{% extends "base.html" %}
+
+{% block title %}{{ translate(lang, 'games.rubiks_cube.title') }}{% endblock %}
+
+{% block extra_head %}
+<style>
+  .game-shell {
+    max-width: 1180px;
+    margin: 0 auto;
+  }
+
+  .scene-wrap {
+    position: relative;
+    border-radius: 1rem;
+    overflow: hidden;
+    background: radial-gradient(circle at 25% 20%, #1f2a44 0%, #0b1020 55%, #05070f 100%);
+    min-height: 420px;
+    height: clamp(420px, 58vh, 640px);
+    touch-action: none;
+    box-shadow: 0 30px 60px rgba(5, 7, 15, 0.4);
+  }
+
+  .scene-wrap canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+
+  .hud-overlay {
+    position: absolute;
+    left: 12px;
+    right: 12px;
+    top: 12px;
+    display: flex;
+    justify-content: space-between;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    pointer-events: none;
+    z-index: 2;
+  }
+
+  .hud-pill {
+    background: rgba(15, 23, 42, 0.68);
+    color: #e2e8f0;
+    border: 1px solid rgba(148, 163, 184, 0.35);
+    border-radius: 9999px;
+    padding: 0.35rem 0.7rem;
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    -webkit-backdrop-filter: blur(4px);
+    backdrop-filter: blur(4px);
+  }
+
+  .hud-pill.solved {
+    background: rgba(21, 128, 61, 0.75);
+    border-color: rgba(74, 222, 128, 0.55);
+  }
+
+  .btn-row {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+
+  .btn-solid {
+    border: 0;
+    border-radius: 0.6rem;
+    font-weight: 700;
+    font-size: 0.9rem;
+    padding: 0.5rem 0.8rem;
+    min-height: 40px;
+    cursor: pointer;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .btn-primary { background: #ca8a04; color: #ffffff; }
+  .btn-primary:hover { background: #a16207; }
+
+  .btn-muted { background: #e2e8f0; color: #1e293b; }
+  .btn-muted:hover { background: #cbd5e1; }
+
+  .btn-outline {
+    background: #fff;
+    color: #334155;
+    border: 1px solid #cbd5e1;
+  }
+  .btn-outline:hover { background: #f1f5f9; }
+
+  .move-btn {
+    border: 0;
+    border-radius: 0.5rem;
+    background: #1e293b;
+    color: #f1f5f9;
+    font-weight: 700;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 0.85rem;
+    padding: 0.45rem 0;
+    cursor: pointer;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .move-btn:hover { background: #334155; }
+  .move-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  .move-btn.cube-rotate { background: #475569; }
+  .move-btn.cube-rotate:hover { background: #64748b; }
+
+  .move-grid {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 0.35rem;
+  }
+
+  .rotate-grid {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 0.35rem;
+  }
+
+  #disabled-veil.disabled { pointer-events: none; opacity: 0.55; }
+
+  /* Tutorial modal */
+  .tutorial-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.6);
+    z-index: 50;
+    display: none;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 3vh 1rem;
+    overflow-y: auto;
+  }
+  .tutorial-backdrop.open { display: flex; }
+
+  .tutorial-panel {
+    background: #fff;
+    border-radius: 1rem;
+    max-width: 760px;
+    width: 100%;
+    box-shadow: 0 30px 70px rgba(0,0,0,0.35);
+    margin-bottom: 3vh;
+  }
+
+  .algo-box {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    background: #0f172a;
+    color: #fde68a;
+    border-radius: 0.6rem;
+    padding: 0.6rem 0.85rem;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 0.95rem;
+    letter-spacing: 0.03em;
+    margin-top: 0.5rem;
+  }
+
+  .try-btn {
+    border: 0;
+    border-radius: 0.5rem;
+    background: #ca8a04;
+    color: #fff;
+    font-weight: 700;
+    font-size: 0.78rem;
+    padding: 0.4rem 0.6rem;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .try-btn:hover { background: #a16207; }
+  .try-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  .step-card {
+    border: 1px solid #e2e8f0;
+    border-radius: 0.75rem;
+    padding: 0.9rem 1rem;
+    margin-top: 0.9rem;
+  }
+
+  .step-card.flip-card {
+    background: #fefce8;
+    border-color: #fde68a;
+  }
+
+  @media (max-width: 640px) {
+    .scene-wrap { min-height: 360px; height: 52vh; }
+    .hud-pill { font-size: 0.68rem; padding: 0.26rem 0.5rem; }
+    .move-btn { font-size: 0.72rem; padding: 0.4rem 0; }
+  }
+</style>
+{% endblock %}
+
+{% block body_class %}bg-gradient-to-br from-slate-100 to-yellow-50 min-h-screen{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+  <div class="game-shell">
+    <div class="mb-5 flex items-center justify-between gap-3">
+      <a href="/" class="inline-flex items-center text-yellow-800 hover:text-yellow-950 font-semibold">
+        <svg class="w-5 h-5 mr-2" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+          <path fill-rule="evenodd" d="M12.707 15.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 111.414 1.414L7.414 9H17a1 1 0 110 2H7.414l5.293 5.293a1 1 0 010 1.414z" clip-rule="evenodd" />
+        </svg>
+        {{ translate(lang, 'common.home') }}
+      </a>
+      <div class="text-xs sm:text-sm text-slate-600 font-semibold">3x3x3</div>
+    </div>
+
+    <header class="text-center mb-6">
+      <h1 class="text-3xl sm:text-5xl font-extrabold tracking-tight text-slate-900">{{ translate(lang, 'games.rubiks_cube.title') }}</h1>
+      <p class="mt-2 text-slate-600 text-sm sm:text-base">{{ translate(lang, 'games.rubiks_cube.subtitle') }}</p>
+    </header>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div class="lg:col-span-2">
+        <div class="scene-wrap" id="scene-wrap" aria-label="3D Rubik's Cube">
+          <div class="hud-overlay">
+            <div class="hud-pill" id="moves-pill"></div>
+            <div class="hud-pill" id="status-pill">{{ translate(lang, 'games.rubiks_cube.ready_message') }}</div>
+          </div>
+        </div>
+        <p class="mt-3 text-xs sm:text-sm text-slate-500 text-center">
+          {{ translate(lang, 'games.rubiks_cube.hint_orbit') }} · {{ translate(lang, 'games.rubiks_cube.hint_tap') }}
+        </p>
+      </div>
+
+      <div class="lg:col-span-1">
+        <div class="bg-white rounded-2xl shadow-xl ring-1 ring-slate-200 p-5 sm:p-6">
+          <div class="flex items-center justify-between gap-3">
+            <h2 class="text-lg font-bold text-slate-900">{{ translate(lang, 'games.rubiks_cube.status_label') }}</h2>
+            <span id="move-count" class="text-sm font-semibold text-slate-600">0</span>
+          </div>
+
+          <div class="mt-4 btn-row">
+            <button type="button" id="scramble-btn" class="btn-solid btn-primary flex-1">{{ translate(lang, 'games.rubiks_cube.scramble') }}</button>
+            <button type="button" id="reset-btn" class="btn-solid btn-muted flex-1">{{ translate(lang, 'games.rubiks_cube.reset') }}</button>
+            <button type="button" id="undo-btn" class="btn-solid btn-muted flex-1">{{ translate(lang, 'games.rubiks_cube.undo') }}</button>
+          </div>
+
+          <div class="mt-5" id="disabled-veil">
+            <h3 class="text-xs font-bold uppercase tracking-wide text-slate-500 mb-2">{{ translate(lang, 'games.rubiks_cube.face_turns_label') }}</h3>
+            <div class="move-grid" id="face-move-grid"></div>
+
+            <h3 class="text-xs font-bold uppercase tracking-wide text-slate-500 mt-4 mb-2">{{ translate(lang, 'games.rubiks_cube.whole_cube_label') }}</h3>
+            <div class="rotate-grid" id="cube-rotate-grid"></div>
+          </div>
+
+          <button type="button" id="how-to-solve-btn" class="mt-5 w-full btn-solid btn-outline">🧠 {{ translate(lang, 'games.rubiks_cube.how_to_solve') }}</button>
+
+          <div class="mt-6">
+            <h3 class="text-sm font-bold text-slate-700 mb-2">{{ translate(lang, 'games.rubiks_cube.how_to_play') }}</h3>
+            <ul class="text-sm text-slate-600 space-y-1">
+              <li>• {{ translate(lang, 'games.rubiks_cube.rule_1') }}</li>
+              <li>• {{ translate(lang, 'games.rubiks_cube.rule_2') }}</li>
+              <li>• {{ translate(lang, 'games.rubiks_cube.rule_3') }}</li>
+              <li>• {{ translate(lang, 'games.rubiks_cube.rule_4') }}</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Tutorial modal -->
+<div class="tutorial-backdrop" id="tutorial-backdrop">
+  <div class="tutorial-panel">
+    <div class="flex items-center justify-between gap-3 px-5 sm:px-6 py-4 border-b border-slate-200 sticky top-0 bg-white rounded-t-2xl">
+      <h2 class="text-lg sm:text-xl font-extrabold text-slate-900">{{ translate(lang, 'games.rubiks_cube.tutorial_title') }}</h2>
+      <button type="button" id="tutorial-close" class="btn-solid btn-muted" aria-label="{{ translate(lang, 'games.rubiks_cube.close') }}">✕</button>
+    </div>
+    <div class="px-5 sm:px-6 py-5">
+      <p class="text-sm text-slate-600">{{ translate(lang, 'games.rubiks_cube.tutorial_intro') }}</p>
+
+      <div class="step-card">
+        <h3 class="font-bold text-slate-900">{{ translate(lang, 'games.rubiks_cube.notation_title') }}</h3>
+        <p class="text-sm text-slate-600 mt-1">{{ translate(lang, 'games.rubiks_cube.notation_body') }}</p>
+      </div>
+
+      <div class="step-card">
+        <h3 class="font-bold text-slate-900">{{ translate(lang, 'games.rubiks_cube.step1_title') }}</h3>
+        <p class="text-sm text-slate-600 mt-1">{{ translate(lang, 'games.rubiks_cube.step1_body') }}</p>
+      </div>
+
+      <div class="step-card">
+        <h3 class="font-bold text-slate-900">{{ translate(lang, 'games.rubiks_cube.step2_title') }}</h3>
+        <p class="text-sm text-slate-600 mt-1">{{ translate(lang, 'games.rubiks_cube.step2_body') }}</p>
+        <div class="algo-box">
+          <span>{{ translate(lang, 'games.rubiks_cube.step2_algo') }}</span>
+          <button type="button" class="try-btn algo-try" data-algo="{{ translate(lang, 'games.rubiks_cube.step2_algo') }}">{{ translate(lang, 'games.rubiks_cube.try_it') }}</button>
+        </div>
+      </div>
+
+      <div class="step-card">
+        <h3 class="font-bold text-slate-900">{{ translate(lang, 'games.rubiks_cube.step3_title') }}</h3>
+        <p class="text-sm text-slate-600 mt-1">{{ translate(lang, 'games.rubiks_cube.step3_body') }}</p>
+        <div class="text-xs font-bold uppercase tracking-wide text-slate-500 mt-3">{{ translate(lang, 'games.rubiks_cube.step3_algo_right_label') }}</div>
+        <div class="algo-box">
+          <span>{{ translate(lang, 'games.rubiks_cube.step3_algo_right') }}</span>
+          <button type="button" class="try-btn algo-try" data-algo="{{ translate(lang, 'games.rubiks_cube.step3_algo_right') }}">{{ translate(lang, 'games.rubiks_cube.try_it') }}</button>
+        </div>
+        <div class="text-xs font-bold uppercase tracking-wide text-slate-500 mt-3">{{ translate(lang, 'games.rubiks_cube.step3_algo_left_label') }}</div>
+        <div class="algo-box">
+          <span>{{ translate(lang, 'games.rubiks_cube.step3_algo_left') }}</span>
+          <button type="button" class="try-btn algo-try" data-algo="{{ translate(lang, 'games.rubiks_cube.step3_algo_left') }}">{{ translate(lang, 'games.rubiks_cube.try_it') }}</button>
+        </div>
+      </div>
+
+      <div class="step-card flip-card">
+        <h3 class="font-bold text-slate-900">🔄 {{ translate(lang, 'games.rubiks_cube.flip_title') }}</h3>
+        <p class="text-sm text-slate-700 mt-1">{{ translate(lang, 'games.rubiks_cube.flip_body') }}</p>
+        <div class="algo-box">
+          <span>x2</span>
+          <button type="button" class="try-btn algo-try" data-algo="x2">{{ translate(lang, 'games.rubiks_cube.try_it') }}</button>
+        </div>
+      </div>
+
+      <div class="step-card">
+        <h3 class="font-bold text-slate-900">{{ translate(lang, 'games.rubiks_cube.step4_title') }}</h3>
+        <p class="text-sm text-slate-600 mt-1">{{ translate(lang, 'games.rubiks_cube.step4_body') }}</p>
+        <div class="algo-box">
+          <span>{{ translate(lang, 'games.rubiks_cube.step4_algo') }}</span>
+          <button type="button" class="try-btn algo-try" data-algo="{{ translate(lang, 'games.rubiks_cube.step4_algo') }}">{{ translate(lang, 'games.rubiks_cube.try_it') }}</button>
+        </div>
+      </div>
+
+      <div class="step-card">
+        <h3 class="font-bold text-slate-900">{{ translate(lang, 'games.rubiks_cube.step5_title') }}</h3>
+        <p class="text-sm text-slate-600 mt-1">{{ translate(lang, 'games.rubiks_cube.step5_body') }}</p>
+        <div class="algo-box">
+          <span>{{ translate(lang, 'games.rubiks_cube.step5_algo') }}</span>
+          <button type="button" class="try-btn algo-try" data-algo="{{ translate(lang, 'games.rubiks_cube.step5_algo') }}">{{ translate(lang, 'games.rubiks_cube.try_it') }}</button>
+        </div>
+      </div>
+
+      <div class="step-card">
+        <h3 class="font-bold text-slate-900">{{ translate(lang, 'games.rubiks_cube.step6_title') }}</h3>
+        <p class="text-sm text-slate-600 mt-1">{{ translate(lang, 'games.rubiks_cube.step6_body') }}</p>
+        <div class="algo-box">
+          <span>{{ translate(lang, 'games.rubiks_cube.step6_algo') }}</span>
+          <button type="button" class="try-btn algo-try" data-algo="{{ translate(lang, 'games.rubiks_cube.step6_algo') }}">{{ translate(lang, 'games.rubiks_cube.try_it') }}</button>
+        </div>
+      </div>
+
+      <div class="step-card">
+        <h3 class="font-bold text-slate-900">{{ translate(lang, 'games.rubiks_cube.step7_title') }}</h3>
+        <p class="text-sm text-slate-600 mt-1">{{ translate(lang, 'games.rubiks_cube.step7_body') }}</p>
+        <div class="algo-box">
+          <span>{{ translate(lang, 'games.rubiks_cube.step7_algo') }}</span>
+          <button type="button" class="try-btn algo-try" data-algo="{{ translate(lang, 'games.rubiks_cube.step7_algo') }}">{{ translate(lang, 'games.rubiks_cube.try_it') }}</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(() => {
+  const t = {
+    lib_failed: "{{ translate(lang, 'games.rubiks_cube.lib_failed') }}",
+    lib_refresh: "{{ translate(lang, 'games.rubiks_cube.lib_refresh') }}",
+    solved_message: "{{ translate(lang, 'games.rubiks_cube.solved_message') }}",
+    scrambling_message: "{{ translate(lang, 'games.rubiks_cube.scrambling_message') }}",
+    ready_message: "{{ translate(lang, 'games.rubiks_cube.ready_message') }}",
+    moves_label: "{{ translate(lang, 'games.rubiks_cube.moves_label') }}"
+  };
+
+  const wrapEl = document.getElementById('scene-wrap');
+  const statusPillEl = document.getElementById('status-pill');
+  const movesPillEl = document.getElementById('moves-pill');
+  const moveCountEl = document.getElementById('move-count');
+  const disabledVeilEl = document.getElementById('disabled-veil');
+
+  if (!window.THREE) {
+    statusPillEl.textContent = t.lib_failed;
+    movesPillEl.textContent = t.lib_refresh;
+    return;
+  }
+
+  // ---------- Colors & constants ----------
+  const COLORS = {
+    U: 0xffffff, // white - up
+    D: 0xffd500, // yellow - down
+    F: 0x009e60, // green - front
+    B: 0x0051ba, // blue - back
+    L: 0xff5800, // orange - left
+    R: 0xc41e3a, // red - right
+    inner: 0x111827
+  };
+
+  // BoxGeometry material order: +x, -x, +y, -y, +z, -z
+  const FACE_AXES = [
+    { axis: 'x', sign: 1, letter: 'R' },
+    { axis: 'x', sign: -1, letter: 'L' },
+    { axis: 'y', sign: 1, letter: 'U' },
+    { axis: 'y', sign: -1, letter: 'D' },
+    { axis: 'z', sign: 1, letter: 'F' },
+    { axis: 'z', sign: -1, letter: 'B' }
+  ];
+
+  const CUBIE_SIZE = 0.96;
+  const SPACING = 1.04;
+  const MOVE_DURATION = 220; // ms per quarter turn
+  const SCRAMBLE_MOVE_DURATION = 110;
+
+  // ---------- Scene setup ----------
+  const scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x0b1020);
+
+  const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 100);
+  camera.position.set(4.6, 4.2, 6.2);
+  camera.lookAt(0, 0, 0);
+
+  const renderer = new THREE.WebGLRenderer({ antialias: true });
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+  wrapEl.appendChild(renderer.domElement);
+
+  const ambient = new THREE.AmbientLight(0xffffff, 0.75);
+  scene.add(ambient);
+  const keyLight = new THREE.DirectionalLight(0xffffff, 0.9);
+  keyLight.position.set(6, 8, 5);
+  scene.add(keyLight);
+  const fillLight = new THREE.DirectionalLight(0x88aaff, 0.35);
+  fillLight.position.set(-6, -3, -4);
+  scene.add(fillLight);
+
+  const rig = new THREE.Group(); // orbit-only, view rotation
+  scene.add(rig);
+  const cubeGroup = new THREE.Group(); // holds the 27 cubies, logical frame
+  rig.add(cubeGroup);
+
+  let cubies = [];
+
+  function buildCube() {
+    cubeGroup.clear();
+    cubies = [];
+    for (let x = -1; x <= 1; x++) {
+      for (let y = -1; y <= 1; y++) {
+        for (let z = -1; z <= 1; z++) {
+          const materials = FACE_AXES.map(({ axis, sign, letter }) => {
+            const coord = { x, y, z }[axis];
+            const isOuter = coord === sign;
+            return new THREE.MeshPhongMaterial({
+              color: isOuter ? COLORS[letter] : COLORS.inner,
+              shininess: 25
+            });
+          });
+          const geo = new THREE.BoxGeometry(CUBIE_SIZE, CUBIE_SIZE, CUBIE_SIZE);
+          const mesh = new THREE.Mesh(geo, materials);
+          mesh.position.set(x * SPACING, y * SPACING, z * SPACING);
+          const edges = new THREE.LineSegments(
+            new THREE.EdgesGeometry(geo),
+            new THREE.LineBasicMaterial({ color: 0x000000, linewidth: 1 })
+          );
+          mesh.add(edges);
+          cubeGroup.add(mesh);
+          cubies.push(mesh);
+        }
+      }
+    }
+  }
+  buildCube();
+
+  // ---------- Orbit controls (drag to look around) ----------
+  let rigRotX = 0;
+  let rigRotY = 0;
+  function applyRigRotation() {
+    rigRotX = Math.max(-1.4, Math.min(1.4, rigRotX));
+    rig.rotation.set(rigRotX, rigRotY, 0, 'YXZ');
+  }
+  applyRigRotation();
+
+  let pointerDown = false;
+  let dragMoved = false;
+  let lastX = 0;
+  let lastY = 0;
+  let downX = 0;
+  let downY = 0;
+
+  function onPointerDown(clientX, clientY) {
+    pointerDown = true;
+    dragMoved = false;
+    lastX = downX = clientX;
+    lastY = downY = clientY;
+  }
+  function onPointerMoveDrag(clientX, clientY) {
+    if (!pointerDown) return;
+    const dx = clientX - lastX;
+    const dy = clientY - lastY;
+    if (Math.abs(clientX - downX) > 6 || Math.abs(clientY - downY) > 6) dragMoved = true;
+    rigRotY += dx * 0.008;
+    rigRotX += dy * 0.008;
+    applyRigRotation();
+    lastX = clientX;
+    lastY = clientY;
+  }
+  function onPointerUpDrag(clientX, clientY) {
+    if (!pointerDown) return;
+    pointerDown = false;
+    if (!dragMoved) {
+      handleTap(clientX, clientY);
+    }
+  }
+
+  renderer.domElement.addEventListener('pointerdown', (e) => {
+    renderer.domElement.setPointerCapture(e.pointerId);
+    onPointerDown(e.clientX, e.clientY);
+  });
+  renderer.domElement.addEventListener('pointermove', (e) => onPointerMoveDrag(e.clientX, e.clientY));
+  renderer.domElement.addEventListener('pointerup', (e) => onPointerUpDrag(e.clientX, e.clientY));
+  renderer.domElement.addEventListener('pointercancel', () => { pointerDown = false; });
+  renderer.domElement.addEventListener('pointerleave', () => { pointerDown = false; });
+
+  // ---------- Tap-to-turn (raycast) ----------
+  const raycaster = new THREE.Raycaster();
+  const pointerNdc = new THREE.Vector2();
+
+  function handleTap(clientX, clientY) {
+    if (animating) return;
+    const rect = renderer.domElement.getBoundingClientRect();
+    pointerNdc.x = ((clientX - rect.left) / rect.width) * 2 - 1;
+    pointerNdc.y = -((clientY - rect.top) / rect.height) * 2 + 1;
+    raycaster.setFromCamera(pointerNdc, camera);
+    const hits = raycaster.intersectObjects(cubies, false);
+    if (!hits.length) return;
+    const hit = hits[0];
+    const localNormal = hit.face.normal.clone().transformDirection(hit.object.matrix);
+    const letter = normalToFaceLetter(localNormal);
+    if (letter) queueMoves([letter]);
+  }
+
+  function normalToFaceLetter(normal) {
+    const ax = Math.abs(normal.x), ay = Math.abs(normal.y), az = Math.abs(normal.z);
+    if (ax >= ay && ax >= az) return normal.x > 0 ? 'R' : 'L';
+    if (ay >= ax && ay >= az) return normal.y > 0 ? 'U' : 'D';
+    return normal.z > 0 ? 'F' : 'B';
+  }
+
+  // ---------- Move engine ----------
+  // A move token is like "U", "U'", "U2", "x", "x'", "x2"
+  const FACE_INFO = {
+    U: { axis: 'y', sign: 1, wholeCube: false },
+    D: { axis: 'y', sign: -1, wholeCube: false },
+    L: { axis: 'x', sign: -1, wholeCube: false },
+    R: { axis: 'x', sign: 1, wholeCube: false },
+    F: { axis: 'z', sign: 1, wholeCube: false },
+    B: { axis: 'z', sign: -1, wholeCube: false },
+    x: { axis: 'x', sign: 1, wholeCube: true },
+    y: { axis: 'y', sign: 1, wholeCube: true },
+    z: { axis: 'z', sign: 1, wholeCube: true }
+  };
+
+  let animating = false;
+  let moveHistory = [];
+  let moveCount = 0;
+  const moveQueue = [];
+  let queueRunning = false;
+
+  function parseMove(token) {
+    const letter = token[0];
+    const suffix = token.slice(1);
+    const turns = suffix === "'" ? -1 : suffix === '2' ? 2 : 1;
+    return { letter, turns };
+  }
+
+  function inverseToken(token) {
+    const { letter, turns } = parseMove(token);
+    if (turns === 2) return letter + '2';
+    if (turns === -1) return letter;
+    return letter + "'";
+  }
+
+  function queueMoves(tokens, opts) {
+    tokens.forEach((tok) => moveQueue.push({ token: tok, opts: opts || {} }));
+    runQueue();
+  }
+
+  async function runQueue() {
+    if (queueRunning) return;
+    queueRunning = true;
+    setControlsEnabled(false);
+    while (moveQueue.length) {
+      const { token, opts } = moveQueue.shift();
+      await performMove(token, opts);
+    }
+    queueRunning = false;
+    setControlsEnabled(true);
+    checkSolved();
+  }
+
+  function setControlsEnabled(enabled) {
+    disabledVeilEl.classList.toggle('disabled', !enabled);
+    document.getElementById('scramble-btn').disabled = !enabled;
+    document.getElementById('reset-btn').disabled = !enabled;
+    document.getElementById('undo-btn').disabled = !enabled || moveHistory.length === 0;
+    document.querySelectorAll('.algo-try').forEach((b) => { b.disabled = !enabled; });
+    statusPillEl.textContent = enabled ? t.ready_message : t.scrambling_message;
+  }
+
+  function performMove(token, opts) {
+    return new Promise((resolve) => {
+      const { letter, turns } = parseMove(token);
+      const info = FACE_INFO[letter];
+      if (!info) { resolve(); return; }
+
+      const targetLayer = info.sign * SPACING;
+      const affected = cubies.filter((c) => {
+        if (info.wholeCube) return true;
+        const coord = info.axis === 'x' ? c.position.x : info.axis === 'y' ? c.position.y : c.position.z;
+        return Math.abs(coord - targetLayer) < 0.3;
+      });
+
+      const pivot = new THREE.Group();
+      cubeGroup.add(pivot);
+      affected.forEach((c) => pivot.attach(c));
+
+      const totalAngle = -info.sign * (Math.PI / 2) * turns;
+      const axisVec = info.axis === 'x' ? new THREE.Vector3(1, 0, 0)
+        : info.axis === 'y' ? new THREE.Vector3(0, 1, 0)
+        : new THREE.Vector3(0, 0, 1);
+
+      const duration = opts.fast ? SCRAMBLE_MOVE_DURATION : MOVE_DURATION;
+      const start = performance.now();
+      animating = true;
+
+      function step(now) {
+        const elapsed = Math.min(1, (now - start) / duration);
+        const eased = 1 - Math.pow(1 - elapsed, 2);
+        pivot.setRotationFromAxisAngle(axisVec, totalAngle * eased);
+        if (elapsed < 1) {
+          requestAnimationFrame(step);
+        } else {
+          pivot.setRotationFromAxisAngle(axisVec, totalAngle);
+          affected.forEach((c) => {
+            cubeGroup.attach(c);
+            c.position.set(
+              Math.round(c.position.x / SPACING) * SPACING,
+              Math.round(c.position.y / SPACING) * SPACING,
+              Math.round(c.position.z / SPACING) * SPACING
+            );
+            snapQuaternion(c);
+          });
+          cubeGroup.remove(pivot);
+          animating = false;
+          if (!opts.silent) {
+            moveHistory.push(token);
+            moveCount += 1;
+            moveCountEl.textContent = String(moveCount);
+            movesPillEl.textContent = `${t.moves_label}: ${moveCount}`;
+          }
+          resolve();
+        }
+      }
+      requestAnimationFrame(step);
+    });
+  }
+
+  function snapQuaternion(mesh) {
+    const HALF = Math.PI / 2;
+    const euler = new THREE.Euler().setFromQuaternion(mesh.quaternion, 'XYZ');
+    euler.x = Math.round(euler.x / HALF) * HALF;
+    euler.y = Math.round(euler.y / HALF) * HALF;
+    euler.z = Math.round(euler.z / HALF) * HALF;
+    mesh.quaternion.setFromEuler(euler);
+  }
+
+  // ---------- Solved detection (orientation independent) ----------
+  function checkSolved() {
+    const faceColors = { '1,0,0': new Set(), '-1,0,0': new Set(), '0,1,0': new Set(), '0,-1,0': new Set(), '0,0,1': new Set(), '0,0,-1': new Set() };
+    const tmpNormal = new THREE.Vector3();
+    const localNormals = [
+      new THREE.Vector3(1, 0, 0), new THREE.Vector3(-1, 0, 0),
+      new THREE.Vector3(0, 1, 0), new THREE.Vector3(0, -1, 0),
+      new THREE.Vector3(0, 0, 1), new THREE.Vector3(0, 0, -1)
+    ];
+
+    cubies.forEach((c) => {
+      c.material.forEach((mat, idx) => {
+        if (mat.color.getHex() === COLORS.inner) return;
+        tmpNormal.copy(localNormals[idx]).transformDirection(c.matrix).round();
+        const key = `${tmpNormal.x},${tmpNormal.y},${tmpNormal.z}`;
+        if (faceColors[key]) faceColors[key].add(mat.color.getHex());
+      });
+    });
+
+    const solved = Object.values(faceColors).every((set) => set.size === 1);
+    if (solved) {
+      statusPillEl.textContent = t.solved_message;
+      statusPillEl.classList.add('solved');
+    } else {
+      statusPillEl.classList.remove('solved');
+      if (!queueRunning) statusPillEl.textContent = t.ready_message;
+    }
+    return solved;
+  }
+
+  // ---------- UI wiring ----------
+  const FACE_BUTTONS = ['U', "U'", 'D', "D'", 'L', "L'", 'R', "R'", 'F', "F'", 'B', "B'"];
+  const faceGrid = document.getElementById('face-move-grid');
+  FACE_BUTTONS.forEach((tok) => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'move-btn';
+    btn.textContent = tok;
+    btn.addEventListener('click', () => queueMoves([tok]));
+    faceGrid.appendChild(btn);
+  });
+
+  const ROTATE_BUTTONS = ['x', "x'", 'y', "y'", 'z', "z'"];
+  const rotateGrid = document.getElementById('cube-rotate-grid');
+  ROTATE_BUTTONS.forEach((tok) => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'move-btn cube-rotate';
+    btn.textContent = tok;
+    btn.addEventListener('click', () => queueMoves([tok]));
+    rotateGrid.appendChild(btn);
+  });
+
+  document.getElementById('scramble-btn').addEventListener('click', () => {
+    const letters = ['U', 'D', 'L', 'R', 'F', 'B'];
+    const suffixes = ['', "'", '2'];
+    const tokens = [];
+    let lastLetter = '';
+    for (let i = 0; i < 22; i++) {
+      let letter;
+      do { letter = letters[Math.floor(Math.random() * letters.length)]; } while (letter === lastLetter);
+      lastLetter = letter;
+      const suffix = suffixes[Math.floor(Math.random() * suffixes.length)];
+      tokens.push(letter + suffix);
+    }
+    moveHistory = [];
+    moveCount = 0;
+    moveCountEl.textContent = '0';
+    movesPillEl.textContent = `${t.moves_label}: 0`;
+    statusPillEl.classList.remove('solved');
+    queueMoves(tokens, { fast: true, silent: true });
+  });
+
+  document.getElementById('reset-btn').addEventListener('click', () => {
+    moveQueue.length = 0;
+    buildCube();
+    moveHistory = [];
+    moveCount = 0;
+    moveCountEl.textContent = '0';
+    movesPillEl.textContent = `${t.moves_label}: 0`;
+    checkSolved();
+  });
+
+  document.getElementById('undo-btn').addEventListener('click', () => {
+    if (!moveHistory.length || animating || queueRunning) return;
+    const last = moveHistory.pop();
+    moveCount = Math.max(0, moveCount - 1);
+    moveCountEl.textContent = String(moveCount);
+    movesPillEl.textContent = `${t.moves_label}: ${moveCount}`;
+    queueMoves([inverseToken(last)], { silent: true });
+  });
+
+  document.querySelectorAll('.algo-try').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const algo = btn.getAttribute('data-algo');
+      const tokens = algo.trim().split(/\s+/);
+      queueMoves(tokens);
+    });
+  });
+
+  window.addEventListener('keydown', (e) => {
+    if (animating || queueRunning) return;
+    const map = { u: 'U', d: 'D', l: 'L', r: 'R', f: 'F', b: 'B' };
+    const key = e.key;
+    const lower = key.toLowerCase();
+    if (map[lower]) {
+      queueMoves([map[lower] + (e.shiftKey ? "'" : '')]);
+    }
+  });
+
+  // ---------- Tutorial modal ----------
+  const backdrop = document.getElementById('tutorial-backdrop');
+  document.getElementById('how-to-solve-btn').addEventListener('click', () => backdrop.classList.add('open'));
+  document.getElementById('tutorial-close').addEventListener('click', () => backdrop.classList.remove('open'));
+  backdrop.addEventListener('click', (e) => { if (e.target === backdrop) backdrop.classList.remove('open'); });
+  window.addEventListener('keydown', (e) => { if (e.key === 'Escape') backdrop.classList.remove('open'); });
+
+  // ---------- Resize & render loop ----------
+  function resizeRenderer() {
+    const w = wrapEl.clientWidth;
+    const h = wrapEl.clientHeight;
+    renderer.setSize(w, h, false);
+    camera.aspect = w / h;
+    camera.updateProjectionMatrix();
+  }
+  window.addEventListener('resize', resizeRenderer);
+  resizeRenderer();
+
+  movesPillEl.textContent = `${t.moves_label}: 0`;
+
+  function animate() {
+    requestAnimationFrame(animate);
+    renderer.render(scene, camera);
+  }
+  animate();
+})();
+</script>
+{% endblock %}

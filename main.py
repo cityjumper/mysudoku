@@ -506,6 +506,13 @@ async def number_match(request: Request):
     return templates.TemplateResponse("number_match.html", {"request": request, "lang": lang})
 
 
+@app.get("/rubiks-cube", response_class=HTMLResponse)
+async def rubiks_cube(request: Request):
+    """Rubik's Cube 3D puzzle page endpoint."""
+    lang = get_current_lang(request)
+    return templates.TemplateResponse("rubiks_cube.html", {"request": request, "lang": lang})
+
+
 @app.get("/api")
 async def api_root():
     """API root endpoint with API information."""
