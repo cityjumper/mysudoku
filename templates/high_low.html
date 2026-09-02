@@ -1,0 +1,664 @@
+{% extends "base.html" %}
+
+{% block title %}{{ translate(lang, 'games.high_low.title') }}{% endblock %}
+
+{% block extra_head %}
+<style>
+  .hl-felt {
+    background: radial-gradient(circle at 50% 30%, #7e22ce 0%, #581c87 70%, #3b0764 100%);
+  }
+
+  .hl-card {
+    position: relative;
+    width: 46px;
+    height: 66px;
+    border-radius: 8px;
+    background: #fdfdfd;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.35);
+    border: 2px solid rgba(255, 255, 255, 0.7);
+    flex-shrink: 0;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+  @media (min-width: 640px) {
+    .hl-card { width: 58px; height: 84px; border-radius: 10px; }
+  }
+
+  .hl-card-lg {
+    width: 90px;
+    height: 130px;
+    border-radius: 14px;
+  }
+  @media (min-width: 640px) {
+    .hl-card-lg { width: 112px; height: 162px; border-radius: 16px; }
+  }
+
+  .hl-rank {
+    position: absolute;
+    top: 3px;
+    left: 5px;
+    font-weight: 900;
+    font-size: 11px;
+    line-height: 1;
+  }
+  @media (min-width: 640px) { .hl-rank { font-size: 14px; top: 5px; left: 7px; } }
+  .hl-card-lg .hl-rank { font-size: 20px; top: 8px; left: 10px; }
+
+  .hl-suit-center { font-size: 20px; font-weight: 900; }
+  @media (min-width: 640px) { .hl-suit-center { font-size: 28px; } }
+  .hl-card-lg .hl-suit-center { font-size: 48px; }
+  @media (min-width: 640px) { .hl-card-lg .hl-suit-center { font-size: 58px; } }
+
+  .hl-red { color: #dc2626; }
+  .hl-black { color: #0f172a; }
+
+  .hl-back {
+    width: 46px;
+    height: 66px;
+    border-radius: 8px;
+    background: repeating-linear-gradient(45deg, #7e22ce, #7e22ce 4px, #4c1d95 4px, #4c1d95 8px);
+    border: 2px solid rgba(255, 255, 255, 0.4);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.4);
+    flex-shrink: 0;
+  }
+  @media (min-width: 640px) { .hl-back { width: 58px; height: 84px; border-radius: 10px; } }
+
+  .hl-back-lg { width: 90px; height: 130px; border-radius: 14px; }
+  @media (min-width: 640px) { .hl-back-lg { width: 112px; height: 162px; border-radius: 16px; } }
+
+  .hl-drawpile { position: relative; }
+  .hl-draw-count {
+    position: absolute;
+    bottom: -8px;
+    right: -8px;
+    background: #0f172a;
+    color: #fff;
+    font-size: 11px;
+    font-weight: 800;
+    border-radius: 999px;
+    padding: 1px 8px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.5);
+  }
+
+  .hl-history { display: flex; gap: 4px; overflow-x: auto; padding: 4px 2px; justify-content: center; flex-wrap: wrap; }
+
+  .hl-chip {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    padding: 8px 14px;
+    border-radius: 14px;
+    background: rgba(255, 255, 255, 0.12);
+    color: #f5f3ff;
+    min-width: 90px;
+  }
+  .hl-chip.hl-active {
+    background: #facc15;
+    color: #422006;
+    box-shadow: 0 0 0 3px rgba(250, 204, 21, 0.4);
+  }
+  .hl-chip-name { font-weight: 800; font-size: 13px; white-space: nowrap; }
+  .hl-chip-score { font-weight: 900; font-size: 18px; }
+  .hl-chip-streak { font-size: 11px; font-weight: 700; opacity: 0.9; }
+
+  .hl-guess-btn {
+    flex: 1;
+    padding: 16px 8px;
+    border-radius: 14px;
+    font-weight: 800;
+    font-size: 15px;
+    text-align: center;
+    transition: all 0.15s ease;
+    border: 2px solid transparent;
+  }
+  .hl-guess-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .hl-guess-btn:not(:disabled):hover { transform: translateY(-2px); }
+  .hl-guess-higher { background: #dcfce7; color: #166534; }
+  .hl-guess-higher:not(:disabled):hover { background: #bbf7d0; }
+  .hl-guess-same { background: #fef9c3; color: #854d0e; }
+  .hl-guess-same:not(:disabled):hover { background: #fef08a; }
+  .hl-guess-lower { background: #fee2e2; color: #991b1b; }
+  .hl-guess-lower:not(:disabled):hover { background: #fecaca; }
+
+  .opp-btn {
+    padding: 14px 8px;
+    border-radius: 12px;
+    background: #f1f5f9;
+    font-weight: 700;
+    color: #334155;
+    border: 2px solid transparent;
+    text-align: center;
+    transition: all 0.15s ease;
+  }
+  .opp-btn.selected { background: #f3e8ff; border-color: #a855f7; color: #6b21a8; }
+</style>
+{% endblock %}
+
+{% block body_class %}bg-gradient-to-br from-purple-50 via-fuchsia-50 to-violet-100 min-h-screen{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+  <div class="max-w-5xl mx-auto mb-6 flex items-center justify-between">
+    <a href="/" class="inline-flex items-center text-purple-800 hover:text-purple-950 font-semibold">
+      <svg class="w-5 h-5 mr-2" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+        <path fill-rule="evenodd" d="M12.707 15.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 111.414 1.414L7.414 9H17a1 1 0 110 2H7.414l5.293 5.293a1 1 0 010 1.414z" clip-rule="evenodd" />
+      </svg>
+      {{ translate(lang, 'common.home') }}
+    </a>
+    <div class="flex items-center gap-4">
+      <a href="/crazy-eights" class="text-sm font-semibold text-emerald-700 hover:text-emerald-900">{{ translate(lang, 'games.crazy_eights.name') }}</a>
+      <a href="/uno" class="text-sm font-semibold text-red-700 hover:text-red-900">{{ translate(lang, 'games.uno.name') }}</a>
+      <a href="/hearts" class="text-sm font-semibold text-rose-700 hover:text-rose-900">{{ translate(lang, 'games.hearts.name') }}</a>
+    </div>
+  </div>
+
+  <div class="max-w-5xl mx-auto">
+    <header class="text-center mb-8">
+      <h1 class="text-4xl sm:text-5xl font-extrabold tracking-tight text-slate-900">{{ translate(lang, 'games.high_low.title') }}</h1>
+      <p class="mt-2 text-slate-600">{{ translate(lang, 'games.high_low.subtitle') }}</p>
+    </header>
+
+    <!-- SETUP SCREEN -->
+    <div id="setup-screen" class="bg-white rounded-2xl shadow-xl ring-1 ring-slate-200 p-6 sm:p-8 max-w-lg mx-auto">
+      <h2 class="text-xl font-bold text-slate-900 mb-1">{{ translate(lang, 'games.high_low.setup_heading') }}</h2>
+      <p class="text-sm text-slate-500 mb-6">{{ translate(lang, 'games.high_low.setup_subheading') }}</p>
+
+      <input id="name-input" type="text" maxlength="16" placeholder="{{ translate(lang, 'games.high_low.name_placeholder') }}"
+        class="w-full border border-slate-300 rounded-lg px-4 py-3 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-purple-500 mb-6">
+
+      <div class="text-xs font-bold uppercase tracking-wide text-slate-500 mb-2">{{ translate(lang, 'games.high_low.opponents_label') }}</div>
+      <div class="grid grid-cols-3 gap-3 mb-6">
+        <button type="button" class="opp-btn" data-count="1">{{ translate(lang, 'games.high_low.opponents_1') }}</button>
+        <button type="button" class="opp-btn" data-count="2">{{ translate(lang, 'games.high_low.opponents_2') }}</button>
+        <button type="button" class="opp-btn" data-count="3">{{ translate(lang, 'games.high_low.opponents_3') }}</button>
+      </div>
+
+      <button id="start-game" type="button" class="w-full rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-bold px-8 py-3 text-lg shadow-lg transition-colors">
+        {{ translate(lang, 'games.high_low.start_game') }} 🎴
+      </button>
+    </div>
+
+    <!-- GAME SCREEN -->
+    <div id="game-screen" class="hidden grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div class="lg:col-span-2">
+        <div class="hl-felt rounded-2xl shadow-xl ring-1 ring-slate-900/20 p-4 sm:p-6 flex flex-col items-center gap-4">
+          <div id="player-row" class="flex flex-wrap items-center justify-center gap-3"></div>
+
+          <div class="flex items-center justify-center gap-6 sm:gap-10">
+            <div class="flex flex-col items-center gap-1">
+              <div id="current-card"></div>
+              <span class="text-[11px] font-semibold uppercase tracking-wide text-purple-100">{{ translate(lang, 'games.high_low.current_card_label') }}</span>
+            </div>
+            <div class="flex flex-col items-center gap-1">
+              <div id="draw-pile" class="hl-drawpile">
+                <div class="hl-back hl-back-lg"></div>
+                <div id="draw-count" class="hl-draw-count">0</div>
+              </div>
+              <span class="text-[11px] font-semibold uppercase tracking-wide text-purple-100">{{ translate(lang, 'games.high_low.draw_pile_label') }}</span>
+            </div>
+          </div>
+
+          <div id="history" class="hl-history"></div>
+        </div>
+
+        <div class="mt-4 bg-white rounded-2xl shadow-xl ring-1 ring-slate-200 p-4">
+          <div id="message" class="text-sm font-semibold text-slate-800 min-h-[20px]"></div>
+          <div id="log" class="mt-2 h-20 overflow-y-auto text-xs text-slate-500 space-y-0.5"></div>
+        </div>
+
+        <div class="mt-4 bg-white rounded-2xl shadow-xl ring-1 ring-slate-200 p-4 sm:p-6">
+          <div class="flex items-center justify-between mb-3">
+            <div class="text-xs font-semibold uppercase tracking-wide text-slate-500">{{ translate(lang, 'games.high_low.your_guess') }}</div>
+          </div>
+          <div class="flex gap-3">
+            <button id="guess-higher" type="button" class="hl-guess-btn hl-guess-higher" disabled>▲ {{ translate(lang, 'games.high_low.guess_higher') }}</button>
+            <button id="guess-same" type="button" class="hl-guess-btn hl-guess-same" disabled>= {{ translate(lang, 'games.high_low.guess_same') }}</button>
+            <button id="guess-lower" type="button" class="hl-guess-btn hl-guess-lower" disabled>▼ {{ translate(lang, 'games.high_low.guess_lower') }}</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="lg:col-span-1 flex flex-col gap-4">
+        <div class="bg-white rounded-2xl shadow-xl ring-1 ring-slate-200 p-5">
+          <div class="flex items-center justify-between mb-3">
+            <h3 class="text-sm font-bold text-slate-700 uppercase tracking-wide">{{ translate(lang, 'games.high_low.scoreboard') }}</h3>
+            <span class="text-[10px] font-semibold uppercase tracking-wide text-slate-400">{{ translate(lang, 'games.high_low.total_points') }}</span>
+          </div>
+          <div id="scoreboard" class="space-y-2"></div>
+        </div>
+
+        <div class="bg-white rounded-2xl shadow-xl ring-1 ring-slate-200 p-5">
+          <h3 class="text-sm font-bold text-slate-700 mb-2">{{ translate(lang, 'common.rules') }}</h3>
+          <ul class="text-sm text-slate-600 space-y-1">
+            <li>• {{ translate(lang, 'games.high_low.rule_1') }}</li>
+            <li>• {{ translate(lang, 'games.high_low.rule_2') }}</li>
+            <li>• {{ translate(lang, 'games.high_low.rule_3') }}</li>
+            <li>• {{ translate(lang, 'games.high_low.rule_4') }}</li>
+            <li>• {{ translate(lang, 'games.high_low.rule_5') }}</li>
+          </ul>
+        </div>
+
+        <div class="bg-white rounded-2xl shadow-xl ring-1 ring-slate-200 p-5 flex gap-2">
+          <button id="change-players-btn" type="button" class="flex-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 font-semibold px-4 py-2 text-sm transition-colors">{{ translate(lang, 'games.high_low.change_players') }}</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- GENERIC MODAL (round summary / game over) -->
+<div id="modal-overlay" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4">
+  <div class="bg-white rounded-2xl shadow-2xl p-6 sm:p-8 max-w-sm w-full text-center">
+    <h2 id="modal-title" class="text-2xl font-extrabold text-slate-900 mb-2"></h2>
+    <p id="modal-note" class="text-slate-600 mb-4"></p>
+    <div id="modal-table" class="text-left mb-6 space-y-1"></div>
+    <button id="modal-action" type="button" class="w-full rounded-lg bg-purple-600 hover:bg-purple-700 text-white font-bold px-4 py-2 transition-colors"></button>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+(function () {
+  const I18N = {{ high_low_i18n | tojson }};
+
+  function fmt(str, vars) {
+    return String(str).replace(/\{(\w+)\}/g, (_, key) => (key in vars ? vars[key] : `{${key}}`));
+  }
+
+  function escapeHtml(str) {
+    return String(str).replace(/[&<>"']/g, (c) => ({
+      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+    }[c]));
+  }
+
+  const SUITS = ['hearts', 'diamonds', 'clubs', 'spades'];
+  const RANKS = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
+  const SUIT_SYMBOL = { hearts: '♥', diamonds: '♦', clubs: '♣', spades: '♠' };
+  const TARGET_SCORE = 25;
+  const SAME_BONUS = 10;
+  const HISTORY_LIMIT = 14;
+
+  function shuffle(arr) {
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
+  }
+
+  function buildDeck() {
+    const deck = [];
+    let id = 0;
+    SUITS.forEach((suit) => {
+      RANKS.forEach((rank) => {
+        deck.push({ id: id++, suit, rank, value: RANKS.indexOf(rank) + 1 });
+      });
+    });
+    return deck;
+  }
+
+  const G = {
+    players: [],
+    turnIndex: 0,
+    drawPile: [],
+    currentCard: null,
+    history: [],
+    scores: {},
+    roundPoints: {},
+    streaks: {},
+    roundNumber: 0,
+    awaitingHumanGuess: false,
+  };
+
+  let logEntries = [];
+  let selectedCount = 2;
+
+  // ---------- DOM refs ----------
+  const setupScreen = document.getElementById('setup-screen');
+  const gameScreen = document.getElementById('game-screen');
+  const nameInput = document.getElementById('name-input');
+  const startGameBtn = document.getElementById('start-game');
+  const changePlayersBtn = document.getElementById('change-players-btn');
+  const oppButtons = Array.from(document.querySelectorAll('.opp-btn'));
+
+  const messageEl = document.getElementById('message');
+  const logEl = document.getElementById('log');
+  const playerRowEl = document.getElementById('player-row');
+  const currentCardEl = document.getElementById('current-card');
+  const drawPileEl = document.getElementById('draw-pile');
+  const drawCountEl = document.getElementById('draw-count');
+  const historyEl = document.getElementById('history');
+  const scoreboardEl = document.getElementById('scoreboard');
+
+  const higherBtn = document.getElementById('guess-higher');
+  const sameBtn = document.getElementById('guess-same');
+  const lowerBtn = document.getElementById('guess-lower');
+
+  const modalOverlay = document.getElementById('modal-overlay');
+  const modalTitle = document.getElementById('modal-title');
+  const modalNote = document.getElementById('modal-note');
+  const modalTable = document.getElementById('modal-table');
+  const modalAction = document.getElementById('modal-action');
+
+  // ---------- Setup ----------
+  oppButtons.forEach((btn) => {
+    btn.addEventListener('click', () => {
+      selectedCount = parseInt(btn.dataset.count, 10);
+      oppButtons.forEach((b) => b.classList.toggle('selected', b === btn));
+    });
+  });
+  oppButtons[1].classList.add('selected'); // default to 2 opponents
+
+  function opponentNames(count) {
+    const names = [I18N.west, I18N.north, I18N.east];
+    return names.slice(0, count);
+  }
+
+  function buildPlayers(count, humanName) {
+    const names = opponentNames(count);
+    const players = [{ id: 0, name: humanName, isHuman: true }];
+    names.forEach((name, i) => {
+      players.push({ id: i + 1, name, isHuman: false });
+    });
+    return players;
+  }
+
+  startGameBtn.addEventListener('click', () => {
+    const name = nameInput.value.trim() || I18N.you;
+    G.players = buildPlayers(selectedCount, name);
+    G.scores = {};
+    G.players.forEach((_, i) => { G.scores[i] = 0; });
+    G.roundNumber = 0;
+    logEntries = [];
+    setupScreen.classList.add('hidden');
+    gameScreen.classList.remove('hidden');
+    startRound();
+  });
+
+  changePlayersBtn.addEventListener('click', backToSetup);
+
+  function backToSetup() {
+    modalOverlay.classList.add('hidden');
+    gameScreen.classList.add('hidden');
+    setupScreen.classList.remove('hidden');
+  }
+
+  // ---------- Helpers ----------
+  function nextIndex(idx) {
+    return (idx + 1) % G.players.length;
+  }
+
+  function log(msg) {
+    logEntries.push(msg);
+    if (logEntries.length > 40) logEntries.shift();
+    logEl.innerHTML = logEntries.map((m) => `<div>${escapeHtml(m)}</div>`).join('');
+    logEl.scrollTop = logEl.scrollHeight;
+  }
+
+  function setMessage(msg) {
+    messageEl.textContent = msg;
+    log(msg);
+  }
+
+  function seatName(idx) {
+    return G.players[idx].isHuman ? I18N.you : G.players[idx].name;
+  }
+
+  // ---------- Round setup ----------
+  function startRound() {
+    G.roundNumber += 1;
+    const deck = shuffle(buildDeck());
+    G.currentCard = deck.pop();
+    G.drawPile = deck;
+    G.history = [];
+    G.roundPoints = {};
+    G.streaks = {};
+    G.players.forEach((_, i) => { G.roundPoints[i] = 0; G.streaks[i] = 0; });
+
+    logEntries = [];
+    log(`— Round ${G.roundNumber} —`);
+
+    G.turnIndex = (G.roundNumber - 1) % G.players.length;
+
+    renderAll();
+    startTurn();
+  }
+
+  // ---------- Turn loop ----------
+  function startTurn() {
+    if (G.drawPile.length === 0) {
+      finishRound();
+      return;
+    }
+    const player = G.players[G.turnIndex];
+    if (player.isHuman) {
+      G.awaitingHumanGuess = true;
+      setMessage(I18N.your_turn);
+      renderAll();
+    } else {
+      G.awaitingHumanGuess = false;
+      setMessage(fmt(I18N.ai_thinking, { name: player.name }));
+      renderAll();
+      setTimeout(() => {
+        const guess = aiChooseGuess(G.currentCard.value);
+        resolveGuess(G.turnIndex, guess);
+      }, 700 + Math.random() * 500);
+    }
+  }
+
+  function aiChooseGuess(currentValue) {
+    if (Math.random() < 0.04) return 'same';
+    const noise = Math.random();
+    if (currentValue <= 6) return noise < 0.85 ? 'higher' : 'lower';
+    if (currentValue >= 8) return noise < 0.85 ? 'lower' : 'higher';
+    return noise < 0.5 ? 'higher' : 'lower';
+  }
+
+  function compareCards(next, current) {
+    if (next.value > current.value) return 'higher';
+    if (next.value < current.value) return 'lower';
+    return 'tie';
+  }
+
+  function resolveGuess(idx, guess) {
+    const player = G.players[idx];
+    const current = G.currentCard;
+    const next = G.drawPile.pop();
+    const result = compareCards(next, current);
+    const correct = guess === result;
+
+    if (correct) {
+      G.streaks[idx] += 1;
+      let pts = G.streaks[idx];
+      if (result === 'tie') pts += SAME_BONUS;
+      G.roundPoints[idx] += pts;
+      G.scores[idx] += pts;
+      if (result === 'tie') {
+        setMessage(fmt(I18N.msg_tie_bonus, { name: seatName(idx), card: cardLabel(next), points: pts }));
+      } else {
+        setMessage(fmt(I18N.msg_correct, { name: seatName(idx), card: cardLabel(next), result: I18N[`result_${result}`], points: pts }));
+      }
+    } else {
+      G.streaks[idx] = 0;
+      if (result === 'tie') {
+        setMessage(fmt(I18N.msg_tie_wrong, { name: seatName(idx), guess: I18N[`guess_${guess}`], card: cardLabel(next) }));
+      } else {
+        setMessage(fmt(I18N.msg_wrong, { name: seatName(idx), guess: I18N[`guess_${guess}`], card: cardLabel(next), result: I18N[`result_${result}`] }));
+      }
+    }
+
+    G.history.push(current);
+    if (G.history.length > HISTORY_LIMIT) G.history.shift();
+    G.currentCard = next;
+    G.awaitingHumanGuess = false;
+    renderAll();
+
+    setTimeout(() => {
+      G.turnIndex = nextIndex(idx);
+      startTurn();
+    }, 900);
+  }
+
+  // ---------- Human interaction ----------
+  function onGuessClick(guess) {
+    if (!G.awaitingHumanGuess) return;
+    G.awaitingHumanGuess = false;
+    resolveGuess(0, guess);
+  }
+
+  higherBtn.addEventListener('click', () => onGuessClick('higher'));
+  sameBtn.addEventListener('click', () => onGuessClick('same'));
+  lowerBtn.addEventListener('click', () => onGuessClick('lower'));
+
+  // ---------- Round / game end ----------
+  function finishRound() {
+    G.awaitingHumanGuess = false;
+    renderAll();
+    const maxScore = Math.max(...G.players.map((_, i) => G.scores[i]));
+    if (maxScore >= TARGET_SCORE) {
+      showGameOverModal();
+    } else {
+      showRoundSummaryModal();
+    }
+  }
+
+  function scoreRowsHtml(rows) {
+    return rows.map((r) => `
+      <div class="flex items-center justify-between rounded-lg px-3 py-2 ${r.highlight ? 'bg-purple-50 ring-1 ring-purple-200' : 'bg-slate-50'}">
+        <span class="font-semibold text-slate-800">${escapeHtml(r.label)}</span>
+        <span class="text-slate-600 text-sm">${escapeHtml(r.extra || '')}</span>
+        <span class="font-bold text-slate-900">${r.total}</span>
+      </div>
+    `).join('');
+  }
+
+  function openModal({ title, note, rows, actionLabel, onAction }) {
+    modalTitle.textContent = title;
+    modalNote.textContent = note || '';
+    modalNote.classList.toggle('hidden', !note);
+    modalTable.innerHTML = scoreRowsHtml(rows);
+    modalAction.textContent = actionLabel;
+    modalAction.onclick = () => {
+      modalOverlay.classList.add('hidden');
+      onAction();
+    };
+    modalOverlay.classList.remove('hidden');
+  }
+
+  function showRoundSummaryModal() {
+    const maxScore = Math.max(...G.players.map((_, i) => G.scores[i]));
+    const roundMax = Math.max(...G.players.map((_, i) => G.roundPoints[i]));
+    const rows = G.players.map((p, i) => ({
+      label: seatName(i),
+      extra: `+${G.roundPoints[i]}`,
+      total: G.scores[i],
+      highlight: G.scores[i] === maxScore,
+    }));
+    const leaderIdx = G.players.reduce((best, _, i) => (G.roundPoints[i] > G.roundPoints[best] ? i : best), 0);
+    openModal({
+      title: leaderIdx === 0 && G.roundPoints[0] === roundMax ? I18N.you_win_round : fmt(I18N.round_win, { name: seatName(leaderIdx) }),
+      note: I18N.round_summary,
+      rows,
+      actionLabel: I18N.next_round,
+      onAction: startRound,
+    });
+  }
+
+  function showGameOverModal() {
+    const winnerIdx = G.players.reduce((best, _, i) => (G.scores[i] > G.scores[best] ? i : best), 0);
+    const rows = G.players.map((p, i) => ({
+      label: seatName(i),
+      extra: '',
+      total: G.scores[i],
+      highlight: i === winnerIdx,
+    })).sort((a, b) => b.total - a.total);
+    openModal({
+      title: winnerIdx === 0 ? I18N.win_title : fmt(I18N.lose_title, { name: seatName(winnerIdx) }),
+      note: I18N.final_scores,
+      rows,
+      actionLabel: I18N.play_again,
+      onAction: () => {
+        G.scores = {};
+        G.players.forEach((_, i) => { G.scores[i] = 0; });
+        G.roundNumber = 0;
+        startRound();
+      },
+    });
+  }
+
+  // ---------- Rendering ----------
+  function cardLabel(card) {
+    return `${card.rank}${SUIT_SYMBOL[card.suit]}`;
+  }
+
+  function suitColorClass(suit) {
+    return (suit === 'hearts' || suit === 'diamonds') ? 'hl-red' : 'hl-black';
+  }
+
+  function createCardEl(card, { large } = {}) {
+    const el = document.createElement('div');
+    el.className = `hl-card ${large ? 'hl-card-lg' : ''} ${suitColorClass(card.suit)}`;
+    el.innerHTML = `<div class="hl-rank">${card.rank}</div><div class="hl-suit-center">${SUIT_SYMBOL[card.suit]}</div>`;
+    return el;
+  }
+
+  function renderPlayerRow() {
+    playerRowEl.innerHTML = G.players.map((p, i) => `
+      <div class="hl-chip ${i === G.turnIndex ? 'hl-active' : ''}">
+        <span class="hl-chip-name">${escapeHtml(seatName(i))}</span>
+        <span class="hl-chip-score">${G.scores[i] || 0}</span>
+        <span class="hl-chip-streak">${G.streaks[i] >= 2 ? `🔥 x${G.streaks[i]}` : '&nbsp;'}</span>
+      </div>
+    `).join('');
+  }
+
+  function renderCurrentCard() {
+    currentCardEl.innerHTML = '';
+    if (G.currentCard) currentCardEl.appendChild(createCardEl(G.currentCard, { large: true }));
+  }
+
+  function renderDrawPile() {
+    drawCountEl.textContent = String(G.drawPile.length);
+  }
+
+  function renderHistory() {
+    historyEl.innerHTML = '';
+    G.history.forEach((card) => {
+      historyEl.appendChild(createCardEl(card));
+    });
+  }
+
+  function renderScoreboard() {
+    const maxScore = Math.max(0, ...G.players.map((_, i) => G.scores[i] || 0));
+    scoreboardEl.innerHTML = G.players.map((p, i) => `
+      <div class="flex items-center justify-between rounded-lg px-3 py-2 ${(G.scores[i] || 0) === maxScore && maxScore > 0 ? 'bg-purple-50 ring-1 ring-purple-200' : 'bg-slate-50'}">
+        <span class="font-semibold text-slate-800 text-sm">${escapeHtml(seatName(i))}</span>
+        <span class="font-bold text-slate-900">${G.scores[i] || 0}</span>
+      </div>
+    `).join('');
+  }
+
+  function renderGuessButtons() {
+    const disabled = !G.awaitingHumanGuess;
+    higherBtn.disabled = disabled;
+    sameBtn.disabled = disabled;
+    lowerBtn.disabled = disabled;
+  }
+
+  function renderAll() {
+    renderPlayerRow();
+    renderCurrentCard();
+    renderDrawPile();
+    renderHistory();
+    renderScoreboard();
+    renderGuessButtons();
+  }
+})();
+</script>
+{% endblock %}

@@ -506,6 +506,31 @@ async def number_match(request: Request):
     return templates.TemplateResponse("number_match.html", {"request": request, "lang": lang})
 
 
+HIGH_LOW_I18N_KEYS = [
+    'name', 'description', 'title', 'subtitle', 'setup_heading', 'setup_subheading',
+    'name_placeholder', 'opponents_label', 'opponents_1', 'opponents_2', 'opponents_3',
+    'start_game', 'you', 'west', 'north', 'east', 'your_turn', 'ai_thinking',
+    'current_card_label', 'draw_pile_label', 'your_guess',
+    'guess_higher', 'guess_same', 'guess_lower', 'result_higher', 'result_lower', 'result_tie',
+    'msg_correct', 'msg_wrong', 'msg_tie_bonus', 'msg_tie_wrong',
+    'round_summary', 'round_win', 'you_win_round',
+    'points_label', 'scoreboard', 'total_points', 'next_round', 'win_title', 'lose_title',
+    'final_scores', 'play_again', 'change_players',
+    'rule_1', 'rule_2', 'rule_3', 'rule_4', 'rule_5',
+]
+
+
+@app.get("/high-low", response_class=HTMLResponse)
+async def high_low(request: Request):
+    """High-Low multiplayer card game page endpoint."""
+    lang = get_current_lang(request)
+    high_low_i18n = {key: get_translation(lang, f'games.high_low.{key}') for key in HIGH_LOW_I18N_KEYS}
+    return templates.TemplateResponse(
+        "high_low.html",
+        {"request": request, "lang": lang, "high_low_i18n": high_low_i18n},
+    )
+
+
 @app.get("/rubiks-cube", response_class=HTMLResponse)
 async def rubiks_cube(request: Request):
     """Rubik's Cube 3D puzzle page endpoint."""
