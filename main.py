@@ -538,6 +538,50 @@ async def rubiks_cube(request: Request):
     return templates.TemplateResponse("rubiks_cube.html", {"request": request, "lang": lang})
 
 
+CIRCUIT_ACADEMY_I18N_KEYS = [
+    'name', 'description', 'title', 'subtitle',
+    'hub_intro', 'progress_label',
+    'lvl1_card_title', 'lvl1_card_desc', 'lvl2_card_title', 'lvl2_card_desc',
+    'lvl3_card_title', 'lvl3_card_desc', 'lvl4_card_title', 'lvl4_card_desc',
+    'lvl5_card_title', 'lvl5_card_desc',
+    'start_btn', 'play_again_btn', 'back_to_labs', 'modal_back_to_labs', 'next_lab_btn',
+    'check_btn', 'check_circuit_btn', 'your_program_label',
+    'btn_forward', 'btn_turn_left', 'btn_turn_right', 'btn_repeat', 'btn_undo', 'btn_clear', 'btn_run',
+    'memory_label', 'alu_label', 'step_btn', 'see_question_btn',
+    'input_label', 'keep_header', 'reject_header', 'keep_btn', 'reject_btn', 'output_word',
+    'round_label',
+    'l1_make_label', 'l1_bubble_make', 'l1_bubble_guess', 'fb_correct', 'fb_not_quite',
+    'l1_fb_not_yet', 'lvl1_complete_title',
+    'gate_round_label', 'gate_detective_label',
+    'gate_hint_and', 'gate_hint_or', 'gate_hint_not', 'gate_hint_xor',
+    'l2_bubble_intro', 'fb_you_did_it', 'l2_fb_not_lit', 'l2_quiz_bubble',
+    'l2_on_label', 'l2_off_label', 'l2_quiz_correct', 'l2_quiz_wrong', 'lvl2_complete_title',
+    'maze_round_label', 'l3_intro_1', 'l3_intro_2', 'l3_intro_3', 'l3_intro_4',
+    'prog_repeat', 'l3_empty_program', 'l3_pending_repeat',
+    'l3_fail_not_landed', 'l3_fail_off_grid', 'l3_puzzle_complete', 'lvl3_complete_title',
+    'program_round_label', 'l4_intro_bubble', 'l4_step_prompt',
+    'l4_store', 'l4_store_overwrite', 'l4_load', 'l4_add', 'l4_store_result',
+    'l4_quiz1_q', 'l4_quiz2_q', 'l4_quiz2_opt_a', 'l4_quiz2_opt_b', 'l4_quiz2_opt_c', 'l4_quiz2_opt_d',
+    'l4_quiz3_q', 'lvl4_complete_title',
+    'l5_rule_even', 'l5_rule_gt6', 'l5_rule_sort', 'l5_rule_double', 'l5_rule_pipeline',
+    'l5_bubble_filter', 'l5_bubble_sort', 'l5_bubble_transform', 'l5_bubble_pipeline',
+    'l5_bubble_pipeline_sort', 'l5_transform_prompt', 'fb_check_rule', 'fb_round_complete',
+    'lvl5_complete_title',
+    'modal_body_3', 'modal_body_2', 'modal_body_1', 'modal_body_0',
+]
+
+
+@app.get("/circuit-academy", response_class=HTMLResponse)
+async def circuit_academy(request: Request):
+    """Circuit Academy - learn how computers work page endpoint."""
+    lang = get_current_lang(request)
+    circuit_academy_i18n = {key: get_translation(lang, f'games.circuit_academy.{key}') for key in CIRCUIT_ACADEMY_I18N_KEYS}
+    return templates.TemplateResponse(
+        "circuit_academy.html",
+        {"request": request, "lang": lang, "circuit_academy_i18n": circuit_academy_i18n},
+    )
+
+
 @app.get("/api")
 async def api_root():
     """API root endpoint with API information."""

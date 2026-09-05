@@ -1,0 +1,1404 @@
+{% extends "base.html" %}
+
+{% block title %}{{ translate(lang, 'games.circuit_academy.title') }}{% endblock %}
+
+{% block extra_head %}
+<style>
+  .cq-shell { max-width: 980px; margin: 0 auto; }
+  .cq-screen { display: none; }
+  .cq-screen.active { display: block; }
+
+  .cq-chip-avatar {
+    width: 56px; height: 56px; border-radius: 16px;
+    background: linear-gradient(135deg, #4f46e5, #06b6d4);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.8rem; box-shadow: 0 8px 20px rgba(79, 70, 229, .35);
+    flex-shrink: 0;
+  }
+
+  .cq-speech {
+    position: relative; background: #fff; border: 2px solid #e0e7ff;
+    border-radius: 1rem; padding: .75rem 1rem; font-size: .9rem;
+    color: #334155; font-weight: 600; flex: 1;
+  }
+  .cq-speech:before {
+    content: ""; position: absolute; left: -10px; top: 18px;
+    border-width: 8px 10px 8px 0; border-style: solid;
+    border-color: transparent #e0e7ff transparent transparent;
+  }
+  .cq-speech:after {
+    content: ""; position: absolute; left: -7px; top: 20px;
+    border-width: 6px 8px 6px 0; border-style: solid;
+    border-color: transparent #fff transparent transparent;
+  }
+
+  .cq-hub-card {
+    background: #fff; border-radius: 1rem; box-shadow: 0 4px 14px rgba(15, 23, 42, .08);
+    border: 1px solid #e2e8f0; padding: 1.15rem; display: flex; flex-direction: column;
+    gap: .5rem; transition: transform .15s, box-shadow .15s; text-align: left;
+  }
+  .cq-hub-card:hover { transform: translateY(-3px); box-shadow: 0 12px 26px rgba(79, 70, 229, .18); }
+  .cq-lvl-badge {
+    width: 30px; height: 30px; border-radius: 9999px; color: #fff; font-weight: 800;
+    display: flex; align-items: center; justify-content: center; font-size: .85rem; flex-shrink: 0;
+  }
+  .cq-star { font-size: 1.15rem; color: #cbd5e1; }
+  .cq-star.filled { color: #f59e0b; }
+
+  .cq-progress-outer { background: #e2e8f0; border-radius: 9999px; height: 10px; overflow: hidden; }
+  .cq-progress-inner { background: linear-gradient(90deg, #4f46e5, #06b6d4); height: 100%; transition: width .4s ease; }
+
+  .cq-btn {
+    border: 0; border-radius: .6rem; font-weight: 700; font-size: .88rem;
+    padding: .55rem .95rem; min-height: 42px; cursor: pointer; touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .cq-btn-primary { background: #4f46e5; color: #fff; }
+  .cq-btn-primary:hover:not(:disabled) { background: #4338ca; }
+  .cq-btn-primary:disabled { opacity: .45; cursor: not-allowed; }
+  .cq-btn-muted { background: #e2e8f0; color: #334155; }
+  .cq-btn-muted:hover:not(:disabled) { background: #cbd5e1; }
+  .cq-btn-muted:disabled { opacity: .45; cursor: not-allowed; }
+  .cq-btn-outline { background: #fff; color: #4f46e5; border: 2px solid #c7d2fe; }
+  .cq-btn-outline:hover { background: #eef2ff; }
+
+  .cq-choice-btn {
+    background: #eef2ff; color: #3730a3; font-weight: 800; border-radius: .6rem;
+    padding: .6rem 1.1rem; border: 2px solid #c7d2fe; font-size: .95rem;
+    cursor: pointer; touch-action: manipulation;
+  }
+  .cq-choice-btn:disabled { cursor: default; }
+  .cq-choice-btn.correct { background: #059669; color: #fff; border-color: #047857; }
+  .cq-choice-btn.wrong { background: #dc2626; color: #fff; border-color: #b91c1c; }
+
+  .cq-lvl-header { display: flex; align-items: center; justify-content: space-between; gap: .75rem; flex-wrap: wrap; }
+  .cq-round-pill {
+    background: #eef2ff; color: #4338ca; font-weight: 800; font-size: .78rem;
+    border-radius: 9999px; padding: .3rem .75rem;
+  }
+
+  .cq-bulb {
+    width: 56px; height: 56px; border-radius: 50%; background: #334155; border: 4px solid #1e293b;
+    display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 1.1rem;
+    color: #94a3b8; margin: 0 auto; transition: all .2s;
+  }
+  .cq-bulb.on {
+    background: radial-gradient(circle at 35% 30%, #fef08a, #f59e0b 70%);
+    border-color: #b45309; color: #7c2d12; box-shadow: 0 0 22px 6px rgba(245, 158, 11, .65);
+  }
+  .cq-bit-label { text-align: center; font-size: .72rem; font-weight: 800; color: #64748b; margin-top: .3rem; }
+
+  .cq-gate-stage { background: #0f172a; border-radius: 1rem; padding: 1.5rem 1rem; color: #e2e8f0; }
+  .cq-switch {
+    width: 64px; height: 34px; border-radius: 9999px; background: #334155; position: relative;
+    cursor: pointer; border: 2px solid #475569; transition: background .2s; touch-action: manipulation;
+  }
+  .cq-switch.on { background: #059669; border-color: #10b981; }
+  .cq-switch .cq-knob {
+    position: absolute; top: 2px; left: 2px; width: 26px; height: 26px; border-radius: 50%;
+    background: #fff; transition: left .2s;
+  }
+  .cq-switch.on .cq-knob { left: 34px; }
+  .cq-gate-box {
+    background: #1e293b; border: 2px solid #475569; border-radius: .75rem; padding: 1rem 1.5rem;
+    font-weight: 800; font-size: 1.2rem; text-align: center; color: #a5b4fc; min-width: 100px;
+  }
+  .cq-output-bulb {
+    width: 60px; height: 60px; border-radius: 50%; background: #334155; border: 4px solid #1e293b; margin: 0 auto;
+    transition: all .2s;
+  }
+  .cq-output-bulb.on {
+    background: radial-gradient(circle at 35% 30%, #fef08a, #f59e0b 70%);
+    box-shadow: 0 0 24px 8px rgba(245, 158, 11, .7);
+  }
+  .cq-table { width: 100%; border-collapse: collapse; font-size: .85rem; }
+  .cq-table th, .cq-table td { border: 1px solid #334155; padding: .4rem .6rem; text-align: center; }
+  .cq-table th { background: #1e293b; color: #a5b4fc; }
+  .cq-table td { background: #0f172a; color: #e2e8f0; }
+
+  .cq-maze-wrap { position: relative; background: #dcfce7; border-radius: 1rem; overflow: auto; padding: 12px; }
+  .cq-maze-grid { position: relative; margin: 0 auto; }
+  .cq-maze-cell { position: absolute; background: #bbf7d0; border: 1px solid #86efac; box-sizing: border-box; }
+  .cq-maze-goal { position: absolute; display: flex; align-items: center; justify-content: center; font-size: 1.4rem; box-sizing: border-box; }
+  .cq-maze-token {
+    position: absolute; display: flex; align-items: center; justify-content: center; font-size: 1.6rem;
+    transition: left .45s ease, top .45s ease, transform .3s ease; box-sizing: border-box; z-index: 2;
+  }
+  .cq-prog-item {
+    display: inline-flex; align-items: center; gap: .25rem; background: #eef2ff; border: 1px solid #c7d2fe;
+    border-radius: .5rem; padding: .35rem .6rem; font-size: .78rem; font-weight: 800; color: #3730a3;
+  }
+  .cq-prog-item.active { background: #4f46e5; color: #fff; border-color: #4338ca; }
+
+  .cq-mem-cell {
+    width: 62px; height: 62px; border-radius: .6rem; background: #fff; border: 2px solid #cbd5e1;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    font-weight: 800; color: #1e293b;
+  }
+  .cq-mem-cell .cq-addr { font-size: .6rem; color: #94a3b8; font-weight: 700; }
+  .cq-mem-cell.flash { animation: cqFlash .5s; }
+  .cq-alu-box {
+    min-height: 66px; border-radius: .75rem; background: #0f172a; color: #a5f3fc;
+    display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 1.05rem; padding: .75rem;
+  }
+  @keyframes cqFlash {
+    0% { transform: scale(1.3); box-shadow: 0 0 0 6px rgba(79, 70, 229, .35); }
+    100% { transform: scale(1); box-shadow: none; }
+  }
+
+  .cq-tile {
+    width: 52px; height: 52px; border-radius: .6rem; background: #fff; border: 2px solid #cbd5e1;
+    display: flex; align-items: center; justify-content: center; font-weight: 800; color: #1e293b;
+    cursor: pointer; transition: transform .12s; touch-action: manipulation;
+  }
+  .cq-tile.selected { border-color: #4f46e5; box-shadow: 0 0 0 3px rgba(79, 70, 229, .25); }
+  .cq-tile.wrong { animation: cqShake .35s; border-color: #ef4444; }
+  @keyframes cqShake {
+    0%, 100% { transform: translateX(0); } 25% { transform: translateX(-6px); } 75% { transform: translateX(6px); }
+  }
+
+  .cq-modal-backdrop {
+    position: fixed; inset: 0; background: rgba(15, 23, 42, .55); display: none;
+    align-items: center; justify-content: center; z-index: 60; padding: 1rem;
+  }
+  .cq-modal-backdrop.active { display: flex; }
+  .cq-modal {
+    background: #fff; border-radius: 1.25rem; padding: 2rem; max-width: 420px; width: 100%;
+    text-align: center; box-shadow: 0 25px 60px rgba(15, 23, 42, .35);
+  }
+</style>
+{% endblock %}
+
+{% block body_class %}bg-gradient-to-br from-indigo-50 via-white to-cyan-50 min-h-screen{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+  <div class="cq-shell">
+    <div class="mb-5">
+      <a href="/" class="inline-flex items-center text-indigo-700 hover:text-indigo-900 font-semibold">
+        <svg class="w-5 h-5 mr-2" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+          <path fill-rule="evenodd" d="M12.707 15.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 111.414 1.414L7.414 9H17a1 1 0 110 2H7.414l5.293 5.293a1 1 0 010 1.414z" clip-rule="evenodd" />
+        </svg>
+        {{ translate(lang, 'common.home') }}
+      </a>
+    </div>
+
+    <header class="text-center mb-6">
+      <h1 class="text-3xl sm:text-5xl font-extrabold tracking-tight text-slate-900">{{ translate(lang, 'games.circuit_academy.title') }}</h1>
+      <p class="mt-2 text-slate-600 text-sm sm:text-base max-w-2xl mx-auto">{{ translate(lang, 'games.circuit_academy.subtitle') }}</p>
+    </header>
+
+    <!-- HUB -->
+    <section id="screen-hub" class="cq-screen active">
+      <div class="flex items-start gap-3 bg-white rounded-2xl ring-1 ring-slate-200 shadow p-4 mb-6">
+        <div class="cq-chip-avatar">🤖</div>
+        <div class="cq-speech">{{ translate(lang, 'games.circuit_academy.hub_intro') }}</div>
+      </div>
+
+      <div class="bg-white rounded-2xl ring-1 ring-slate-200 shadow p-4 mb-6">
+        <div class="flex items-center justify-between mb-2">
+          <span class="text-sm font-bold text-slate-700">{{ translate(lang, 'games.circuit_academy.progress_label') }}</span>
+          <span id="hub-total-stars" class="text-sm font-extrabold text-indigo-700">0 / 15</span>
+        </div>
+        <div class="cq-progress-outer"><div id="hub-total-bar" class="cq-progress-inner" style="width:0%"></div></div>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div class="cq-hub-card">
+          <div class="flex items-center gap-2">
+            <span class="cq-lvl-badge" style="background:#f59e0b;">1</span>
+            <h2 class="text-lg font-extrabold text-slate-900">{{ translate(lang, 'games.circuit_academy.lvl1_card_title') }}</h2>
+          </div>
+          <p class="text-sm text-slate-600 flex-1">{{ translate(lang, 'games.circuit_academy.lvl1_card_desc') }}</p>
+          <div id="hub-stars-l1" class="space-x-0.5"></div>
+          <button type="button" id="hub-btn-l1" data-start-level="l1" class="cq-btn cq-btn-primary mt-1">{{ translate(lang, 'games.circuit_academy.start_btn') }}</button>
+        </div>
+
+        <div class="cq-hub-card">
+          <div class="flex items-center gap-2">
+            <span class="cq-lvl-badge" style="background:#6366f1;">2</span>
+            <h2 class="text-lg font-extrabold text-slate-900">{{ translate(lang, 'games.circuit_academy.lvl2_card_title') }}</h2>
+          </div>
+          <p class="text-sm text-slate-600 flex-1">{{ translate(lang, 'games.circuit_academy.lvl2_card_desc') }}</p>
+          <div id="hub-stars-l2" class="space-x-0.5"></div>
+          <button type="button" id="hub-btn-l2" data-start-level="l2" class="cq-btn cq-btn-primary mt-1">{{ translate(lang, 'games.circuit_academy.start_btn') }}</button>
+        </div>
+
+        <div class="cq-hub-card">
+          <div class="flex items-center gap-2">
+            <span class="cq-lvl-badge" style="background:#10b981;">3</span>
+            <h2 class="text-lg font-extrabold text-slate-900">{{ translate(lang, 'games.circuit_academy.lvl3_card_title') }}</h2>
+          </div>
+          <p class="text-sm text-slate-600 flex-1">{{ translate(lang, 'games.circuit_academy.lvl3_card_desc') }}</p>
+          <div id="hub-stars-l3" class="space-x-0.5"></div>
+          <button type="button" id="hub-btn-l3" data-start-level="l3" class="cq-btn cq-btn-primary mt-1">{{ translate(lang, 'games.circuit_academy.start_btn') }}</button>
+        </div>
+
+        <div class="cq-hub-card">
+          <div class="flex items-center gap-2">
+            <span class="cq-lvl-badge" style="background:#0891b2;">4</span>
+            <h2 class="text-lg font-extrabold text-slate-900">{{ translate(lang, 'games.circuit_academy.lvl4_card_title') }}</h2>
+          </div>
+          <p class="text-sm text-slate-600 flex-1">{{ translate(lang, 'games.circuit_academy.lvl4_card_desc') }}</p>
+          <div id="hub-stars-l4" class="space-x-0.5"></div>
+          <button type="button" id="hub-btn-l4" data-start-level="l4" class="cq-btn cq-btn-primary mt-1">{{ translate(lang, 'games.circuit_academy.start_btn') }}</button>
+        </div>
+
+        <div class="cq-hub-card sm:col-span-2">
+          <div class="flex items-center gap-2">
+            <span class="cq-lvl-badge" style="background:#e11d48;">5</span>
+            <h2 class="text-lg font-extrabold text-slate-900">{{ translate(lang, 'games.circuit_academy.lvl5_card_title') }}</h2>
+          </div>
+          <p class="text-sm text-slate-600 flex-1">{{ translate(lang, 'games.circuit_academy.lvl5_card_desc') }}</p>
+          <div id="hub-stars-l5" class="space-x-0.5"></div>
+          <button type="button" id="hub-btn-l5" data-start-level="l5" class="cq-btn cq-btn-primary mt-1 sm:w-48">{{ translate(lang, 'games.circuit_academy.start_btn') }}</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- LEVEL 1: Bits & Bulbs -->
+    <section id="screen-l1" class="cq-screen">
+      <div class="bg-white rounded-2xl ring-1 ring-slate-200 shadow p-4 sm:p-6">
+        <div class="cq-lvl-header mb-4">
+          <button type="button" data-back-hub class="cq-btn cq-btn-muted">{{ translate(lang, 'games.circuit_academy.back_to_labs') }}</button>
+          <span id="l1-round-label" class="cq-round-pill"></span>
+        </div>
+        <div class="flex items-start gap-3 mb-5">
+          <div class="cq-chip-avatar">🤖</div>
+          <div class="cq-speech" id="l1-bubble"></div>
+        </div>
+
+        <div id="l1-target-wrap" class="text-center mb-4 hidden">
+          <span class="text-sm font-bold text-slate-500 uppercase tracking-wide">{{ translate(lang, 'games.circuit_academy.l1_make_label') }}</span>
+          <div id="l1-target-num" class="text-4xl font-extrabold text-amber-600"></div>
+        </div>
+
+        <div id="l1-bulbs" class="grid grid-cols-5 gap-2 sm:gap-4 max-w-sm mx-auto mb-2"></div>
+
+        <div id="l1-readout-wrap" class="text-center text-2xl font-extrabold text-slate-800 mb-4 hidden">
+          <span id="l1-readout">= 0</span>
+        </div>
+
+        <div id="l1-choices" class="flex flex-wrap justify-center gap-2 mb-2 hidden"></div>
+
+        <div class="text-center">
+          <button type="button" id="l1-check" class="cq-btn cq-btn-primary">{{ translate(lang, 'games.circuit_academy.check_btn') }}</button>
+        </div>
+        <div id="l1-feedback" class="mt-3 text-sm font-bold text-center h-5"></div>
+      </div>
+    </section>
+
+    <!-- LEVEL 2: Logic Gates Lab -->
+    <section id="screen-l2" class="cq-screen">
+      <div class="bg-white rounded-2xl ring-1 ring-slate-200 shadow p-4 sm:p-6">
+        <div class="cq-lvl-header mb-4">
+          <button type="button" data-back-hub class="cq-btn cq-btn-muted">{{ translate(lang, 'games.circuit_academy.back_to_labs') }}</button>
+          <span id="l2-round-label" class="cq-round-pill"></span>
+        </div>
+        <div class="flex items-start gap-3 mb-5">
+          <div class="cq-chip-avatar">🤖</div>
+          <div class="cq-speech" id="l2-bubble"></div>
+        </div>
+
+        <div id="l2-circuit-wrap">
+          <div class="cq-gate-stage">
+            <div class="flex items-center justify-center gap-6 sm:gap-10 flex-wrap">
+              <div class="flex flex-col items-center gap-4">
+                <div>
+                  <div class="text-xs font-bold text-slate-400 mb-1 text-center">A</div>
+                  <div id="l2-switch-a" class="cq-switch" role="button" tabindex="0" aria-pressed="false"><div class="cq-knob"></div></div>
+                </div>
+                <div id="l2-switch-b-wrap">
+                  <div class="text-xs font-bold text-slate-400 mb-1 text-center">B</div>
+                  <div id="l2-switch-b" class="cq-switch" role="button" tabindex="0" aria-pressed="false"><div class="cq-knob"></div></div>
+                </div>
+              </div>
+              <div class="cq-gate-box" id="l2-gate-name">AND</div>
+              <div class="flex flex-col items-center gap-2">
+                <div id="l2-output-bulb" class="cq-output-bulb"></div>
+                <div id="l2-output-label" class="text-xs font-bold text-slate-300"></div>
+              </div>
+            </div>
+          </div>
+          <div class="text-center mt-4">
+            <button type="button" id="l2-check" class="cq-btn cq-btn-primary">{{ translate(lang, 'games.circuit_academy.check_circuit_btn') }}</button>
+          </div>
+        </div>
+
+        <div id="l2-quiz-wrap" class="hidden">
+          <div class="cq-gate-stage">
+            <table class="cq-table mx-auto max-w-xs">
+              <thead><tr><th>A</th><th>B</th><th>{{ translate(lang, 'games.circuit_academy.output_word') }}</th></tr></thead>
+              <tbody id="l2-quiz-table-body"></tbody>
+            </table>
+          </div>
+          <div id="l2-quiz-choices" class="flex flex-wrap justify-center gap-2 mt-4"></div>
+        </div>
+
+        <div id="l2-feedback" class="mt-3 text-sm font-bold text-center h-5"></div>
+      </div>
+    </section>
+
+    <!-- LEVEL 3: Program Chip -->
+    <section id="screen-l3" class="cq-screen">
+      <div class="bg-white rounded-2xl ring-1 ring-slate-200 shadow p-4 sm:p-6">
+        <div class="cq-lvl-header mb-4">
+          <button type="button" data-back-hub class="cq-btn cq-btn-muted">{{ translate(lang, 'games.circuit_academy.back_to_labs') }}</button>
+          <span id="l3-round-label" class="cq-round-pill"></span>
+        </div>
+        <div class="flex items-start gap-3 mb-5">
+          <div class="cq-chip-avatar">🤖</div>
+          <div class="cq-speech" id="l3-bubble"></div>
+        </div>
+
+        <div class="cq-maze-wrap mb-4">
+          <div id="l3-grid" class="cq-maze-grid"></div>
+        </div>
+
+        <div class="mb-2">
+          <h3 class="text-xs font-bold uppercase tracking-wide text-slate-500 mb-2">{{ translate(lang, 'games.circuit_academy.your_program_label') }}</h3>
+          <div id="l3-program" class="flex flex-wrap gap-2 min-h-[42px] bg-slate-50 rounded-lg p-2 ring-1 ring-slate-200"></div>
+        </div>
+
+        <div class="flex flex-wrap gap-2 mt-4">
+          <button type="button" id="l3-btn-forward" class="cq-btn cq-btn-outline">{{ translate(lang, 'games.circuit_academy.btn_forward') }}</button>
+          <button type="button" id="l3-btn-left" class="cq-btn cq-btn-outline">{{ translate(lang, 'games.circuit_academy.btn_turn_left') }}</button>
+          <button type="button" id="l3-btn-right" class="cq-btn cq-btn-outline">{{ translate(lang, 'games.circuit_academy.btn_turn_right') }}</button>
+          <span class="inline-flex items-center gap-1">
+            <select id="l3-repeat-count" class="rounded-lg border-2 border-slate-200 text-sm font-bold py-2 px-1">
+              <option value="2">2×</option>
+              <option value="3" selected>3×</option>
+              <option value="4">4×</option>
+              <option value="5">5×</option>
+              <option value="6">6×</option>
+            </select>
+            <button type="button" id="l3-btn-repeat" class="cq-btn cq-btn-outline">{{ translate(lang, 'games.circuit_academy.btn_repeat') }}</button>
+          </span>
+          <button type="button" id="l3-btn-undo" class="cq-btn cq-btn-muted">{{ translate(lang, 'games.circuit_academy.btn_undo') }}</button>
+          <button type="button" id="l3-btn-clear" class="cq-btn cq-btn-muted">{{ translate(lang, 'games.circuit_academy.btn_clear') }}</button>
+          <button type="button" id="l3-btn-run" class="cq-btn cq-btn-primary ml-auto">{{ translate(lang, 'games.circuit_academy.btn_run') }}</button>
+        </div>
+
+        <div id="l3-fail-msg" class="mt-3 text-sm font-bold text-center h-5 text-rose-600 hidden"></div>
+      </div>
+    </section>
+
+    <!-- LEVEL 4: Memory Cells -->
+    <section id="screen-l4" class="cq-screen">
+      <div class="bg-white rounded-2xl ring-1 ring-slate-200 shadow p-4 sm:p-6">
+        <div class="cq-lvl-header mb-4">
+          <button type="button" data-back-hub class="cq-btn cq-btn-muted">{{ translate(lang, 'games.circuit_academy.back_to_labs') }}</button>
+          <span id="l4-round-label" class="cq-round-pill"></span>
+        </div>
+        <div class="flex items-start gap-3 mb-5">
+          <div class="cq-chip-avatar">🤖</div>
+          <div class="cq-speech" id="l4-bubble"></div>
+        </div>
+
+        <h3 class="text-xs font-bold uppercase tracking-wide text-slate-500 mb-2">{{ translate(lang, 'games.circuit_academy.memory_label') }}</h3>
+        <div id="l4-cells" class="flex flex-wrap gap-2 justify-center mb-4"></div>
+
+        <h3 class="text-xs font-bold uppercase tracking-wide text-slate-500 mb-2">{{ translate(lang, 'games.circuit_academy.alu_label') }}</h3>
+        <div id="l4-alu" class="cq-alu-box mb-4">—</div>
+
+        <div id="l4-controls" class="text-center">
+          <p id="l4-step-text" class="text-sm text-slate-500 mb-3 min-h-[1.25rem]"></p>
+          <button type="button" id="l4-step-btn" class="cq-btn cq-btn-primary"></button>
+        </div>
+
+        <div id="l4-quiz-wrap" class="hidden text-center">
+          <p id="l4-quiz-q" class="font-bold text-slate-800 mb-3"></p>
+          <div id="l4-quiz-choices" class="flex flex-wrap justify-center gap-2"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- LEVEL 5: Input -> Process -> Output -->
+    <section id="screen-l5" class="cq-screen">
+      <div class="bg-white rounded-2xl ring-1 ring-slate-200 shadow p-4 sm:p-6">
+        <div class="cq-lvl-header mb-4">
+          <button type="button" data-back-hub class="cq-btn cq-btn-muted">{{ translate(lang, 'games.circuit_academy.back_to_labs') }}</button>
+          <span id="l5-round-label" class="cq-round-pill"></span>
+        </div>
+        <div class="flex items-start gap-3 mb-4">
+          <div class="cq-chip-avatar">🤖</div>
+          <div class="cq-speech" id="l5-bubble"></div>
+        </div>
+
+        <div class="text-center bg-indigo-50 rounded-xl py-2 px-3 mb-4 font-bold text-indigo-800 text-sm" id="l5-rule"></div>
+
+        <h3 class="text-xs font-bold uppercase tracking-wide text-slate-500 mb-2">{{ translate(lang, 'games.circuit_academy.input_label') }}</h3>
+        <div id="l5-tray" class="flex flex-wrap gap-2 justify-center mb-4 min-h-[60px]"></div>
+
+        <div id="l5-transform-choices" class="flex flex-wrap justify-center gap-2 mb-4 hidden"></div>
+
+        <div id="l5-bins" class="grid grid-cols-2 gap-3 mb-4">
+          <div>
+            <div class="flex items-center justify-between mb-1">
+              <h3 class="text-xs font-bold uppercase tracking-wide text-emerald-600">{{ translate(lang, 'games.circuit_academy.keep_header') }}</h3>
+            </div>
+            <div id="l5-kept-list" class="flex flex-wrap gap-1.5 min-h-[60px] bg-emerald-50 rounded-lg p-2 ring-1 ring-emerald-200"></div>
+          </div>
+          <div>
+            <div class="flex items-center justify-between mb-1">
+              <h3 class="text-xs font-bold uppercase tracking-wide text-rose-600">{{ translate(lang, 'games.circuit_academy.reject_header') }}</h3>
+            </div>
+            <div id="l5-rejected-list" class="flex flex-wrap gap-1.5 min-h-[60px] bg-rose-50 rounded-lg p-2 ring-1 ring-rose-200"></div>
+          </div>
+        </div>
+
+        <div id="l5-classify-btns" class="text-center mb-4">
+          <button type="button" id="l5-keep-btn" class="cq-btn cq-btn-primary" style="background:#059669;">{{ translate(lang, 'games.circuit_academy.keep_btn') }}</button>
+          <button type="button" id="l5-reject-btn" class="cq-btn cq-btn-primary" style="background:#dc2626;">{{ translate(lang, 'games.circuit_academy.reject_btn') }}</button>
+        </div>
+
+        <div id="l5-output-row-wrap" class="hidden">
+          <h3 class="text-xs font-bold uppercase tracking-wide text-slate-500 mb-2">{{ translate(lang, 'games.circuit_academy.output_word') }}</h3>
+          <div id="l5-output-row" class="flex flex-wrap gap-2 justify-center min-h-[60px] bg-slate-50 rounded-lg p-2 ring-1 ring-slate-200"></div>
+        </div>
+
+        <div id="l5-feedback" class="mt-3 text-sm font-bold text-center h-5"></div>
+      </div>
+    </section>
+
+  </div>
+</div>
+
+<!-- Level complete modal -->
+<div class="cq-modal-backdrop" id="cq-modal-backdrop">
+  <div class="cq-modal">
+    <div class="text-5xl mb-2">🎉</div>
+    <h2 id="modal-title" class="text-xl font-extrabold text-slate-900 mb-2"></h2>
+    <div id="modal-stars" class="text-2xl mb-3"></div>
+    <p id="modal-body" class="text-sm text-slate-600 mb-6"></p>
+    <div class="flex flex-col gap-2">
+      <button type="button" id="modal-next" class="cq-btn cq-btn-primary">{{ translate(lang, 'games.circuit_academy.next_lab_btn') }}</button>
+      <button type="button" id="modal-replay" class="cq-btn cq-btn-outline">{{ translate(lang, 'games.circuit_academy.play_again_btn') }}</button>
+      <button type="button" id="modal-close" class="cq-btn cq-btn-muted">{{ translate(lang, 'games.circuit_academy.modal_back_to_labs') }}</button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+(function () {
+  var I18N = {{ circuit_academy_i18n | tojson }};
+  function fmt(str, vars) {
+    return String(str).replace(/\{(\w+)\}/g, function (_, key) { return (vars && key in vars) ? vars[key] : '{' + key + '}'; });
+  }
+
+  var STORAGE_KEY = 'circuitAcademyProgress';
+
+  function loadProgress() {
+    try {
+      return Object.assign({ l1: 0, l2: 0, l3: 0, l4: 0, l5: 0 }, JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}'));
+    } catch (e) {
+      return { l1: 0, l2: 0, l3: 0, l4: 0, l5: 0 };
+    }
+  }
+  function saveProgress() { try { localStorage.setItem(STORAGE_KEY, JSON.stringify(progress)); } catch (e) {} }
+  var progress = loadProgress();
+
+  function showScreen(id) {
+    document.querySelectorAll('.cq-screen').forEach(function (s) { s.classList.remove('active'); });
+    document.getElementById(id).classList.add('active');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function starString(n) {
+    var s = '';
+    for (var i = 0; i < 3; i++) { s += '<span class="cq-star ' + (i < n ? 'filled' : '') + '">★</span>'; }
+    return s;
+  }
+
+  function renderHub() {
+    var total = 0;
+    ['l1', 'l2', 'l3', 'l4', 'l5'].forEach(function (key) {
+      total += progress[key];
+      var starEl = document.getElementById('hub-stars-' + key);
+      if (starEl) starEl.innerHTML = starString(progress[key]);
+      var btn = document.getElementById('hub-btn-' + key);
+      if (btn) btn.textContent = progress[key] > 0 ? I18N.play_again_btn : I18N.start_btn;
+    });
+    document.getElementById('hub-total-stars').textContent = total + ' / 15';
+    document.getElementById('hub-total-bar').style.width = ((total / 15) * 100) + '%';
+  }
+
+  function backToHub() { renderHub(); showScreen('screen-hub'); }
+
+  var LEVEL_ORDER = ['l1', 'l2', 'l3', 'l4', 'l5'];
+  var starters = {};
+
+  function finishLevel(levelKey, starsEarned, title) {
+    progress[levelKey] = Math.max(progress[levelKey], starsEarned);
+    saveProgress();
+    document.getElementById('modal-title').textContent = title;
+    document.getElementById('modal-stars').innerHTML = starString(starsEarned);
+    document.getElementById('modal-body').textContent =
+      starsEarned === 3 ? I18N.modal_body_3 :
+      starsEarned === 2 ? I18N.modal_body_2 :
+      starsEarned === 1 ? I18N.modal_body_1 :
+      I18N.modal_body_0;
+    var nextBtn = document.getElementById('modal-next');
+    var idx = LEVEL_ORDER.indexOf(levelKey);
+    if (idx >= 0 && idx < LEVEL_ORDER.length - 1) {
+      nextBtn.style.display = '';
+      nextBtn.onclick = function () { closeModalAnd(function () { starters[LEVEL_ORDER[idx + 1]](); }); };
+    } else {
+      nextBtn.style.display = 'none';
+    }
+    document.getElementById('modal-replay').onclick = function () { closeModalAnd(function () { starters[levelKey](); }); };
+    document.getElementById('cq-modal-backdrop').classList.add('active');
+  }
+  function closeModalAnd(cb) {
+    document.getElementById('cq-modal-backdrop').classList.remove('active');
+    renderHub();
+    if (cb) cb();
+  }
+  document.getElementById('modal-close').addEventListener('click', function () {
+    document.getElementById('cq-modal-backdrop').classList.remove('active');
+    backToHub();
+  });
+
+  document.querySelectorAll('[data-start-level]').forEach(function (btn) {
+    btn.addEventListener('click', function () { starters[btn.dataset.startLevel](); });
+  });
+  document.querySelectorAll('[data-back-hub]').forEach(function (btn) {
+    btn.addEventListener('click', backToHub);
+  });
+
+  /* ===================== LEVEL 1: Bits & Bulbs ===================== */
+  var L1_ROUNDS = 6;
+  var BIT_VALUES = [16, 8, 4, 2, 1];
+  var l1 = {};
+
+  function startLevel1() {
+    l1 = { round: 0, correct: 0, mode: '', target: 0, on: [false, false, false, false, false] };
+    nextL1Round();
+    showScreen('screen-l1');
+  }
+  starters.l1 = startLevel1;
+
+  function renderL1Bulbs(interactive) {
+    var wrap = document.getElementById('l1-bulbs');
+    wrap.innerHTML = '';
+    BIT_VALUES.forEach(function (val, i) {
+      var col = document.createElement('div');
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'cq-bulb' + (l1.on[i] ? ' on' : '');
+      btn.textContent = l1.on[i] ? '1' : '0';
+      if (interactive) {
+        btn.addEventListener('click', function () {
+          l1.on[i] = !l1.on[i];
+          renderL1Bulbs(true);
+          updateL1Readout();
+        });
+      } else {
+        btn.disabled = true;
+      }
+      col.appendChild(btn);
+      var label = document.createElement('div');
+      label.className = 'cq-bit-label';
+      label.textContent = val;
+      col.appendChild(label);
+      wrap.appendChild(col);
+    });
+  }
+
+  function currentL1Value() {
+    var v = 0;
+    BIT_VALUES.forEach(function (val, i) { if (l1.on[i]) v += val; });
+    return v;
+  }
+  function updateL1Readout() { document.getElementById('l1-readout').textContent = '= ' + currentL1Value(); }
+
+  function nextL1Round() {
+    l1.round++;
+    document.getElementById('l1-feedback').textContent = '';
+    if (l1.round > L1_ROUNDS) { finishL1(); return; }
+    document.getElementById('l1-round-label').textContent = fmt(I18N.round_label, { n: l1.round, total: L1_ROUNDS });
+    l1.mode = (l1.round % 2 === 1) ? 'make' : 'guess';
+    l1.target = Math.floor(Math.random() * 31) + 1;
+
+    if (l1.mode === 'make') {
+      l1.on = [false, false, false, false, false];
+      document.getElementById('l1-bubble').textContent = fmt(I18N.l1_bubble_make, { target: l1.target });
+      document.getElementById('l1-target-wrap').classList.remove('hidden');
+      document.getElementById('l1-target-num').textContent = l1.target;
+      document.getElementById('l1-readout-wrap').classList.remove('hidden');
+      document.getElementById('l1-choices').classList.add('hidden');
+      document.getElementById('l1-check').classList.remove('hidden');
+      renderL1Bulbs(true);
+      updateL1Readout();
+    } else {
+      l1.on = [false, false, false, false, false];
+      var remaining = l1.target;
+      BIT_VALUES.forEach(function (val, i) { if (remaining >= val) { l1.on[i] = true; remaining -= val; } });
+      document.getElementById('l1-bubble').textContent = I18N.l1_bubble_guess;
+      document.getElementById('l1-target-wrap').classList.add('hidden');
+      document.getElementById('l1-readout-wrap').classList.add('hidden');
+      document.getElementById('l1-check').classList.add('hidden');
+      renderL1Bulbs(false);
+      var choicesWrap = document.getElementById('l1-choices');
+      choicesWrap.classList.remove('hidden');
+      choicesWrap.innerHTML = '';
+      var opts = new Set([l1.target]);
+      while (opts.size < 4) { opts.add(Math.floor(Math.random() * 31) + 1); }
+      var arr = Array.from(opts).sort(function () { return Math.random() - 0.5; });
+      arr.forEach(function (opt) {
+        var b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'cq-choice-btn';
+        b.textContent = opt;
+        b.addEventListener('click', function () { checkL1Guess(opt, b); });
+        choicesWrap.appendChild(b);
+      });
+    }
+  }
+
+  function checkL1Guess(opt, btnEl) {
+    document.querySelectorAll('#l1-choices button').forEach(function (b) { b.disabled = true; });
+    var correct = opt === l1.target;
+    if (correct) { l1.correct++; btnEl.classList.add('correct'); } else { btnEl.classList.add('wrong'); }
+    var fb = document.getElementById('l1-feedback');
+    fb.textContent = correct ? I18N.fb_correct : fmt(I18N.fb_not_quite, { target: l1.target });
+    fb.className = 'mt-3 text-sm font-bold text-center h-5 ' + (correct ? 'text-emerald-600' : 'text-rose-600');
+    setTimeout(nextL1Round, 1400);
+  }
+
+  document.getElementById('l1-check').addEventListener('click', function () {
+    var val = currentL1Value();
+    var correct = val === l1.target;
+    var fb = document.getElementById('l1-feedback');
+    if (correct) {
+      l1.correct++;
+      fb.textContent = I18N.fb_correct;
+      fb.className = 'mt-3 text-sm font-bold text-center h-5 text-emerald-600';
+      setTimeout(nextL1Round, 1200);
+    } else {
+      fb.textContent = fmt(I18N.l1_fb_not_yet, { val: val });
+      fb.className = 'mt-3 text-sm font-bold text-center h-5 text-rose-600';
+    }
+  });
+
+  function finishL1() {
+    var stars = l1.correct >= 6 ? 3 : l1.correct >= 4 ? 2 : l1.correct >= 2 ? 1 : 0;
+    finishLevel('l1', stars, I18N.lvl1_complete_title);
+  }
+
+  /* ===================== LEVEL 2: Logic Gates Lab ===================== */
+  var L2_INTRO = [
+    { gate: 'AND', useB: true, hint: I18N.gate_hint_and },
+    { gate: 'OR', useB: true, hint: I18N.gate_hint_or },
+    { gate: 'NOT', useB: false, hint: I18N.gate_hint_not },
+    { gate: 'XOR', useB: true, hint: I18N.gate_hint_xor }
+  ];
+  var L2_QUIZ_GATES = ['AND', 'OR', 'XOR'];
+  var l2 = {};
+
+  function gateOutput(gate, a, b) {
+    switch (gate) {
+      case 'AND': return a && b;
+      case 'OR': return a || b;
+      case 'NOT': return !a;
+      case 'XOR': return a !== b;
+      default: return false;
+    }
+  }
+
+  function startLevel2() {
+    l2 = { introIndex: 0, quizIndex: 0, quizCorrect: 0, a: false, b: false };
+    document.getElementById('l2-circuit-wrap').classList.remove('hidden');
+    document.getElementById('l2-quiz-wrap').classList.add('hidden');
+    renderL2Intro();
+    showScreen('screen-l2');
+  }
+  starters.l2 = startLevel2;
+
+  function renderL2Intro() {
+    var step = L2_INTRO[l2.introIndex];
+    l2.a = false; l2.b = false;
+    document.getElementById('l2-round-label').textContent = fmt(I18N.gate_round_label, { n: l2.introIndex + 1, total: L2_INTRO.length });
+    document.getElementById('l2-gate-name').textContent = step.gate;
+    document.getElementById('l2-bubble').textContent = fmt(I18N.l2_bubble_intro, { gate: step.gate, hint: step.hint });
+    document.getElementById('l2-switch-b-wrap').classList.toggle('hidden', !step.useB);
+    renderL2Circuit();
+    document.getElementById('l2-feedback').textContent = '';
+  }
+
+  function renderL2Circuit() {
+    var step = L2_INTRO[l2.introIndex];
+    document.getElementById('l2-switch-a').classList.toggle('on', l2.a);
+    document.getElementById('l2-switch-a').setAttribute('aria-pressed', l2.a);
+    document.getElementById('l2-switch-b').classList.toggle('on', l2.b);
+    document.getElementById('l2-switch-b').setAttribute('aria-pressed', l2.b);
+    var out = gateOutput(step.gate, l2.a, l2.b);
+    document.getElementById('l2-output-bulb').classList.toggle('on', out);
+    var lbl = document.getElementById('l2-output-label');
+    lbl.textContent = out ? I18N.l2_on_label : I18N.l2_off_label;
+    lbl.className = out ? 'text-xs font-bold text-amber-400' : 'text-xs font-bold text-slate-500';
+  }
+
+  document.getElementById('l2-switch-a').addEventListener('click', function () { l2.a = !l2.a; renderL2Circuit(); });
+  document.getElementById('l2-switch-b').addEventListener('click', function () { l2.b = !l2.b; renderL2Circuit(); });
+
+  document.getElementById('l2-check').addEventListener('click', function () {
+    var step = L2_INTRO[l2.introIndex];
+    var out = gateOutput(step.gate, l2.a, l2.b);
+    var fb = document.getElementById('l2-feedback');
+    if (out) {
+      fb.textContent = I18N.fb_you_did_it;
+      fb.className = 'mt-3 text-sm font-bold text-center h-5 text-emerald-600';
+      l2.introIndex++;
+      setTimeout(function () {
+        if (l2.introIndex < L2_INTRO.length) { renderL2Intro(); } else { startL2Quiz(); }
+      }, 1100);
+    } else {
+      fb.textContent = fmt(I18N.l2_fb_not_lit, { hint: step.hint });
+      fb.className = 'mt-3 text-sm font-bold text-center h-5 text-rose-600';
+    }
+  });
+
+  function startL2Quiz() {
+    l2.quizIndex = 0; l2.quizCorrect = 0;
+    document.getElementById('l2-circuit-wrap').classList.add('hidden');
+    document.getElementById('l2-quiz-wrap').classList.remove('hidden');
+    nextL2Quiz();
+  }
+
+  function nextL2Quiz() {
+    document.getElementById('l2-feedback').textContent = '';
+    if (l2.quizIndex >= 3) { finishL2(); return; }
+    document.getElementById('l2-round-label').textContent = fmt(I18N.gate_detective_label, { n: l2.quizIndex + 1, total: 3 });
+    var gate = L2_QUIZ_GATES[Math.floor(Math.random() * L2_QUIZ_GATES.length)];
+    l2.quizAnswer = gate;
+    document.getElementById('l2-bubble').textContent = I18N.l2_quiz_bubble;
+    var rows = [[false, false], [false, true], [true, false], [true, true]];
+    var tbody = document.getElementById('l2-quiz-table-body');
+    tbody.innerHTML = '';
+    rows.forEach(function (r) {
+      var out = gateOutput(gate, r[0], r[1]);
+      var tr = document.createElement('tr');
+      tr.innerHTML = '<td>' + (r[0] ? 1 : 0) + '</td><td>' + (r[1] ? 1 : 0) + '</td><td class="font-bold">' + (out ? 1 : 0) + '</td>';
+      tbody.appendChild(tr);
+    });
+    var choicesWrap = document.getElementById('l2-quiz-choices');
+    choicesWrap.innerHTML = '';
+    var opts = L2_QUIZ_GATES.slice().sort(function () { return Math.random() - 0.5; });
+    opts.forEach(function (g) {
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'cq-choice-btn';
+      b.textContent = g;
+      b.addEventListener('click', function () { checkL2Quiz(g, b); });
+      choicesWrap.appendChild(b);
+    });
+  }
+
+  function checkL2Quiz(guess, btnEl) {
+    document.querySelectorAll('#l2-quiz-choices button').forEach(function (b) { b.disabled = true; });
+    var correct = guess === l2.quizAnswer;
+    if (correct) { l2.quizCorrect++; btnEl.classList.add('correct'); } else { btnEl.classList.add('wrong'); }
+    var fb = document.getElementById('l2-feedback');
+    fb.textContent = correct ? fmt(I18N.l2_quiz_correct, { gate: l2.quizAnswer }) : fmt(I18N.l2_quiz_wrong, { gate: l2.quizAnswer });
+    fb.className = 'mt-3 text-sm font-bold text-center h-5 ' + (correct ? 'text-emerald-600' : 'text-rose-600');
+    l2.quizIndex++;
+    setTimeout(nextL2Quiz, 1500);
+  }
+
+  function finishL2() {
+    var stars = l2.quizCorrect >= 3 ? 3 : l2.quizCorrect >= 2 ? 2 : l2.quizCorrect >= 1 ? 1 : 0;
+    finishLevel('l2', stars, I18N.lvl2_complete_title);
+  }
+
+  /* ===================== LEVEL 3: Program Chip ===================== */
+  var L3_PUZZLES = [
+    { rows: 3, cols: 5, start: { r: 1, c: 0, dir: 0 }, goal: { r: 1, c: 4 }, par: 4, intro: I18N.l3_intro_1 },
+    { rows: 5, cols: 5, start: { r: 0, c: 0, dir: 0 }, goal: { r: 3, c: 2 }, par: 6, intro: I18N.l3_intro_2 },
+    { rows: 5, cols: 5, start: { r: 4, c: 0, dir: 3 }, goal: { r: 0, c: 4 }, par: 9, intro: I18N.l3_intro_3 },
+    { rows: 3, cols: 7, start: { r: 1, c: 0, dir: 0 }, goal: { r: 1, c: 6 }, par: 1, intro: I18N.l3_intro_4 }
+  ];
+  var DIRS = [{ dr: 0, dc: 1, rot: 90 }, { dr: 1, dc: 0, rot: 180 }, { dr: 0, dc: -1, rot: 270 }, { dr: -1, dc: 0, rot: 0 }];
+  var l3 = {};
+
+  function startLevel3() {
+    l3 = { index: 0, bestStarsThisRun: 3 };
+    startL3Puzzle();
+    showScreen('screen-l3');
+  }
+  starters.l3 = startLevel3;
+
+  function startL3Puzzle() {
+    var p = L3_PUZZLES[l3.index];
+    l3.program = [];
+    l3.pendingRepeat = null;
+    l3.running = false;
+    l3.pos = { r: p.start.r, c: p.start.c };
+    l3.dir = p.start.dir;
+    document.getElementById('l3-round-label').textContent = fmt(I18N.maze_round_label, { n: l3.index + 1, total: L3_PUZZLES.length });
+    document.getElementById('l3-bubble').textContent = p.intro;
+    document.getElementById('l3-fail-msg').classList.add('hidden');
+    buildL3Grid();
+    renderL3Program();
+    setL3ControlsEnabled(true);
+  }
+
+  function buildL3Grid() {
+    var p = L3_PUZZLES[l3.index];
+    var cell = 46;
+    var grid = document.getElementById('l3-grid');
+    grid.innerHTML = '';
+    grid.style.width = (p.cols * cell) + 'px';
+    grid.style.height = (p.rows * cell) + 'px';
+    for (var r = 0; r < p.rows; r++) {
+      for (var c = 0; c < p.cols; c++) {
+        var cellEl = document.createElement('div');
+        cellEl.className = 'cq-maze-cell';
+        cellEl.style.left = (c * cell) + 'px';
+        cellEl.style.top = (r * cell) + 'px';
+        cellEl.style.width = cell + 'px';
+        cellEl.style.height = cell + 'px';
+        grid.appendChild(cellEl);
+      }
+    }
+    var goalEl = document.createElement('div');
+    goalEl.className = 'cq-maze-goal';
+    goalEl.style.left = (p.goal.c * cell) + 'px';
+    goalEl.style.top = (p.goal.r * cell) + 'px';
+    goalEl.style.width = cell + 'px';
+    goalEl.style.height = cell + 'px';
+    goalEl.textContent = '🔋';
+    grid.appendChild(goalEl);
+
+    var token = document.createElement('div');
+    token.id = 'l3-token';
+    token.className = 'cq-maze-token';
+    token.style.width = cell + 'px';
+    token.style.height = cell + 'px';
+    token.textContent = '🤖';
+    grid.appendChild(token);
+    l3.cellSize = cell;
+    positionL3Token();
+  }
+
+  function positionL3Token() {
+    var token = document.getElementById('l3-token');
+    var cell = l3.cellSize;
+    token.style.left = (l3.pos.c * cell) + 'px';
+    token.style.top = (l3.pos.r * cell) + 'px';
+    token.style.transform = 'rotate(' + DIRS[l3.dir].rot + 'deg)';
+  }
+
+  function describeL3Item(item) {
+    if (item.type === 'F') return I18N.btn_forward;
+    if (item.type === 'L') return I18N.btn_turn_left;
+    if (item.type === 'R') return I18N.btn_turn_right;
+    if (item.type === 'REPEAT') return fmt(I18N.prog_repeat, { n: item.n, inner: describeL3Item(item.inner) });
+    return '';
+  }
+
+  function renderL3Program() {
+    var wrap = document.getElementById('l3-program');
+    wrap.innerHTML = '';
+    if (l3.program.length === 0 && !l3.pendingRepeat) {
+      wrap.innerHTML = '<span class="text-sm text-slate-400">' + I18N.l3_empty_program + '</span>';
+    }
+    l3.program.forEach(function (item) {
+      var chip = document.createElement('span');
+      chip.className = 'cq-prog-item';
+      chip.textContent = describeL3Item(item);
+      wrap.appendChild(chip);
+    });
+    if (l3.pendingRepeat) {
+      var pending = document.createElement('span');
+      pending.className = 'cq-prog-item';
+      pending.style.opacity = '0.6';
+      pending.textContent = fmt(I18N.l3_pending_repeat, { n: l3.pendingRepeat.n });
+      wrap.appendChild(pending);
+    }
+  }
+
+  function l3AddPrimitive(type) {
+    if (l3.running) return;
+    if (l3.pendingRepeat) {
+      l3.program.push({ type: 'REPEAT', n: l3.pendingRepeat.n, inner: { type: type } });
+      l3.pendingRepeat = null;
+    } else {
+      l3.program.push({ type: type });
+    }
+    renderL3Program();
+  }
+
+  document.getElementById('l3-btn-forward').addEventListener('click', function () { l3AddPrimitive('F'); });
+  document.getElementById('l3-btn-left').addEventListener('click', function () { l3AddPrimitive('L'); });
+  document.getElementById('l3-btn-right').addEventListener('click', function () { l3AddPrimitive('R'); });
+  document.getElementById('l3-btn-repeat').addEventListener('click', function () {
+    if (l3.running || l3.pendingRepeat) return;
+    var n = parseInt(document.getElementById('l3-repeat-count').value, 10) || 3;
+    l3.pendingRepeat = { n: n };
+    renderL3Program();
+  });
+  document.getElementById('l3-btn-undo').addEventListener('click', function () {
+    if (l3.running) return;
+    if (l3.pendingRepeat) { l3.pendingRepeat = null; } else { l3.program.pop(); }
+    renderL3Program();
+  });
+  document.getElementById('l3-btn-clear').addEventListener('click', function () {
+    if (l3.running) return;
+    l3.program = []; l3.pendingRepeat = null;
+    renderL3Program();
+  });
+
+  function setL3ControlsEnabled(enabled) {
+    ['l3-btn-forward', 'l3-btn-left', 'l3-btn-right', 'l3-btn-repeat', 'l3-btn-undo', 'l3-btn-clear', 'l3-btn-run'].forEach(function (id) {
+      document.getElementById(id).disabled = !enabled;
+    });
+  }
+
+  function flattenL3Program() {
+    var flat = [];
+    l3.program.forEach(function (item, idx) {
+      if (item.type === 'REPEAT') {
+        for (var i = 0; i < item.n; i++) { flat.push({ type: item.inner.type, topIndex: idx }); }
+      } else {
+        flat.push({ type: item.type, topIndex: idx });
+      }
+    });
+    return flat;
+  }
+
+  document.getElementById('l3-btn-run').addEventListener('click', function () {
+    if (l3.running || l3.program.length === 0 || l3.pendingRepeat) return;
+    l3.running = true;
+    setL3ControlsEnabled(false);
+    document.getElementById('l3-fail-msg').classList.add('hidden');
+    var p = L3_PUZZLES[l3.index];
+    l3.pos = { r: p.start.r, c: p.start.c };
+    l3.dir = p.start.dir;
+    positionL3Token();
+    var flat = flattenL3Program();
+    var i = 0;
+
+    function step() {
+      document.querySelectorAll('.cq-prog-item').forEach(function (el) { el.classList.remove('active'); });
+      if (i >= flat.length) {
+        l3.running = false;
+        var reached = l3.pos.r === p.goal.r && l3.pos.c === p.goal.c;
+        if (reached) {
+          var stars = l3.program.length <= p.par ? 3 : l3.program.length <= p.par + 2 ? 2 : 1;
+          setTimeout(function () { finishL3Puzzle(stars); }, 300);
+        } else {
+          var fm = document.getElementById('l3-fail-msg');
+          fm.textContent = I18N.l3_fail_not_landed;
+          fm.classList.remove('hidden');
+          setL3ControlsEnabled(true);
+        }
+        return;
+      }
+      var s = flat[i];
+      var chipEl = document.querySelectorAll('.cq-prog-item')[s.topIndex];
+      if (chipEl) chipEl.classList.add('active');
+      var failed = false;
+      if (s.type === 'L') { l3.dir = (l3.dir + 3) % 4; }
+      else if (s.type === 'R') { l3.dir = (l3.dir + 1) % 4; }
+      else if (s.type === 'F') {
+        var d = DIRS[l3.dir];
+        var nr = l3.pos.r + d.dr, nc = l3.pos.c + d.dc;
+        if (nr < 0 || nr >= p.rows || nc < 0 || nc >= p.cols) { failed = true; } else { l3.pos = { r: nr, c: nc }; }
+      }
+      positionL3Token();
+      if (failed) {
+        l3.running = false;
+        var fm2 = document.getElementById('l3-fail-msg');
+        fm2.textContent = I18N.l3_fail_off_grid;
+        fm2.classList.remove('hidden');
+        setL3ControlsEnabled(true);
+        return;
+      }
+      i++;
+      setTimeout(step, 480);
+    }
+    step();
+  });
+
+  function finishL3Puzzle(stars) {
+    l3.bestStarsThisRun = Math.min(l3.bestStarsThisRun, stars);
+    if (l3.index < L3_PUZZLES.length - 1) {
+      var fm = document.getElementById('l3-fail-msg');
+      fm.textContent = fmt(I18N.l3_puzzle_complete, { stars: stars });
+      fm.className = 'mt-3 text-sm font-bold text-center h-5 text-emerald-600';
+      fm.classList.remove('hidden');
+      l3.index++;
+      setTimeout(startL3Puzzle, 1700);
+    } else {
+      finishLevel('l3', l3.bestStarsThisRun, I18N.lvl3_complete_title);
+    }
+  }
+
+  /* ===================== LEVEL 4: Memory Cells ===================== */
+  var L4_PROGRAMS = [
+    {
+      steps: [
+        { type: 'store', addr: 0, value: 7 },
+        { type: 'store', addr: 1, value: 5 },
+        { type: 'load', addr: 0 },
+        { type: 'load', addr: 1 },
+        { type: 'add' },
+        { type: 'storeResult', addr: 2 }
+      ],
+      quiz: { qKey: 'l4_quiz1_q', options: [12, 7, 5, 2], answer: 12 }
+    },
+    {
+      steps: [
+        { type: 'store', addr: 3, value: 9 },
+        { type: 'store', addr: 3, value: 2 }
+      ],
+      quiz: {
+        qKey: 'l4_quiz2_q',
+        options: [
+          { key: 'a', textKey: 'l4_quiz2_opt_a' },
+          { key: 'b', textKey: 'l4_quiz2_opt_b' },
+          { key: 'c', textKey: 'l4_quiz2_opt_c' },
+          { key: 'd', textKey: 'l4_quiz2_opt_d' }
+        ],
+        answerKey: 'a'
+      }
+    },
+    {
+      steps: [
+        { type: 'store', addr: 0, value: 4 },
+        { type: 'store', addr: 1, value: 6 },
+        { type: 'store', addr: 2, value: 3 },
+        { type: 'load', addr: 0 },
+        { type: 'load', addr: 1 },
+        { type: 'add' },
+        { type: 'storeResult', addr: 3 },
+        { type: 'load', addr: 3 },
+        { type: 'load', addr: 2 },
+        { type: 'add' },
+        { type: 'storeResult', addr: 4 }
+      ],
+      quiz: { qKey: 'l4_quiz3_q', options: [13, 10, 7, 3], answer: 13 }
+    }
+  ];
+  var l4 = {};
+
+  function describeL4Step(step, cellHadValue) {
+    if (step.type === 'store') {
+      return fmt(cellHadValue ? I18N.l4_store_overwrite : I18N.l4_store, { value: step.value, addr: step.addr });
+    }
+    if (step.type === 'load') return fmt(I18N.l4_load, { addr: step.addr });
+    if (step.type === 'add') return I18N.l4_add;
+    if (step.type === 'storeResult') return fmt(I18N.l4_store_result, { addr: step.addr });
+    return '';
+  }
+
+  function startLevel4() {
+    l4 = { index: 0, correctCount: 0 };
+    startL4Program();
+    showScreen('screen-l4');
+  }
+  starters.l4 = startLevel4;
+
+  function startL4Program() {
+    l4.stepIndex = 0;
+    l4.cells = [null, null, null, null, null, null];
+    l4.aluPending = null; l4.aluSecond = null; l4.aluResult = null;
+    renderL4Cells();
+    document.getElementById('l4-alu').textContent = '—';
+    document.getElementById('l4-round-label').textContent = fmt(I18N.program_round_label, { n: l4.index + 1, total: L4_PROGRAMS.length });
+    document.getElementById('l4-bubble').textContent = I18N.l4_intro_bubble;
+    document.getElementById('l4-quiz-wrap').classList.add('hidden');
+    document.getElementById('l4-controls').classList.remove('hidden');
+    document.getElementById('l4-step-text').textContent = I18N.l4_step_prompt;
+    var stepBtn = document.getElementById('l4-step-btn');
+    stepBtn.disabled = false;
+    stepBtn.textContent = I18N.step_btn;
+  }
+
+  function renderL4Cells() {
+    var wrap = document.getElementById('l4-cells');
+    wrap.innerHTML = '';
+    l4.cells.forEach(function (val, i) {
+      var cell = document.createElement('div');
+      cell.className = 'cq-mem-cell';
+      cell.id = 'l4-cell-' + i;
+      cell.innerHTML = '<div class="cq-addr">' + i + '</div><div>' + (val === null ? '—' : val) + '</div>';
+      wrap.appendChild(cell);
+    });
+  }
+
+  function flashL4Cell(addr) {
+    var el = document.getElementById('l4-cell-' + addr);
+    if (!el) return;
+    el.classList.remove('flash');
+    void el.offsetWidth;
+    el.classList.add('flash');
+  }
+
+  document.getElementById('l4-step-btn').addEventListener('click', function () {
+    var prog = L4_PROGRAMS[l4.index];
+    if (l4.stepIndex >= prog.steps.length) { showL4Quiz(); return; }
+    var step = prog.steps[l4.stepIndex];
+    var cellHadValue = step.type === 'store' && l4.cells[step.addr] !== null;
+    document.getElementById('l4-step-text').textContent = describeL4Step(step, cellHadValue);
+    if (step.type === 'store') {
+      l4.cells[step.addr] = step.value;
+      renderL4Cells();
+      flashL4Cell(step.addr);
+    } else if (step.type === 'load') {
+      if (l4.aluPending === null) {
+        l4.aluPending = l4.cells[step.addr];
+        document.getElementById('l4-alu').textContent = l4.aluPending;
+      } else {
+        l4.aluSecond = l4.cells[step.addr];
+        document.getElementById('l4-alu').textContent = l4.aluPending + ' , ' + l4.aluSecond;
+      }
+      flashL4Cell(step.addr);
+    } else if (step.type === 'add') {
+      l4.aluResult = l4.aluPending + l4.aluSecond;
+      document.getElementById('l4-alu').textContent = l4.aluPending + ' + ' + l4.aluSecond + ' = ' + l4.aluResult;
+    } else if (step.type === 'storeResult') {
+      l4.cells[step.addr] = l4.aluResult;
+      renderL4Cells();
+      flashL4Cell(step.addr);
+      l4.aluPending = null; l4.aluSecond = null; l4.aluResult = null;
+      setTimeout(function () { document.getElementById('l4-alu').textContent = '—'; }, 900);
+    }
+    l4.stepIndex++;
+    if (l4.stepIndex >= prog.steps.length) {
+      document.getElementById('l4-step-btn').textContent = I18N.see_question_btn;
+    }
+  });
+
+  function showL4Quiz() {
+    var prog = L4_PROGRAMS[l4.index];
+    document.getElementById('l4-controls').classList.add('hidden');
+    var qw = document.getElementById('l4-quiz-wrap');
+    qw.classList.remove('hidden');
+    document.getElementById('l4-quiz-q').textContent = I18N[prog.quiz.qKey];
+    var choicesWrap = document.getElementById('l4-quiz-choices');
+    choicesWrap.innerHTML = '';
+    var opts = prog.quiz.options.slice().sort(function () { return Math.random() - 0.5; });
+    opts.forEach(function (opt) {
+      var isTextOpt = typeof opt === 'object';
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'cq-choice-btn';
+      b.textContent = isTextOpt ? I18N[opt.textKey] : opt;
+      b.addEventListener('click', function () { checkL4Quiz(opt, b); });
+      choicesWrap.appendChild(b);
+    });
+  }
+
+  function checkL4Quiz(opt, btnEl) {
+    var prog = L4_PROGRAMS[l4.index];
+    document.querySelectorAll('#l4-quiz-choices button').forEach(function (b) { b.disabled = true; });
+    var correct = typeof opt === 'object' ? opt.key === prog.quiz.answerKey : opt === prog.quiz.answer;
+    if (correct) { l4.correctCount++; btnEl.classList.add('correct'); } else { btnEl.classList.add('wrong'); }
+    setTimeout(function () {
+      if (l4.index < L4_PROGRAMS.length - 1) { l4.index++; startL4Program(); } else { finishL4(); }
+    }, 1500);
+  }
+
+  function finishL4() {
+    var stars = l4.correctCount >= 3 ? 3 : l4.correctCount >= 2 ? 2 : l4.correctCount >= 1 ? 1 : 0;
+    finishLevel('l4', stars, I18N.lvl4_complete_title);
+  }
+
+  /* ===================== LEVEL 5: Input -> Process -> Output ===================== */
+  var L5_ROUNDS = [
+    { mode: 'filter', rule: I18N.l5_rule_even, items: [3, 8, 12, 7, 2, 15, 4, 9], test: function (n) { return n % 2 === 0; } },
+    { mode: 'filter', rule: I18N.l5_rule_gt6, items: [2, 9, 4, 11, 6, 3, 14, 8], test: function (n) { return n > 6; } },
+    { mode: 'sort', rule: I18N.l5_rule_sort, items: [9, 2, 7, 4] },
+    { mode: 'transform', rule: I18N.l5_rule_double, items: [1, 3, 5, 7], fn: function (n) { return n * 2; } },
+    { mode: 'pipeline', rule: I18N.l5_rule_pipeline, items: [2, 9, 4, 11, 6, 3, 14, 8, 1, 12], test: function (n) { return n > 5; } }
+  ];
+  var l5 = {};
+
+  function startLevel5() {
+    l5 = { index: 0, mistakes: 0 };
+    startL5Round();
+    showScreen('screen-l5');
+  }
+  starters.l5 = startLevel5;
+
+  function l5RoundBubble(mode) {
+    if (mode === 'filter') return I18N.l5_bubble_filter;
+    if (mode === 'sort') return I18N.l5_bubble_sort;
+    if (mode === 'transform') return I18N.l5_bubble_transform;
+    return I18N.l5_bubble_pipeline;
+  }
+
+  function startL5Round() {
+    var round = L5_ROUNDS[l5.index];
+    document.getElementById('l5-round-label').textContent = fmt(I18N.round_label, { n: l5.index + 1, total: L5_ROUNDS.length });
+    document.getElementById('l5-rule').textContent = round.rule;
+    document.getElementById('l5-bubble').textContent = l5RoundBubble(round.mode);
+    document.getElementById('l5-transform-choices').innerHTML = '';
+    document.getElementById('l5-transform-choices').classList.add('hidden');
+    l5.selected = null;
+    l5.remaining = round.items.slice();
+    l5.kept = [];
+    l5.pipelinePhase = 'filter';
+
+    var l5NeedsBins = round.mode === 'filter' || round.mode === 'pipeline';
+    document.getElementById('l5-bins').classList.toggle('hidden', !l5NeedsBins);
+    document.getElementById('l5-classify-btns').classList.toggle('hidden', !l5NeedsBins);
+    document.getElementById('l5-output-row-wrap').classList.toggle('hidden', round.mode === 'filter');
+
+    document.getElementById('l5-kept-list').innerHTML = '';
+    document.getElementById('l5-rejected-list').innerHTML = '';
+    document.getElementById('l5-output-row').innerHTML = '';
+    renderL5Tray();
+  }
+
+  function renderL5Tray() {
+    var wrap = document.getElementById('l5-tray');
+    wrap.innerHTML = '';
+    l5.remaining.forEach(function (val, idx) {
+      var t = document.createElement('button');
+      t.type = 'button';
+      t.className = 'cq-tile';
+      t.textContent = val;
+      t.addEventListener('click', function () { l5TileClick(val, idx, t); });
+      wrap.appendChild(t);
+    });
+  }
+
+  function appendL5Output(val) {
+    var row = document.getElementById('l5-output-row');
+    var t = document.createElement('span');
+    t.className = 'cq-tile';
+    t.style.cursor = 'default';
+    t.textContent = val;
+    row.appendChild(t);
+  }
+
+  function l5TileClick(val, idx, tileEl) {
+    var round = L5_ROUNDS[l5.index];
+    var mode = round.mode === 'pipeline' ? l5.pipelinePhase : round.mode;
+    if (mode === 'filter') {
+      document.querySelectorAll('#l5-tray .cq-tile').forEach(function (t) { t.classList.remove('selected'); });
+      tileEl.classList.add('selected');
+      l5.selected = { val: val, idx: idx };
+    } else if (mode === 'sort') {
+      var expected = l5.remaining.slice().sort(function (a, b) { return a - b; })[0];
+      if (val === expected) {
+        l5.remaining.splice(idx, 1);
+        appendL5Output(val);
+        renderL5Tray();
+        checkL5RoundComplete();
+      } else {
+        tileEl.classList.add('wrong');
+        l5.mistakes++;
+        setTimeout(function () { tileEl.classList.remove('wrong'); }, 400);
+      }
+    } else if (mode === 'transform') {
+      showL5TransformChoices(val, idx, round.fn(val));
+    }
+  }
+
+  function showL5TransformChoices(val, idx, correctVal) {
+    var wrap = document.getElementById('l5-transform-choices');
+    wrap.classList.remove('hidden');
+    wrap.innerHTML = '';
+    var opts = new Set([correctVal, val + 1, val * 3]);
+    while (opts.size < 3) { opts.add(correctVal + Math.floor(Math.random() * 5) + 2); }
+    var arr = Array.from(opts).sort(function () { return Math.random() - 0.5; });
+    var label = document.createElement('div');
+    label.className = 'w-full text-sm font-semibold text-slate-600 mb-1 text-center';
+    label.textContent = fmt(I18N.l5_transform_prompt, { val: val });
+    wrap.appendChild(label);
+    arr.forEach(function (opt) {
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'cq-choice-btn';
+      b.textContent = opt;
+      b.addEventListener('click', function () {
+        if (opt === correctVal) {
+          l5.remaining.splice(idx, 1);
+          appendL5Output(opt);
+          renderL5Tray();
+          wrap.classList.add('hidden');
+          checkL5RoundComplete();
+        } else {
+          l5.mistakes++;
+          b.classList.add('wrong');
+        }
+      });
+      wrap.appendChild(b);
+    });
+  }
+
+  document.getElementById('l5-keep-btn').addEventListener('click', function () { l5Classify(true); });
+  document.getElementById('l5-reject-btn').addEventListener('click', function () { l5Classify(false); });
+
+  function l5Classify(keep) {
+    if (!l5.selected) return;
+    var round = L5_ROUNDS[l5.index];
+    var shouldKeep = round.test(l5.selected.val);
+    var correct = keep === shouldKeep;
+    if (correct) {
+      var selIdx = l5.selected.idx;
+      var selVal = l5.selected.val;
+      l5.remaining = l5.remaining.filter(function (v, i) { return i !== selIdx; });
+      var list = document.getElementById(keep ? 'l5-kept-list' : 'l5-rejected-list');
+      var t = document.createElement('span');
+      t.className = 'cq-tile';
+      t.style.cursor = 'default';
+      t.textContent = selVal;
+      list.appendChild(t);
+      if (keep) l5.kept.push(selVal);
+      l5.selected = null;
+      renderL5Tray();
+      checkL5RoundComplete();
+    } else {
+      l5.mistakes++;
+      var fb = document.getElementById('l5-feedback');
+      fb.textContent = I18N.fb_check_rule;
+      fb.className = 'mt-3 text-sm font-bold text-center text-rose-600';
+      setTimeout(function () { fb.textContent = ''; }, 1200);
+    }
+  }
+
+  function checkL5RoundComplete() {
+    var round = L5_ROUNDS[l5.index];
+    if (round.mode === 'pipeline' && l5.pipelinePhase === 'filter') {
+      if (l5.remaining.length === 0) {
+        l5.pipelinePhase = 'sort';
+        l5.remaining = l5.kept.slice();
+        document.getElementById('l5-bins').classList.add('hidden');
+        document.getElementById('l5-classify-btns').classList.add('hidden');
+        document.getElementById('l5-output-row-wrap').classList.remove('hidden');
+        document.getElementById('l5-bubble').textContent = I18N.l5_bubble_pipeline_sort;
+        renderL5Tray();
+      }
+      return;
+    }
+    if (l5.remaining.length === 0) { setTimeout(l5RoundDone, 500); }
+  }
+
+  function l5RoundDone() {
+    if (l5.index < L5_ROUNDS.length - 1) {
+      var fb = document.getElementById('l5-feedback');
+      fb.textContent = I18N.fb_round_complete;
+      fb.className = 'mt-3 text-sm font-bold text-center text-emerald-600';
+      l5.index++;
+      setTimeout(function () { fb.textContent = ''; startL5Round(); }, 1300);
+    } else {
+      finishL5();
+    }
+  }
+
+  function finishL5() {
+    var stars = l5.mistakes === 0 ? 3 : l5.mistakes <= 3 ? 2 : 1;
+    finishLevel('l5', stars, I18N.lvl5_complete_title);
+  }
+
+  renderHub();
+})();
+</script>
+{% endblock %}
