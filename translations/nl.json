@@ -1249,6 +1249,12 @@
       "modal_body_2": "Goed gedaan! Speel nog eens om alle 3 sterren te halen.",
       "modal_body_1": "Goed werk — je hebt het gehaald! Speel opnieuw voor een betere score.",
       "modal_body_0": "Je hebt het gered — probeer nog eens om sterren te verdienen!"
+    },
+    "jigsaw_drop": {
+      "name": "Puzzel Val",
+      "description": "Verwissel puzzelhoekjes om elk plaatje compleet te maken — voltooide plaatjes verdwijnen en nieuwe stukjes vallen naar beneden om de plek op te vullen.",
+      "title": "Puzzel Val",
+      "subtitle": "Verwissel aangrenzende stukjes om een plaatje samen te stellen uit zijn vier hoeken. Voltooide plaatjes verdwijnen en nieuwe stukjes vallen op hun plek."
     }
   },
   "common": {

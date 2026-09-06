@@ -1249,6 +1249,12 @@
       "modal_body_2": "Ottimo lavoro! Rigioca per ottenere tutte e 3 le stelle.",
       "modal_body_1": "Bel lavoro — ce l'hai fatta! Rigioca per un punteggio migliore.",
       "modal_body_0": "Ce l'hai fatta — riprova per guadagnare delle stelle!"
+    },
+    "jigsaw_drop": {
+      "name": "Puzzle a Cascata",
+      "description": "Scambia gli angoli delle immagini per completare ogni quadro — le immagini completate spariscono e nuovi pezzi cadono per riempire lo spazio.",
+      "title": "Puzzle a Cascata",
+      "subtitle": "Scambia i pezzi adiacenti per comporre un'immagine dai suoi quattro angoli. Le immagini completate spariscono e nuovi pezzi cadono al loro posto."
     }
   },
   "common": {

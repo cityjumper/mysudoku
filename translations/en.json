@@ -1249,6 +1249,12 @@
       "modal_body_2": "Great job! Play again to earn all 3 stars.",
       "modal_body_1": "Nice work — you finished it! Replay for a better score.",
       "modal_body_0": "You made it through — have another go to earn stars!"
+    },
+    "jigsaw_drop": {
+      "name": "Jigsaw Drop",
+      "description": "Swap picture-corner pieces to complete each image — finished pictures vanish and new pieces drop in to fill the gap.",
+      "title": "Jigsaw Drop",
+      "subtitle": "Swap adjacent pieces to assemble a picture from its four corners. Completed pictures disappear and new pieces drop in to take their place."
     }
   },
   "common": {

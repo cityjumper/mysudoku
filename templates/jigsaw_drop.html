@@ -1,0 +1,599 @@
+{% extends "base.html" %}
+
+{% block title %}{{ translate(lang, 'games.jigsaw_drop.title') }}{% endblock %}
+
+{% block extra_head %}
+<style>
+  #jd-scroll {
+    max-height: 74vh;
+    overflow-y: auto;
+    overflow-x: auto;
+    touch-action: pan-y;
+  }
+  #jd-grid {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 52px));
+    justify-content: center;
+    gap: 3px;
+  }
+  .jd-cell {
+    position: relative;
+    aspect-ratio: 1 / 1;
+    overflow: hidden;
+    border-radius: 6px;
+    box-shadow: inset 0 0 0 1px rgba(71, 85, 105, 0.2);
+    cursor: pointer;
+    transition: transform 0.12s ease, box-shadow 0.12s ease, filter 0.12s ease;
+  }
+  .jd-pic-inner {
+    position: absolute;
+    width: 200%;
+    height: 200%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2.6rem;
+    color: #fff;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+    pointer-events: none;
+  }
+  .jd-off-TL { top: 0; left: 0; }
+  .jd-off-TR { top: 0; left: -100%; }
+  .jd-off-BL { top: -100%; left: 0; }
+  .jd-off-BR { top: -100%; left: -100%; }
+  .jd-cell.jd-corner-TL { border-radius: 14px 4px 4px 4px; }
+  .jd-cell.jd-corner-TR { border-radius: 4px 14px 4px 4px; }
+  .jd-cell.jd-corner-BL { border-radius: 4px 4px 4px 14px; }
+  .jd-cell.jd-corner-BR { border-radius: 4px 4px 14px 4px; }
+  /* Hard mode drops the softened-outer-corner shape cue — every piece
+     looks the same regardless of which corner it actually is. */
+  #jd-grid.jd-hard .jd-cell.jd-corner-TL,
+  #jd-grid.jd-hard .jd-cell.jd-corner-TR,
+  #jd-grid.jd-hard .jd-cell.jd-corner-BL,
+  #jd-grid.jd-hard .jd-cell.jd-corner-BR {
+    border-radius: 6px;
+  }
+  .jd-cell.jd-selected {
+    box-shadow: 0 0 0 2px #fff, 0 0 0 4px #0ea5e9;
+    transform: scale(1.08);
+    z-index: 2;
+  }
+  .jd-cell.jd-locked {
+    box-shadow: 0 0 0 2px #fff, 0 0 0 3px #f59e0b;
+    filter: brightness(1.12) saturate(1.25);
+    cursor: default;
+  }
+  .jd-cell.jd-conn-top { border-top: 3px solid #22c55e; }
+  .jd-cell.jd-conn-right { border-right: 3px solid #22c55e; }
+  .jd-cell.jd-conn-bottom { border-bottom: 3px solid #22c55e; }
+  .jd-cell.jd-conn-left { border-left: 3px solid #22c55e; }
+  .jd-cell.jd-flash {
+    animation: jd-flash-anim 0.55s ease;
+  }
+  .jd-cell.jd-hint {
+    animation: jd-hint-pulse 0.9s ease-in-out 2;
+  }
+  @keyframes jd-hint-pulse {
+    0%, 100% { box-shadow: 0 0 0 3px #fff, 0 0 0 5px #22c55e; }
+    50% { box-shadow: 0 0 0 3px #fff, 0 0 0 8px #22c55e; }
+  }
+  @keyframes jd-flash-anim {
+    0% { transform: scale(1); }
+    45% { transform: scale(1.22); filter: brightness(1.6); }
+    100% { transform: scale(1); }
+  }
+  .jd-cell.jd-dropin {
+    animation: jd-dropin-anim 0.3s ease;
+  }
+  @keyframes jd-dropin-anim {
+    0% { transform: translateY(-130%); opacity: 0.4; }
+    100% { transform: translateY(0); opacity: 1; }
+  }
+  .jd-legend-swatch {
+    width: 20px;
+    height: 20px;
+    border-radius: 5px;
+    flex-shrink: 0;
+  }
+</style>
+{% endblock %}
+
+{% block body_class %}bg-gradient-to-br from-slate-50 to-fuchsia-100 min-h-screen{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+  <div class="max-w-5xl mx-auto mb-6 flex items-center justify-between">
+    <a href="/" class="inline-flex items-center text-fuchsia-800 hover:text-fuchsia-950 font-semibold">
+      <svg class="w-5 h-5 mr-2" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+        <path fill-rule="evenodd" d="M12.707 15.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 111.414 1.414L7.414 9H17a1 1 0 110 2H7.414l5.293 5.293a1 1 0 010 1.414z" clip-rule="evenodd" />
+      </svg>
+      {{ translate(lang, 'common.home') }}
+    </a>
+  </div>
+
+  <div class="max-w-5xl mx-auto">
+    <header class="text-center mb-6">
+      <h1 class="text-4xl sm:text-5xl font-extrabold tracking-tight text-slate-900">{{ translate(lang, 'games.jigsaw_drop.title') }}</h1>
+      <p class="mt-2 text-slate-600">{{ translate(lang, 'games.jigsaw_drop.subtitle') }}</p>
+    </header>
+
+    <!-- Stat bar -->
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
+      <div class="bg-white rounded-xl shadow ring-1 ring-slate-200 p-3 text-center">
+        <div class="text-xs font-bold text-slate-500 uppercase tracking-wide">Score</div>
+        <div id="score-val" class="text-lg font-extrabold text-slate-900">0</div>
+      </div>
+      <div class="bg-white rounded-xl shadow ring-1 ring-slate-200 p-3 text-center">
+        <div class="text-xs font-bold text-slate-500 uppercase tracking-wide">Best</div>
+        <div id="best-val" class="text-lg font-extrabold text-fuchsia-700">0</div>
+      </div>
+      <div class="bg-white rounded-xl shadow ring-1 ring-slate-200 p-3 text-center">
+        <div class="text-xs font-bold text-slate-500 uppercase tracking-wide">Pictures</div>
+        <div id="pictures-val" class="text-lg font-extrabold text-slate-900">0</div>
+      </div>
+      <div class="bg-white rounded-xl shadow ring-1 ring-slate-200 p-3 text-center">
+        <div class="text-xs font-bold text-slate-500 uppercase tracking-wide">Moves</div>
+        <div id="moves-val" class="text-lg font-extrabold text-slate-900">0</div>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+      <div class="lg:col-span-3">
+        <div class="mb-3 flex items-center justify-center gap-2">
+          <span class="text-xs font-bold text-slate-500 uppercase tracking-wide">Difficulty</span>
+          <div class="inline-flex rounded-lg ring-1 ring-slate-300 overflow-hidden">
+            <button id="diff-easy-btn" type="button" class="px-3 py-1 text-sm font-semibold transition">Easy</button>
+            <button id="diff-hard-btn" type="button" class="px-3 py-1 text-sm font-semibold transition">Hard</button>
+          </div>
+        </div>
+
+        <div class="bg-white rounded-2xl shadow-xl ring-1 ring-slate-200 p-3 sm:p-4 relative">
+          <div id="jd-scroll">
+            <div id="jd-grid"></div>
+          </div>
+        </div>
+
+        <div class="mt-3 flex flex-wrap items-center justify-center gap-3">
+          <button id="hint-btn" type="button" class="rounded-lg bg-sky-600 hover:bg-sky-700 text-white font-bold px-4 py-2 text-sm transition">💡 Hint</button>
+          <button id="shuffle-btn" type="button" class="rounded-lg bg-amber-500 hover:bg-amber-600 text-white font-bold px-4 py-2 text-sm transition">🔀 Shuffle</button>
+          <button id="new-game-btn" type="button" class="rounded-lg bg-slate-800 hover:bg-slate-900 text-white font-bold px-4 py-2 text-sm transition">New Game</button>
+        </div>
+      </div>
+
+      <!-- Sidebar -->
+      <div class="lg:col-span-1 flex flex-col gap-4">
+        <div class="bg-white rounded-2xl shadow-xl ring-1 ring-slate-200 p-4">
+          <h3 class="text-sm font-bold text-slate-700 mb-2">How to play</h3>
+          <ul class="text-xs text-slate-600 space-y-1">
+            <li>• Every square is one corner (¼) of a picture — top-left, top-right, bottom-left or bottom-right.</li>
+            <li>• Tap any two pieces to swap them — anywhere on the board, matching or not, as often as you like.</li>
+            <li>• A green edge glows when two pieces are correctly placed next to each other.</li>
+            <li>• Get all 4 corners of a picture into the right arrangement and they click together.</li>
+            <li>• Completed pictures disappear and new pieces drop in from above to fill the gap.</li>
+            <li>• On Easy, each piece's outer corner is softened — a shape cue for which corner it is. Hard removes that cue.</li>
+            <li>• Stuck? Tap "Hint" to highlight a swap that completes a picture, or "Shuffle" to mix up the board.</li>
+          </ul>
+        </div>
+
+        <div class="bg-white rounded-2xl shadow-xl ring-1 ring-slate-200 p-4">
+          <h3 class="text-xs font-bold text-slate-500 uppercase tracking-wide mb-2">Pictures</h3>
+          <ul id="jd-legend" class="text-xs text-slate-600 space-y-1.5"></ul>
+        </div>
+
+        <div class="bg-white rounded-2xl shadow-xl ring-1 ring-slate-200 p-4">
+          <h3 class="text-xs font-bold text-slate-500 uppercase tracking-wide mb-2">Log</h3>
+          <ul id="msg-log" class="text-xs text-slate-600 space-y-1.5 min-h-[60px]"></ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="jd-toast" class="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 hidden">
+  <div class="bg-slate-900 text-white text-sm font-semibold px-4 py-2 rounded-full shadow-xl"></div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+(function () {
+  const COLS = 6;
+  const ROWS = 6;
+  const STORAGE_KEY = 'jigsaw-drop-best-v1';
+  const CORNERS = ['TL', 'TR', 'BL', 'BR'];
+  const IMAGES = [
+    { name: 'Sun', grad: 'linear-gradient(135deg, #fde047, #eab308)', emoji: '☀️' },
+    { name: 'Fire', grad: 'linear-gradient(135deg, #fb923c, #ea580c)', emoji: '🔥' },
+    { name: 'Heart', grad: 'linear-gradient(135deg, #f87171, #dc2626)', emoji: '❤️' },
+    { name: 'Flower', grad: 'linear-gradient(135deg, #f472b6, #db2777)', emoji: '🌸' },
+    { name: 'Star', grad: 'linear-gradient(135deg, #a78bfa, #7c3aed)', emoji: '⭐' },
+    { name: 'Moon', grad: 'linear-gradient(135deg, #818cf8, #4f46e5)', emoji: '🌙' },
+    { name: 'Wave', grad: 'linear-gradient(135deg, #38bdf8, #0284c7)', emoji: '🌊' },
+    { name: 'Butterfly', grad: 'linear-gradient(135deg, #2dd4bf, #0d9488)', emoji: '🦋' },
+    { name: 'Tree', grad: 'linear-gradient(135deg, #4ade80, #16a34a)', emoji: '🌳' },
+    { name: 'Rocket', grad: 'linear-gradient(135deg, #94a3b8, #475569)', emoji: '🚀' },
+  ];
+  const CLEAR_DELAY_MS = 550;
+  const DIFFICULTY_KEY = 'jigsaw-drop-difficulty-v1';
+
+  const gridEl = document.getElementById('jd-grid');
+  const scoreVal = document.getElementById('score-val');
+  const bestVal = document.getElementById('best-val');
+  const picturesVal = document.getElementById('pictures-val');
+  const movesVal = document.getElementById('moves-val');
+  const hintBtn = document.getElementById('hint-btn');
+  const shuffleBtn = document.getElementById('shuffle-btn');
+  const newGameBtn = document.getElementById('new-game-btn');
+  const diffEasyBtn = document.getElementById('diff-easy-btn');
+  const diffHardBtn = document.getElementById('diff-hard-btn');
+  const legendEl = document.getElementById('jd-legend');
+  const msgLog = document.getElementById('msg-log');
+  const toastEl = document.getElementById('jd-toast');
+  const toastInner = toastEl.querySelector('div');
+
+  let state = null;
+  let toastTimer = null;
+  let cellEls = [];
+  let innerEls = [];
+  let difficulty = localStorage.getItem(DIFFICULTY_KEY) === 'hard' ? 'hard' : 'easy';
+
+  function randomTile() {
+    return {
+      img: Math.floor(Math.random() * IMAGES.length),
+      corner: CORNERS[Math.floor(Math.random() * CORNERS.length)],
+      locked: false,
+    };
+  }
+
+  function freshGrid() {
+    return Array.from({ length: ROWS }, () => Array.from({ length: COLS }, () => randomTile()));
+  }
+
+  function freshState() {
+    return {
+      grid: freshGrid(),
+      selected: null,
+      score: 0,
+      pictures: 0,
+      moves: 0,
+    };
+  }
+
+  function bestScore() {
+    return Number(localStorage.getItem(STORAGE_KEY) || 0);
+  }
+
+  function saveBest() {
+    const best = Math.max(state.score, bestScore());
+    localStorage.setItem(STORAGE_KEY, String(best));
+  }
+
+  function pushMessage(text) {
+    const li = document.createElement('li');
+    li.textContent = text;
+    msgLog.prepend(li);
+    while (msgLog.children.length > 8) msgLog.removeChild(msgLog.lastChild);
+  }
+
+  function showToast(text) {
+    toastInner.textContent = text;
+    toastEl.classList.remove('hidden');
+    if (toastTimer) clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => toastEl.classList.add('hidden'), 2000);
+  }
+
+  function buildGridDom() {
+    gridEl.innerHTML = '';
+    cellEls = [];
+    innerEls = [];
+    for (let r = 0; r < ROWS; r++) {
+      const cellRow = [];
+      const innerRow = [];
+      for (let c = 0; c < COLS; c++) {
+        const outer = document.createElement('div');
+        outer.className = 'jd-cell';
+        outer.dataset.r = r;
+        outer.dataset.c = c;
+        const inner = document.createElement('div');
+        inner.className = 'jd-pic-inner';
+        outer.appendChild(inner);
+        gridEl.appendChild(outer);
+        cellRow.push(outer);
+        innerRow.push(inner);
+      }
+      cellEls.push(cellRow);
+      innerEls.push(innerRow);
+    }
+  }
+
+  function buildLegend() {
+    legendEl.innerHTML = '';
+    IMAGES.forEach((img) => {
+      const li = document.createElement('li');
+      li.className = 'flex items-center gap-2';
+      const swatch = document.createElement('span');
+      swatch.className = 'jd-legend-swatch';
+      swatch.style.background = img.grad;
+      const label = document.createElement('span');
+      label.textContent = `${img.emoji} ${img.name}`;
+      li.appendChild(swatch);
+      li.appendChild(label);
+      legendEl.appendChild(li);
+    });
+  }
+
+  // Highlights an edge whenever the neighbor on that side is the correct
+  // partner corner of the same picture — a preview of a match taking shape.
+  function connectionClasses(r, c, tile) {
+    let cls = '';
+    const left = c > 0 ? state.grid[r][c - 1] : null;
+    const right = c < COLS - 1 ? state.grid[r][c + 1] : null;
+    const top = r > 0 ? state.grid[r - 1][c] : null;
+    const bottom = r < ROWS - 1 ? state.grid[r + 1][c] : null;
+
+    if (left && !left.locked && left.img === tile.img && left.corner === 'TL' && tile.corner === 'TR') cls += ' jd-conn-left';
+    if (left && !left.locked && left.img === tile.img && left.corner === 'BL' && tile.corner === 'BR') cls += ' jd-conn-left';
+    if (right && !right.locked && right.img === tile.img && tile.corner === 'TL' && right.corner === 'TR') cls += ' jd-conn-right';
+    if (right && !right.locked && right.img === tile.img && tile.corner === 'BL' && right.corner === 'BR') cls += ' jd-conn-right';
+    if (top && !top.locked && top.img === tile.img && top.corner === 'TL' && tile.corner === 'BL') cls += ' jd-conn-top';
+    if (top && !top.locked && top.img === tile.img && top.corner === 'TR' && tile.corner === 'BR') cls += ' jd-conn-top';
+    if (bottom && !bottom.locked && bottom.img === tile.img && tile.corner === 'TL' && bottom.corner === 'BL') cls += ' jd-conn-bottom';
+    if (bottom && !bottom.locked && bottom.img === tile.img && tile.corner === 'TR' && bottom.corner === 'BR') cls += ' jd-conn-bottom';
+    return cls;
+  }
+
+  function render() {
+    for (let r = 0; r < ROWS; r++) {
+      for (let c = 0; c < COLS; c++) {
+        const outer = cellEls[r][c];
+        const inner = innerEls[r][c];
+        const tile = state.grid[r][c];
+        if (!tile) {
+          outer.className = 'jd-cell';
+          inner.className = 'jd-pic-inner';
+          inner.style.background = '';
+          inner.textContent = '';
+          continue;
+        }
+        const img = IMAGES[tile.img];
+        let cls = `jd-cell jd-corner-${tile.corner}`;
+        if (tile.locked) cls += ' jd-locked';
+        if (state.selected && state.selected.r === r && state.selected.c === c) cls += ' jd-selected';
+        if (!tile.locked) cls += connectionClasses(r, c, tile);
+        outer.className = cls;
+        inner.className = `jd-pic-inner jd-off-${tile.corner}`;
+        inner.style.background = img.grad;
+        inner.textContent = img.emoji;
+      }
+    }
+    scoreVal.textContent = state.score;
+    bestVal.textContent = Math.max(state.score, bestScore());
+    picturesVal.textContent = state.pictures;
+    movesVal.textContent = state.moves;
+  }
+
+  function flashCells(cells) {
+    cells.forEach(({ r, c }) => {
+      const el = cellEls[r][c];
+      el.classList.remove('jd-flash');
+      void el.offsetWidth;
+      el.classList.add('jd-flash');
+    });
+  }
+
+  function findMatches(grid) {
+    grid = grid || state.grid;
+    const groups = [];
+    for (let r = 0; r < ROWS - 1; r++) {
+      for (let c = 0; c < COLS - 1; c++) {
+        const a = grid[r][c];
+        const b = grid[r][c + 1];
+        const d = grid[r + 1][c];
+        const e = grid[r + 1][c + 1];
+        if (
+          a && b && d && e &&
+          !a.locked && !b.locked && !d.locked && !e.locked &&
+          a.img === b.img && a.img === d.img && a.img === e.img &&
+          a.corner === 'TL' && b.corner === 'TR' && d.corner === 'BL' && e.corner === 'BR'
+        ) {
+          groups.push({ img: a.img, cells: [{ r, c }, { r, c: c + 1 }, { r: r + 1, c }, { r: r + 1, c: c + 1 }] });
+        }
+      }
+    }
+    return groups;
+  }
+
+  // Brute-forces every possible single swap looking for one that completes
+  // a picture, so Hint can point at a real, immediately-useful move.
+  function findHint() {
+    const cells = [];
+    for (let r = 0; r < ROWS; r++) {
+      for (let c = 0; c < COLS; c++) {
+        if (state.grid[r][c] && !state.grid[r][c].locked) cells.push({ r, c });
+      }
+    }
+    for (let i = 0; i < cells.length; i++) {
+      for (let j = i + 1; j < cells.length; j++) {
+        const a = cells[i], b = cells[j];
+        const scratch = state.grid.map((row) => row.slice());
+        const tmp = scratch[a.r][a.c];
+        scratch[a.r][a.c] = scratch[b.r][b.c];
+        scratch[b.r][b.c] = tmp;
+        if (findMatches(scratch).length > 0) return { a, b };
+      }
+    }
+    return null;
+  }
+
+  // Locks any newly-completed pictures, then (after a short animation delay)
+  // clears them and lets new pieces drop in to fill the gap. This is the
+  // only time tiles move — swapping never shifts anything on its own.
+  function checkMatches() {
+    const groups = findMatches();
+    if (groups.length === 0) return false;
+
+    groups.forEach((g) => {
+      g.cells.forEach(({ r, c }) => { state.grid[r][c].locked = true; });
+      pushMessage(`✨ Completed ${IMAGES[g.img].name}! +100`);
+    });
+    flashCells(groups.flatMap((g) => g.cells));
+    render();
+
+    setTimeout(() => resolveClear(groups), CLEAR_DELAY_MS);
+    return true;
+  }
+
+  function resolveClear(groups) {
+    const affectedCols = new Set();
+    groups.forEach((g) => {
+      state.score += 100;
+      state.pictures += 1;
+      g.cells.forEach(({ r, c }) => {
+        state.grid[r][c] = null;
+        affectedCols.add(c);
+      });
+    });
+    saveBest();
+
+    // A swap made mid-animation may have selected a tile in a column that's
+    // about to shift — deselect defensively so the highlight can't go stale.
+    if (state.selected && affectedCols.has(state.selected.c)) state.selected = null;
+
+    const newTopCells = [];
+    affectedCols.forEach((c) => {
+      const colVals = [];
+      for (let r = 0; r < ROWS; r++) {
+        if (state.grid[r][c]) colVals.push(state.grid[r][c]);
+      }
+      for (let r = 0; r < ROWS; r++) state.grid[r][c] = null;
+      const startRow = ROWS - colVals.length;
+      for (let i = 0; i < colVals.length; i++) state.grid[startRow + i][c] = colVals[i];
+      for (let r = 0; r < startRow; r++) {
+        state.grid[r][c] = randomTile();
+        newTopCells.push({ r, c });
+      }
+    });
+
+    render();
+    newTopCells.forEach(({ r, c }) => {
+      const el = cellEls[r][c];
+      el.classList.remove('jd-dropin');
+      void el.offsetWidth;
+      el.classList.add('jd-dropin');
+    });
+
+    // Cascading matches from the refill chain automatically into another clear.
+    checkMatches();
+  }
+
+  function onCellClick(r, c) {
+    const cell = state.grid[r][c];
+    if (!cell || cell.locked) return;
+
+    if (!state.selected) {
+      state.selected = { r, c };
+      render();
+      return;
+    }
+    if (state.selected.r === r && state.selected.c === c) {
+      state.selected = null;
+      render();
+      return;
+    }
+    const a = state.selected;
+    const tmp = state.grid[a.r][a.c];
+    state.grid[a.r][a.c] = state.grid[r][c];
+    state.grid[r][c] = tmp;
+    state.selected = null;
+    state.moves += 1;
+    render();
+    checkMatches();
+  }
+
+  function shuffleBoard() {
+    const positions = [];
+    const values = [];
+    for (let r = 0; r < ROWS; r++) {
+      for (let c = 0; c < COLS; c++) {
+        const cell = state.grid[r][c];
+        if (cell && !cell.locked) {
+          positions.push({ r, c });
+          values.push(cell);
+        }
+      }
+    }
+    for (let i = values.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [values[i], values[j]] = [values[j], values[i]];
+    }
+    positions.forEach((p, i) => { state.grid[p.r][p.c] = values[i]; });
+    state.selected = null;
+    pushMessage('🔀 Board shuffled.');
+    render();
+    checkMatches();
+  }
+
+  function newGame() {
+    state = freshState();
+    msgLog.innerHTML = '';
+    buildGridDom();
+    pushMessage('New game started. Swap pieces to assemble pictures!');
+    render();
+    checkMatches();
+  }
+
+  function showHint() {
+    const hint = findHint();
+    if (!hint) {
+      showToast('No matches available — try Shuffle!');
+      return;
+    }
+    [hint.a, hint.b].forEach(({ r, c }) => {
+      const el = cellEls[r][c];
+      el.classList.remove('jd-hint');
+      void el.offsetWidth;
+      el.classList.add('jd-hint');
+      setTimeout(() => el.classList.remove('jd-hint'), 1800);
+    });
+  }
+
+  function setDifficulty(level) {
+    difficulty = level;
+    localStorage.setItem(DIFFICULTY_KEY, level);
+    gridEl.classList.toggle('jd-hard', level === 'hard');
+    const easyOn = level === 'easy';
+    diffEasyBtn.classList.toggle('bg-fuchsia-600', easyOn);
+    diffEasyBtn.classList.toggle('text-white', easyOn);
+    diffEasyBtn.classList.toggle('bg-white', !easyOn);
+    diffEasyBtn.classList.toggle('text-slate-700', !easyOn);
+    diffHardBtn.classList.toggle('bg-fuchsia-600', !easyOn);
+    diffHardBtn.classList.toggle('text-white', !easyOn);
+    diffHardBtn.classList.toggle('bg-white', easyOn);
+    diffHardBtn.classList.toggle('text-slate-700', easyOn);
+  }
+
+  gridEl.addEventListener('click', (e) => {
+    const el = e.target.closest('.jd-cell');
+    if (!el) return;
+    onCellClick(Number(el.dataset.r), Number(el.dataset.c));
+  });
+  hintBtn.addEventListener('click', showHint);
+  shuffleBtn.addEventListener('click', shuffleBoard);
+  newGameBtn.addEventListener('click', newGame);
+  diffEasyBtn.addEventListener('click', () => setDifficulty('easy'));
+  diffHardBtn.addEventListener('click', () => setDifficulty('hard'));
+
+  function init() {
+    buildLegend();
+    setDifficulty(difficulty);
+    state = freshState();
+    buildGridDom();
+    pushMessage('New game started. Swap pieces to assemble pictures!');
+    render();
+    checkMatches();
+  }
+
+  init();
+})();
+</script>
+{% endblock %}

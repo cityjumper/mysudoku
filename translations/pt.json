@@ -1248,6 +1248,12 @@
       "modal_body_2": "Bom trabalho! Joga novamente para ganhares as 3 estrelas.",
       "modal_body_1": "Bom trabalho — conseguiste terminar! Joga novamente para uma pontuação melhor.",
       "modal_body_0": "Conseguiste passar — tenta outra vez para ganhares estrelas!"
+    },
+    "jigsaw_drop": {
+      "name": "Quebra-Cabeça em Queda",
+      "description": "Troque os cantos das imagens para completar cada quadro — imagens concluídas desaparecem e novas peças caem para preencher o espaço.",
+      "title": "Quebra-Cabeça em Queda",
+      "subtitle": "Troque peças vizinhas para montar uma imagem a partir dos seus quatro cantos. Imagens concluídas desaparecem e novas peças caem no seu lugar."
     }
   },
   "common": {

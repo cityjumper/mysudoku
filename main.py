@@ -582,6 +582,13 @@ async def circuit_academy(request: Request):
     )
 
 
+@app.get("/jigsaw-drop", response_class=HTMLResponse)
+async def jigsaw_drop(request: Request):
+    """Jigsaw Drop falling-puzzle page endpoint."""
+    lang = get_current_lang(request)
+    return templates.TemplateResponse("jigsaw_drop.html", {"request": request, "lang": lang})
+
+
 @app.get("/api")
 async def api_root():
     """API root endpoint with API information."""
