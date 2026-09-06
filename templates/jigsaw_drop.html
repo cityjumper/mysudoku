@@ -403,26 +403,67 @@
     return groups;
   }
 
-  // Brute-forces every possible single swap looking for one that completes
-  // a picture, so Hint can point at a real, immediately-useful move.
-  function findHint() {
-    const cells = [];
-    for (let r = 0; r < ROWS; r++) {
-      for (let c = 0; c < COLS; c++) {
-        if (state.grid[r][c] && !state.grid[r][c].locked) cells.push({ r, c });
-      }
+  // For one 2x2 block, finds the picture that already has the most of its
+  // 4 corners correctly placed there (0-3 — a 4th would already have cleared).
+  function bestImageForBlock(slots) {
+    let best = null;
+    for (let img = 0; img < IMAGES.length; img++) {
+      let count = 0;
+      slots.forEach(({ pos, corner }) => {
+        const t = state.grid[pos.r][pos.c];
+        if (t && !t.locked && t.img === img && t.corner === corner) count++;
+      });
+      if (count > 0 && (!best || count > best.count)) best = { img, count };
     }
-    for (let i = 0; i < cells.length; i++) {
-      for (let j = i + 1; j < cells.length; j++) {
-        const a = cells[i], b = cells[j];
-        const scratch = state.grid.map((row) => row.slice());
-        const tmp = scratch[a.r][a.c];
-        scratch[a.r][a.c] = scratch[b.r][b.c];
-        scratch[b.r][b.c] = tmp;
-        if (findMatches(scratch).length > 0) return { a, b };
+    return best;
+  }
+
+  // Finds an unlocked cell holding exactly the given corner of the given
+  // picture, outside a block's own cells — a piece that could be swapped in.
+  function findDonor(img, corner, excludeSlots) {
+    for (let rr = 0; rr < ROWS; rr++) {
+      for (let cc = 0; cc < COLS; cc++) {
+        if (excludeSlots.some((s) => s.pos.r === rr && s.pos.c === cc)) continue;
+        const donor = state.grid[rr][cc];
+        if (donor && !donor.locked && donor.img === img && donor.corner === corner) return { r: rr, c: cc };
       }
     }
     return null;
+  }
+
+  // Scans every 2x2 block on the board and, for whichever picture is
+  // already furthest along there, finds a single swap that brings in its
+  // next missing corner from wherever that exact piece currently sits.
+  // A block that's 3/4 done yields a swap that completes the picture
+  // outright; otherwise this returns the most useful next step available.
+  function findHint() {
+    let best = null; // { a, b, score, img }
+    for (let r = 0; r < ROWS - 1; r++) {
+      for (let c = 0; c < COLS - 1; c++) {
+        const slots = [
+          { pos: { r, c }, corner: 'TL' },
+          { pos: { r, c: c + 1 }, corner: 'TR' },
+          { pos: { r: r + 1, c }, corner: 'BL' },
+          { pos: { r: r + 1, c: c + 1 }, corner: 'BR' },
+        ];
+        const cand = bestImageForBlock(slots);
+        if (!cand || (best && cand.count <= best.score)) continue;
+
+        for (const { pos, corner } of slots) {
+          const t = state.grid[pos.r][pos.c];
+          if (!t || t.locked) continue;
+          if (t.img === cand.img && t.corner === corner) continue; // already correct
+
+          const donor = findDonor(cand.img, corner, slots);
+          if (donor) {
+            best = { a: pos, b: donor, score: cand.count, img: cand.img };
+            if (best.score >= 3) return best; // completing a picture is the best possible hint
+            break; // this block can't offer a better swap than its first fixable slot
+          }
+        }
+      }
+    }
+    return best;
   }
 
   // Locks any newly-completed pictures, then (after a short animation delay)
@@ -545,9 +586,14 @@
   function showHint() {
     const hint = findHint();
     if (!hint) {
-      showToast('No matches available — try Shuffle!');
+      showToast('No helpful swap found — try Shuffle!');
       return;
     }
+    showToast(
+      hint.score >= 3
+        ? `Swap these two to complete ${IMAGES[hint.img].name}!`
+        : `Swap these two — a step toward ${IMAGES[hint.img].name}.`
+    );
     [hint.a, hint.b].forEach(({ r, c }) => {
       const el = cellEls[r][c];
       el.classList.remove('jd-hint');
